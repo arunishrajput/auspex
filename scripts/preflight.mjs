@@ -160,40 +160,54 @@ async function checkGemini() {
     return;
   }
 
-  const model = env.GEMINI_MODEL_FAST ?? "gemini-3.5-flash-lite";
-  try {
-    const started = Date.now();
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Reply with the single word: ok" }] }],
-        }),
-        signal: AbortSignal.timeout(20_000),
-      },
-    );
-    const latency = Date.now() - started;
+  // Walk the fallback chain, exactly as the pipeline does, and report which model
+  // actually answered. A 503 here means capacity contention (free tier), not quota.
+  const chain = (env.GEMINI_MODELS_FAST ?? "gemini-3.5-flash-lite,gemini-3.1-flash-lite")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const timeout = Number(env.GEMINI_TIMEOUT_MS ?? 20_000);
 
-    if (response.status === 429) {
-      record(
-        "Gemini API",
-        false,
-        "429 rate limited — free-tier quota exhausted. The pipeline fails safe on this, but you want it working before a demo.",
-        "Phase 3+ (degrades, does not crash)",
+  const failures = [];
+
+  for (const model of chain) {
+    try {
+      const started = Date.now();
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "Reply with the single word: ok" }] }],
+          }),
+          signal: AbortSignal.timeout(timeout),
+        },
       );
-      return;
+
+      if (response.ok) {
+        const latency = Date.now() - started;
+        const note = failures.length > 0 ? ` (after ${failures.length} unavailable)` : "";
+        record("Gemini API", true, `${model} responded in ${latency}ms${note}`);
+        return;
+      }
+      failures.push(`${model} → ${response.status}`);
+    } catch {
+      failures.push(`${model} → timeout`);
     }
-    if (!response.ok) {
-      const text = await response.text();
-      record("Gemini API", false, `HTTP ${response.status}: ${text.slice(0, 160)}`, "Phase 3+");
-      return;
-    }
-    record("Gemini API", true, `${model} responded in ${latency}ms`);
-  } catch (error) {
-    record("Gemini API", false, String(error.message ?? error), "Phase 3+");
   }
+
+  const all503 = failures.every((f) => f.endsWith("503"));
+  record(
+    "Gemini API",
+    false,
+    all503
+      ? `every model returned 503 (capacity contention, not quota): ${failures.join(", ")}. ` +
+          "The free tier is not reliable enough for a live demo — enable billing on the key's " +
+          "Google Cloud project. The pipeline fails safe regardless."
+      : failures.join(", "),
+    "Phase 3+ (degrades safely, does not crash)",
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -202,7 +216,7 @@ async function checkGemini() {
 async function checkDatabase() {
   const url = env.DATABASE_URL;
   if (!url || url.includes("user:password@host")) {
-    record("Neon Postgres", false, "DATABASE_URL not set — see docs/RUNBOOK.md §2", "Phase 2+");
+    record("Neon Postgres", false, "DATABASE_URL not set — see docs/RUNBOOK.md §3", "Phase 2+");
     return;
   }
   if (!url.includes("-pooler")) {

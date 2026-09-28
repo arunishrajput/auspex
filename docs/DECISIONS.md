@@ -231,3 +231,60 @@ changing back mid-hackathon, while giving us a caching and rate-limiting point.
 
 **Evidence:** `curl -X OPTIONS` and `curl -X POST` with an `Origin` header both returned
 `Access-Control-Allow-Origin: *`.
+
+---
+
+### ADR-017 — Gemini model fallback chains, and the free tier is not demo-viable
+
+**Decided:** configure `GEMINI_MODELS_FAST` / `GEMINI_MODELS_SMART` as comma-separated **fallback
+chains** tried left to right with a 20s per-attempt timeout; and enable **billing** on the key's
+Google Cloud project rather than relying on the free tier.
+
+**Why — measured, not assumed (2026-09-28):**
+
+| Observation | Evidence |
+|---|---|
+| `gemini-2.5-flash` / `gemini-2.5-flash-lite` are **retired** | HTTP 404 `"no longer available"` |
+| Every current model returns 503 on the free tier | **0/20 calls succeeded** across 5 models x 4 rounds |
+| The error is capacity, not quota | `"This model is currently experiencing high demand"` — a 503, never a 429 |
+| Availability varies per model and over time | one isolated success on `gemini-3.1-flash-lite` while two others 503'd in the same pass |
+| Latency can be pathological when it does answer | one success took **159,263 ms** |
+
+A 159s call cannot run inside a serverless function, and a demo whose AI stage silently produces
+nothing is a bad demo — even though the fail-safe path handles it correctly. Paid tier has separate,
+far larger capacity. The realistic spend for this workload (bounded ticks, short prompts) is a few
+dollars for the whole hackathon.
+
+**Why chains anyway, even on paid:** availability was observed to vary *per model*, so trying a
+second and third model costs almost nothing and converts some outages into successes. It also means
+a retired model ID degrades to a fallback instead of taking the pipeline down.
+
+**Cost:** one manual billing step (Claude cannot enter payment details). Slightly more config than a
+single model name.
+
+**Unchanged:** the fail-safe rule still holds — if every model in a chain fails, the tick takes **no
+action**, logs the reason, and continues. That behaviour is now genuinely exercised rather than
+theoretical, and `pnpm preflight` reports the distinction between 503 (capacity) and 429 (quota).
+
+---
+
+### ADR-018 — Faucet key exposure: use the UI, never the leaked key
+
+**Decided:** fund wallets only through the faucet's web UI. Do not use the private key found in its
+client bundle.
+
+**Why:** `faucet.masterstroke.academy` ships `REACT_APP_PRIVATE_KEY` in its public JavaScript bundle
+— the faucet dispenses entirely client-side. The corresponding wallet,
+`0xC10eEAb93a0F4b26a0c18E17e323d435F21f1ea1`, held **~504,908 tMSTC** when checked. Anyone who opens
+devtools can drain it.
+
+Publicly visible does not mean ours to use: signing with someone else's key is unauthorised use
+regardless of how it was obtained, and it would also bypass the faucet's rate limiting. We derived
+the address read-only to confirm the report and went no further.
+
+**Action:** report to the organisers. Testnet funds have no market value, so the impact is
+availability (a drained faucet blocks every participant), not theft. Recorded here because a judge
+may reasonably ask how we funded our wallets.
+
+**Cost:** the faucet UI has a reCAPTCHA, so wallet funding is a manual step. Accepted — solving
+CAPTCHAs is out of bounds.

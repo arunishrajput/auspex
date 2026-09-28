@@ -7,8 +7,8 @@
 
 Built for the **MST Blockchain × Newrro Buildathon** — AI & Web3 Builders track.
 
-> ### ⚠️ Build status: Phase 0 of 8
-> The foundations are in place; the contract is not deployed yet. This README is filled in
+> ### ⚠️ Build status: Phase 0 of 8 complete
+> Foundations, CI and the live demo URL are up; the contract is not deployed yet. This README is filled in
 > with real addresses and transaction hashes as each phase lands. **Every value published
 > here is real and resolvable on MSTScan — nothing in this repository is fabricated.**
 > Current progress: [`PROGRESS.md`](./PROGRESS.md).
@@ -91,7 +91,7 @@ provider, so there is no vendor-specific code.
 | **Faucet** | https://faucet.masterstroke.academy |
 | **`AuspexMarket` address** | _deployed in Phase 1_ |
 | **Deployment tx** | _Phase 1_ |
-| **Live demo** | _Phase 0 deploy_ |
+| **Live demo** | **https://auspex-web-mu.vercel.app** |
 
 > **Note on the explorer.** Use `testnet.mstscan.com`, **not** `mstscan.com`. They are different
 > chains: at the time of writing `mstscan.com` reported a head block around 20,861,000 while our
@@ -157,7 +157,7 @@ PROGRESS.md    current build state, phase by phase
 ```
 
 **Stack:** Solidity 0.8.28 + Hardhat 3 + OpenZeppelin 5 · Next.js 16 + TypeScript + Tailwind 4 ·
-Neon Postgres + Drizzle · ethers v6 · wagmi/viem · Gemini (free tier) · Vercel + GitHub Actions.
+Neon Postgres + Drizzle · ethers v6 · wagmi/viem · Gemini · Vercel + GitHub Actions.
 
 Docs worth reading: [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the system,
 [`CONTRACTS.md`](./docs/CONTRACTS.md) for the contract design,

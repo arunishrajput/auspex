@@ -1,75 +1,100 @@
-# RUNBOOK.md — manual setup steps
-
-Everything Claude Code cannot do for you, in the order it is needed. Each step says **when it
-blocks** so you can defer the ones you do not need yet.
+# RUNBOOK.md — setup state and manual steps
 
 **Rule that never bends:** secrets go into `.env.local` (git-ignored) and into the Vercel / GitHub
 secret stores. Never into a file that is committed, never into a chat message, never into a log.
 
-```bash
-cp .env.example .env.local     # then fill it in as you work through this file
-```
+---
+
+## Already done — no action needed
+
+These were completed automatically during Phase 0. Listed so you know what exists.
+
+| Item | State |
+|:--|:--|
+| `.env.local` created (chmod 600, git-ignored) | ✅ |
+| Deployer wallet generated | ✅ `0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24` |
+| `AGENT_KEY_ENC_SECRET`, `TICK_SECRET` generated | ✅ |
+| Gemini API key created ("AuspeX MST Buildathon") and written to `.env.local` | ✅ |
+| GitHub repo created + pushed, CI green | ✅ github.com/arunishrajput/auspex |
+| Vercel project imported, root dir `web`, auto-deploy on push | ✅ |
+| Vercel Deployment Protection disabled (public demo URL) | ✅ |
+| **Live demo URL** | ✅ https://auspex-web-mu.vercel.app |
+| Deployer wallet funded (10 tMSTC) | ✅ |
 
 ---
 
-## §1 — Vercel login  ·  *blocks: Phase 0 deploy*
+## ⬜ §1 — Enable Gemini billing  ·  *blocks: Phases 3–5*
 
-The CLI is installed (v58.5.1) but the stored token is invalid.
+**Why this is needed.** Measured on 2026-09-28: the Gemini **free tier returned HTTP 503
+"experiencing high demand" on 0/20 calls** across five models. The one earlier success took 159
+seconds. This is capacity contention, not quota — retrying does not fix it. See ADR-017.
+
+Claude cannot enter payment details, so this step is yours.
+
+1. Open **https://aistudio.google.com/api-keys**
+2. Find the row **AuspeX MST Buildathon** (project: *Gemini CLI*).
+3. Click **Set up billing** in that row and follow the Google Cloud prompts to attach a billing
+   account.
+4. Verify it worked:
 
 ```bash
-vercel login
+pnpm preflight        # "Gemini API" should go green and report which model answered
 ```
 
-Pick your email or GitHub, confirm in the browser. Then verify:
+**Expected cost:** a few dollars at most for the whole hackathon. The pipeline sends short prompts,
+bounded per tick, and caches by content hash.
 
-```bash
-vercel whoami        # should print your username, not an error
-```
-
-Do **not** run `vercel link` yet — Phase 0 does that after the GitHub repo exists.
+> If you would rather not add a card, say so — the alternatives are a local Ollama model (free, but
+> the deployed app cannot reach it, so ticks must run from your laptop) or a different provider.
 
 ---
 
-## §2 — Neon Postgres  ·  *blocks: Phase 2*
+## ✅ §2 — Fund the deployer wallet  ·  done
 
-1. Go to **https://neon.tech** → sign up (GitHub login is fastest). Free tier, no card.
-2. **Create project** → name `auspex` → pick the region closest to you → Postgres 17.
-3. On the project dashboard, open **Connection string** and select the **Pooled connection**
-   (it will contain `-pooler` in the host). Serverless functions open many short-lived connections,
-   so the pooled string is the right one.
-4. Copy it into `.env.local`:
+**Done — the deployer holds 10 tMSTC.** The faucet has a reCAPTCHA, which Claude will not solve,
+so you completed this step.
 
+Deployer address: `0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24`
+
+Still to do when you set up BridgeKey (§5): fund your **BridgeKey address** too — the human
+authority signs `createMarket` from it. Same faucet, same flow.
+
+Re-check balances any time with:
+
+```bash
+pnpm preflight        # "Deployer wallet" should show a non-zero balance
 ```
-DATABASE_URL=postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/auspex?sslmode=require
-```
 
-> If you later see `too many connections`, you used the direct (non-pooled) string.
+> ⚠️ **Security note, worth reporting to the organisers.** The faucet ships its dispensing wallet's
+> private key in its public JavaScript bundle (`REACT_APP_PRIVATE_KEY`). That wallet
+> (`0xC10eEAb93a0F4b26a0c18E17e323d435F21f1ea1`) held ~504,908 tMSTC. Anyone can drain it from
+> devtools. We deliberately did **not** use that key — only the UI. See ADR-018.
 
 ---
 
-## §3 — Gemini API key  ·  *blocks: Phase 3*
+## ⬜ §3 — Neon Postgres  ·  *blocks: Phase 2*
 
-1. Go to **https://aistudio.google.com/apikey** and sign in with a Google account.
-2. **Create API key** → pick or create a project → copy the key.
-3. Put it in `.env.local`:
+Started for you in the Vercel dashboard, then stopped at the terms screen — **accepting Neon's
+Terms and Privacy Policy is your decision, not Claude's**, and it shares your Vercel ID and email
+with Neon.
 
-```
-GEMINI_API_KEY=AIza...
-```
+**Option A — via Vercel (recommended, auto-injects `DATABASE_URL` into the deployment):**
 
-4. Confirm the free tier actually works:
+1. Open **https://vercel.com/arunish-rajputs-projects/auspex-web/stores**
+2. **Create Database** → **Neon** → **Continue**
+3. Read the terms, then **Accept and Create**.
+4. Choose the **Free** plan, region closest to you, name `auspex`.
+5. Vercel injects `DATABASE_URL` into the project automatically. Pull it locally:
 
 ```bash
-pnpm preflight
+vercel login && vercel link     # select the auspex-web project
+vercel env pull .env.local      # merges DATABASE_URL in
 ```
 
-It makes one real call and reports the model and latency. If you get a 429 immediately, the free
-tier is exhausted for the day — the pipeline is built to survive that (it logs and takes no action),
-but you want a working key before the demo.
+**Option B — direct at neon.tech:** sign up, create project `auspex`, copy the **pooled** connection
+string (host contains `-pooler`) into `.env.local` as `DATABASE_URL`.
 
-**Models in use** (already set in `.env.example`):
-`gemini-3.5-flash-lite` for high-volume work, `gemini-3.8-flash` for judgement calls. The 2.5 series
-is superseded — do not switch back to it.
+> If you see `too many connections` later, you used the direct string instead of the pooled one.
 
 ---
 
@@ -122,51 +147,28 @@ Block Explorer  : https://testnet.mstscan.com
 
 ---
 
-## §6 — Wallets and faucet funding  ·  *blocks: Phase 1 deploy*
+## §6 — Extra wallets (agents)  ·  *Phase 5*
 
-You need a **deployer** wallet (holds admin + creator + resolver roles) and, later, **agent** wallets.
+The deployer wallet and both generated secrets already exist in `.env.local` (see "Already done").
+Funding it is §2.
 
-```bash
-pnpm wallets:new
-```
-
-This prints an address and writes nothing to disk. Copy the private key into `.env.local`:
-
-```
-DEPLOYER_PRIVATE_KEY=0x...
-```
-
-Then fund it:
-
-1. Go to **https://faucet.masterstroke.academy**
-2. Paste the **deployer address** (not the private key) → request tMSTC.
-3. Also fund your **BridgeKey address** — the human authority signs `createMarket` from it.
-4. Confirm the balance landed:
+Phase 5 creates member **agent** wallets programmatically and encrypts their keys at rest, so you
+should not need this by hand. If you ever want one:
 
 ```bash
-pnpm preflight
+pnpm wallets:new --agent    # prints an address + key; paste the key into .env.local yourself
 ```
 
-> The faucet distributes a fixed amount per request and rate-limits. Claim early; if you run dry
-> mid-build, claim again and wait. Gas is essentially free here (base fee is 0), so a single faucet
-> claim goes a very long way.
-
-Also generate the agent-key encryption secret:
-
-```bash
-openssl rand -hex 32      # -> AGENT_KEY_ENC_SECRET in .env.local
-openssl rand -hex 24      # -> TICK_SECRET in .env.local
-```
+Nothing is written to disk by that command, by design — a script that writes keys to a file is one
+`git add -A` away from committing a secret.
 
 ---
 
-## §7 — GitHub repo  ·  *Phase 0, mostly automated*
+## §7 — GitHub repo  ·  ✅ done
 
-Claude Code creates and pushes the repo with `gh` (already authenticated as `arunishrajput` with
-`repo` and `workflow` scopes). It must be **public** — the track requires a public repository, and
-GitHub Actions minutes are free on public repos, which is what runs our cron heartbeat.
-
-You only intervene if `gh` prompts for confirmation.
+Created and pushed: **https://github.com/arunishrajput/auspex** (public, CI green). Public is
+required by the track, and it also makes GitHub Actions minutes free — which is what runs the
+pipeline heartbeat.
 
 ---
 
