@@ -101,11 +101,21 @@ describe.skipIf(!canRun)("migrations against a fresh database", () => {
   });
 
   it("is re-runnable: applying migrations twice is a no-op", async () => {
+    const applied = async () => {
+      const { rows } = await client.query<{ count: string }>(
+        "select count(*)::text as count from drizzle.__drizzle_migrations",
+      );
+      return Number(rows[0].count);
+    };
+
+    // Compared against itself, not against a literal. The property under test is "a second run
+    // applies nothing new"; pinning a specific count instead meant every future migration broke
+    // this test for a reason unrelated to what it checks — which is what Phase 4 did to it.
+    const before = await applied();
+    expect(before).toBeGreaterThan(0);
+
     await applyMigrations(testUrl);
-    const { rows } = await client.query<{ count: string }>(
-      "select count(*)::text as count from drizzle.__drizzle_migrations",
-    );
-    expect(Number(rows[0].count)).toBe(1);
+    expect(await applied()).toBe(before);
   });
 
   describe("the unique constraints that carry idempotency", () => {

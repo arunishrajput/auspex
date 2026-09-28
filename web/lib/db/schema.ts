@@ -112,6 +112,21 @@ export const intentStatusEnum = pgEnum("intent_status", [
   "ABANDONED",
 ]);
 
+/**
+ * Who holds the key that signs an intent.
+ *
+ * `SERVER` is the default and the only kind the intent worker can drive end to end: it signs
+ * with a key this process holds. `EXTERNAL` means the key is in a human's browser wallet, so
+ * the worker **must not** try to sign — it waits for the signature to arrive from outside and
+ * then settles the receipt like any other intent.
+ *
+ * This is a column rather than an inference from `from_address` on purpose. Phase 5 adds agent
+ * wallets whose keys the server *does* hold, so "not the deployer" will stop meaning "not ours"
+ * — and a worker that guessed wrong here would either stall a real intent forever or try to
+ * sign for a key it does not have.
+ */
+export const intentSignerEnum = pgEnum("intent_signer", ["SERVER", "EXTERNAL"]);
+
 /** Which contract call an intent performs. Constrains what the engine may ever send. */
 export const intentKindEnum = pgEnum("intent_kind", [
   "CREATE_MARKET",
@@ -263,10 +278,25 @@ export const proposals = pgTable(
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
     status: proposalStatusEnum("status").notNull().default("DRAFTED"),
-    /** The validated spec. Shape is owned by Phase 4's Zod schema, not by this table. */
+    /**
+     * The validated `MarketSpec`, and nothing else.
+     *
+     * `spec_hash` is keccak256 of this object's canonical JSON, and approval re-derives the
+     * hash from this column before signing. Any extra key stored here would change the hash
+     * and break that check — so advisory material goes in `warnings`, not in here.
+     */
     spec: jsonb("spec").$type<Record<string, unknown>>(),
     /** keccak256 of the canonical spec encoding. Must equal the on-chain `specHash`. */
     specHash: hash32("spec_hash"),
+    /**
+     * Advisory notes for the reviewer — the proposer's own ambiguity rating, injection
+     * signatures on the chosen source. Never blocks approval: a model's self-assessment is a
+     * hint to a human and worthless as a control. See `lib/proposer/validate.ts`.
+     */
+    warnings: jsonb("warnings")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     /** Raw model text, kept when validation failed so the rejection is auditable. */
     rawModelOutput: text("raw_model_output"),
     rejectionReason: text("rejection_reason"),
@@ -460,6 +490,8 @@ export const onchainIntents = pgTable(
     idempotencyKey: varchar("idempotency_key", { length: 200 }).notNull(),
     kind: intentKindEnum("kind").notNull(),
     status: intentStatusEnum("status").notNull().default("PENDING"),
+    /** Whose key signs. `EXTERNAL` intents are never signed here — see the enum comment. */
+    signer: intentSignerEnum("signer").notNull().default("SERVER"),
 
     fromAddress: address("from_address").notNull(),
     toAddress: address("to_address").notNull(),
@@ -470,7 +502,11 @@ export const onchainIntents = pgTable(
 
     nonce: integer("nonce"),
     gasLimit: bigint("gas_limit", { mode: "number" }),
-    /** The signed transaction, persisted BEFORE the first broadcast. The crux of ADR-027. */
+    /**
+     * The signed transaction, persisted BEFORE the first broadcast. The crux of ADR-027.
+     * Always null for an `EXTERNAL` signer — those bytes only ever exist in a browser wallet,
+     * which is exactly the property Phase 4's human gate is built on.
+     */
     signedRawTx: text("signed_raw_tx"),
     txHash: hash32("tx_hash"),
 
@@ -603,6 +639,8 @@ export const auditLog = pgTable(
 
 export type Market = typeof markets.$inferSelect;
 export type NewMarket = typeof markets.$inferInsert;
+export type Proposal = typeof proposals.$inferSelect;
+export type ProposalStatus = Proposal["status"];
 export type OnchainIntent = typeof onchainIntents.$inferSelect;
 export type ChainEvent = typeof chainEvents.$inferSelect;
 export type AuditEntry = typeof auditLog.$inferSelect;

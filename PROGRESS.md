@@ -8,8 +8,8 @@
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
 **Last updated:** 2026-09-29
-**Current status:** ✅ Phase 3 complete
-**Next phase:** **Phase 4 — Market proposer agent + human approval gate**
+**Current status:** ⚠️ Phase 4 complete with one known gap (see below)
+**Next phase:** **Phase 5 — Member agents + deterministic policy gate**
 
 ---
 
@@ -21,8 +21,8 @@
 | 1 | Smart contract — build, test, deploy, verify | ✅ Complete |
 | 2 | Data layer + chain client + idempotency engine | ✅ Complete |
 | 3 | News ingestion, dedup, 2-source confirmation | ✅ Complete |
-| 4 | Market proposer agent + human approval gate | ⬜ **NEXT** |
-| 5 | Member agents + deterministic policy gate | ⬜ Not started |
+| 4 | Market proposer agent + human approval gate | ⚠️ Complete, 1 gap |
+| 5 | Member agents + deterministic policy gate | ⬜ **NEXT** |
 | 6 | Resolution, challenge window, payout | ⬜ Not started |
 | 7 | Dashboard polish + trust page | ⬜ Not started |
 | 8 | Live end-to-end run + README + submission | ⬜ Not started |
@@ -59,7 +59,9 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | **`POST /api/tick` in production** | 200 in **14.9s**, 0 stage errors, 3 LLM calls | ✅ verified 2026-09-29 |
 | Pipeline state (live) | 255 articles · 106 publishers · 215 events · 3 `CONFIRMED` | ✅ real feeds |
 | Gemini free-tier key | project `agentforge-gemini-free`, no billing account | ✅ `preflight` 9/9 |
-| `createMarket` tx (human-approved) | _n/a_ | ⬜ Phase 4 |
+| **`/review` — the human gate** | **https://auspex-web-mu.vercel.app/review** | ✅ 4 real proposals queued |
+| Approval dry run (`pnpm --filter web verify:approval`) | 8/8 live checks, `eth_call createMarket` → market #4 | ✅ role, pause, replay guard, calldata |
+| `createMarket` tx (human-approved) | _pending the user's BridgeKey signature_ | ⚠️ gap #13 |
 | `placeBet` tx (agent, within caps) | _n/a_ | ⬜ Phase 5 |
 | Over-cap bet tx (**expected revert**) | _n/a_ | ⬜ Phase 5 |
 | Resolution tx (with evidence URL) | _n/a_ | ⬜ Phase 6 |
@@ -76,6 +78,113 @@ decodes their method names (`createMarket`, `placeBet`) because the source is ve
 
 ---
 
+## Phase 4 — what shipped
+
+### The shape of it
+
+```
+CONFIRMED event ──> proposer agent ──> Zod ──> deterministic rules ──> PENDING_REVIEW
+   (Phase 3)         (LLM, bounded)     │            │                      │
+                                        └─ fails ────┴──> SCHEMA_REJECTED   │  ═══ HUMAN ═══
+                                             (kept, shown, never queued)     │        │
+                                                                             │   BridgeKey
+   Discord + in-app feed <── indexer <── confirmed log <── createMarket tx <──┘   signature
+      (only after this)
+```
+
+**The key that creates a market is in a browser wallet and on no server AuspeX runs.** That is
+not a policy; it is why `lib/intents/engine.ts` needed a second signer kind (ADR-037).
+
+### Where authority was taken away from the model
+
+The proposer returns **seven constrained fields and not one free value**:
+
+| The model may say | It may **not** say | Who decides instead |
+|:--|:--|:--|
+| `resolutionSourceLabel` — one of the `SOURCE_n` we issued | a URL | `validate.ts` substitutes the real one |
+| `closeInHours`, bounded 2–72 | an absolute time | `closeTime = now + hours`, computed |
+| `category` from a fixed enum | free text | Phase 5's policy gate allowlists these |
+| `ambiguityRisk` | whether to proceed | a human, who sees the rating as a warning |
+
+A label we never issued is discarded — the check an API-side JSON schema structurally cannot make,
+because `resolutionSourceLabel` is a well-typed string there whatever it contains (ADR-035).
+
+### The deterministic gate, and what it refuses
+
+`lib/proposer/validate.ts` is pure — no I/O, no clock — and collects **every** failing rule rather
+than the first, because the rejection row is evidence:
+
+1. the resolution source label was one we issued
+2. the question ends in `?` and opens with a word that admits yes/no (`Should` is excluded — an
+   opinion has no fact at a source that settles it)
+3. neither question nor criteria contains an unresolvable term (`significantly`, `likely`, `major`, …)
+4. **the model's own output is scanned for injection signatures** — text that passed *through* a
+   model after being derived from a hostile headline is still hostile
+5. the horizon is inside this deployment's window
+6. the question names no year that ended before the market closes
+
+### What measurement changed — again, two defects found by reading real output
+
+Both were in the first live run's actual specs, not in anything a test would have predicted:
+
+| Found in live output | Fix |
+|:--|:--|
+| A spec's `resolutionSourceUrl` was `https://news.google.com/rss/articles/CBMiqAF…` — opaque on the explorer, expires, and not demonstrably the publisher's | Rule 7: the URL must resolve to the credited publisher, else degrade to `https://<domain>/` (ADR-040) |
+| `"Will the pandas arrive … by 12:00 PM EST on November 20, 2024?"` on a market closing the next day | Rule 6 above, plus the current instant is now stated in the prompt |
+
+**The first fix for the redirect was wrong, and the database said so.** Excluding redirect links
+outright starved the pipeline completely: **every** confirmed event's articles were Google News
+redirects. That is structural — confirmation needs two independent publishers, and only the
+aggregator carries one story from several of them, while the four direct publisher feeds each cover
+different stories and so make single-publisher events that stay `OBSERVED` by design. Measured:
+130 direct URLs, 69 redirects, and 4/4 confirmed events with **zero** usable direct links.
+
+### Live results
+
+Four real proposals in the queue, all drafted by `gemini-3.1-flash-lite` from confirmed events:
+
+```
+Will Zoo Atlanta issue an official press release confirming that Ping Ping and
+  Fu Shuang have been moved into their public exhibit space?            WORLD
+  → resolves at theguardian.com/us-news/2026/sep/27/giant-pandas-…  (direct link)
+Will the Department of Justice file an appeal against the court ruling
+  that blocks tying anti-terrorism grants to election changes?        POLITICS
+Will the Federal Reserve announce a further increase in the federal
+  funds rate at their next scheduled meeting?                          ECONOMY
+Will the Iranian government issue an official public statement accepting
+  the terms of the sanctions relief offer…                            POLITICS
+```
+
+`pnpm --filter web verify:approval` — **8/8 against the live chain, writing nothing**:
+
+```
+PASS  authority holds MARKET_CREATOR_ROLE   hasRole() == true
+PASS  contract is not paused                paused() == false
+PASS  authority can pay for gas             50 tMSTC
+PASS  stored hash matches the spec          0x9f2aeaca…8d6909
+PASS  specHash is unused on chain           free
+PASS  closeTime is still in the future      47.7 h left
+PASS  eth_call createMarket succeeds        would create market #4
+```
+
+That last line is the real check: the exact calldata, sent `from` the authority address, against the
+deployed contract at the current block. A revert there is the revert the wallet would produce —
+decoded now rather than in front of a judge.
+
+### Exit criteria
+
+| Criterion | Result |
+|:--|:--|
+| A confirmed event produces a schema-valid proposal | ✅ **4 live**, from real confirmed events |
+| A malformed model output is rejected, logged, and does **not** reach the queue | ✅ `draft.test.ts` covers invented label, Zod failure, missing field, prose-instead-of-JSON; `/review` renders the validator live over a constructed bad draft |
+| Nothing on-chain and no notification before human approval | ✅ a full tick with 4 queued proposals reported `notify: eligible 0, created 0`; the selector matches only on indexer-written columns (ADR-042) |
+| Approving signs via BridgeKey → a real `createMarket` tx | ⚠️ **gap #13** — needs the user's wallet; everything up to the signature verified 8/8 on chain |
+| The on-chain `specHash` matches the hash of the approved spec | ✅ derivable now: `specHashUsed(0x9f2aeaca…)` read live, and `prepareApproval` re-derives the hash from `proposals.spec` and refuses to sign on a mismatch |
+| Re-submitting the same approved spec is rejected by the contract | ✅ the guard is `specHashUsed` and Phase 1's smoke test proves it live; `verify:approval` reads it per proposal |
+| With `GEMINI_API_KEY` unset, a tick logs the failure, takes no action, does not crash | ✅ `draft.test.ts` asserts `UNAVAILABLE` with **zero budget spent and no row written** |
+| `pnpm -r build` / `lint` / `typecheck` / `test` | ✅ **268 tests** (57 contracts + 211 web), zero warnings |
+
+---
 ## Phase 3 — what shipped
 
 ### The blocker that was not a blocker
@@ -332,7 +441,8 @@ secrets file (the same one hardhat reads). No-op on Vercel; never overrides an e
 | §3 | Neon Postgres | Phase 2 | ✅ done |
 | §4 | Discord webhook | Phase 4 notifications | ✅ done |
 | §5 | BridgeKey install + fund + role grant | Phase 4 approvals | ✅ **done 2026-09-29** |
-| §8 | Secrets into Vercel + GitHub | Phase 3 in production | ✅ **done this session** |
+| §8 | Secrets into Vercel + GitHub | Phase 3 in production | ✅ done |
+| — | **Approve one proposal in `/review` with BridgeKey** | Phase 4 exit criterion, Phase 5 input | ⚠️ **open — gap #13** |
 
 **§1 was never a billing wall.** The 402 body says `Your prepayment credits are depleted` — that
 is *project-scoped* prepay exhaustion. A key in a project with no billing account attached uses
@@ -432,6 +542,32 @@ New in Phase 3:
 - **ADR-034 — prefer the model that answers, not the newest.** `3.5-flash-lite` timed out twice
   and 503'd once; `3.1-flash-lite` answered every time.
 
+New in Phase 4:
+
+- **ADR-035 — the proposer picks a resolution source by label; it never types a URL.** The one spec
+  field that both goes on chain and points somewhere. A model that can type a destination can type
+  one that is expired or hostile; one that picks from a menu cannot. Same mechanism as
+  `adjudicate.ts`'s `pairLabel`, where the consequence is permanent instead of cosmetic.
+- **ADR-036 — the proposer uses the FAST chain, not SMART.** A model that does not answer drafts
+  nothing, however capable. The task is narrow by construction.
+- **ADR-037 — `onchain_intents.signer` is `SERVER | EXTERNAL`; the worker never signs an EXTERNAL
+  intent.** A column, not an inference from `from_address`, because Phase 5's agent wallets *are*
+  ours. Excluded in the claim query, not claimed-and-skipped, or a ten-minute wait for a human
+  would exhaust `MAX_ATTEMPTS`.
+- **ADR-038 — the reported tx hash is verified against the node, never believed.** `from`, `to` and
+  `data` must all match the authorised intent. Otherwise anyone reaching the server action could
+  mark a proposal approved by pasting a hash.
+- **ADR-039 — rejection is authenticated by a signature; approval is authenticated by the chain.**
+  An approval proves itself — only the authority's key produces a tx the contract accepts. A
+  rejection leaves no on-chain trace, so it carries an EIP-191 signature over the proposal's own
+  identity.
+- **ADR-040 — an aggregator redirect degrades to the publisher's front page.** The obvious fix
+  (exclude them) starved the pipeline completely; measurement, not reasoning, caught that.
+- **ADR-041 — the model's self-assessed risk is shown to the human, never used to filter.** A model
+  that wanted approval would rate itself LOW.
+- **ADR-042 — notifications select on indexer-written columns, so they cannot fire early.** A
+  selector that cannot match is stronger than a check that can be reordered away.
+
 ---
 
 ## Known gaps
@@ -485,41 +621,95 @@ damage. A `pair_adjudications` table would fix it properly; deferred as it needs
 
 **12. No favicon.** `/favicon.ico` 404s in the browser console. Cosmetic, one file, not done.
 
+**13. No human-approved `createMarket` tx yet — it needs the user's wallet.** This is the one Phase 4
+exit criterion not met, and it is unmeetable from here **by design**: the signing key is in
+BridgeKey, in a browser, and nothing in this repository can produce that signature. That is the
+property the whole phase exists to establish, so it is a gap and not a defect.
+
+Everything up to the signature is verified against the live chain — `pnpm --filter web
+verify:approval` returns 8/8, including an `eth_call` of the exact calldata from the authority
+address that returns "would create market #4".
+
+**To close it: open `/review`, connect BridgeKey (`0xA9F6…1fF1`), click "Approve & sign
+createMarket".** The page then verifies the hash against the node, settles the receipt, indexes the
+log and fires the Discord notification in one action. Record the tx hash in the artifacts table
+above. The deployer also holds `MARKET_CREATOR_ROLE`, so a market *could* be created from the
+server — but doing that would defeat the entire phase, so it is deliberately not offered anywhere in
+the code.
+
+**14. `/review` ships wagmi to the browser; `/` and `/markets` do not.** The providers are mounted
+inside the review page's own tree rather than in the root layout, so the two pages a judge lands on
+first stay server-only. Worth keeping if a wallet is ever needed elsewhere.
+
+**15. Proposal quality is bounded by a small model on a free tier.** `gemini-3.1-flash-lite` drafts
+specs that are structurally sound and sometimes loose — one queued market's criteria says "check Zoo
+Atlanta's official website" while its resolution source is the Guardian. That inconsistency is
+exactly what the human checklist is for, and it is left visible rather than patched, because the
+reviewer catching it is the demo. The deterministic rules catch what is *checkable*; judgement is
+the human's job.
+
 ## What the next session needs to know
 
-**Start Phase 4: market proposer agent + human approval gate.** Read `docs/BUILD_PLAN.md` Phase 4.
-There are **3 `CONFIRMED` events sitting in the database right now**, which is exactly the input
-Phase 4 consumes. `proposals` is migrated and empty.
+**Start Phase 5: member agents + deterministic policy gate.** Read `docs/BUILD_PLAN.md` Phase 5.
+It is the phase that proves "AI proposes, deterministic code and the chain decide", and its headline
+artifact is a **deliberately over-cap bet that reverts on chain**.
 
-**Everything Phase 3 built is available and tested. Do not rebuild any of it.**
+**First, though: gap #13.** Ask the user to approve a proposal in `/review` so Phase 4 has its real
+`createMarket` tx hash, and record it in the artifacts table. Four proposals are queued and
+`verify:approval` is 8/8 — it is one click, and Phase 5 wants a market that came through the gate to
+bet on. Everything else in Phase 4 is done.
+
+**Everything Phases 3–4 built is available and tested. Do not rebuild any of it.**
 
 | You need | Use | Notes |
 |:--|:--|:--|
-| Confirmed events to propose on | `events` where `status = 'CONFIRMED'` | 3 waiting |
-| Calling a model safely | `callJson()` from `@/lib/llm/client` | never throws; returns a union |
+| A market that came through the human gate | `markets` where `proposal_id is not null` | needs gap #13 closed first |
+| Calling a model safely | `callJson()` from `@/lib/llm/client` | never throws; returns a union; `raw` is set on `SCHEMA_REJECTED` |
 | Delimiting untrusted text | `buildUserMessage()` from `@/lib/llm/prompt` | **mandatory** — hard rule #4 |
-| A per-tick call budget | `new LlmBudget(n)` | pass it in; never a module global |
-| Injection flags for an item | `raw_items.injection_flags` | already populated |
+| A per-stage call budget | `new LlmBudget(n)` | **two exist now** — see `tick.ts`; give Phase 5 its own |
 | Adding a stage to the tick | `lib/pipeline/tick.ts` → `stage()` | wrap it, so a failure is recorded not thrown |
 | Writing to chain | `createIntent()` + `runIntentWorker()` | nothing else may broadcast |
-| Spec hashing | `computeSpecHash()` from `@/lib/chain/spec` | Phase 4 needs this |
+| Signing with a key we hold | `createIntent({ signer: "SERVER" })` | the default; agent wallets are SERVER |
+| Deciding what a worker may do to an intent | `plannedSteps()` — pure, tested | do not re-derive this inline |
+| Decoding a revert for the UI | `describeRevert()` from `@/lib/chain/revert` | Phase 5's headline demo depends on it |
 
-**The Phase 4 proposer is the same shape as `lib/news/adjudicate.ts`.** Read it first — it is the
-worked example of the whole pattern: trusted system instruction, untrusted text sealed in a
-user message, `ResponseSchema` at the API, Zod re-validation, and **a check that the model's
-output refers to something we actually sent** (it discards any `pairLabel` we did not issue).
-That last check is the one the API-side schema cannot do, and Phase 4's `SCHEMA_REJECTED` rows
-are supposed to be exactly this.
+**The Phase 5 agent is the same shape as `lib/proposer/`.** Read `draft.ts` and `validate.ts`
+together — they are the worked example of the pattern Phase 5 repeats with money instead of text:
+
+- the model fills **constrained fields only**, and never a value that is used directly
+- a **pure** validator with no I/O and no clock turns those fields into the real decision
+- the three-outcome split matters: `PROPOSED` / `REJECTED` (terminal, row written) /
+  `UNAVAILABLE` (**no row**, retried). Collapsing the last two writes a terminal row against a
+  unique constraint on the strength of a 429 — for Phase 5 that means an agent that can never bet
+  on a market again because one call rate-limited
+- the model's self-assessment is shown, never used as a gate (ADR-041). `confidence` in Phase 5 is
+  the same trap: it is the agent's own number, so the *threshold* must be policy, not the model's
+
+**`policyGate.ts` must be pure.** No network, no DB, **no clock read inside it** — time and balances
+are injected. `validate.ts` is the precedent: it takes `now` as an argument, which is why its 20
+tests need no infrastructure and pin exact output.
 
 **Commands added this phase:**
 
 ```bash
-pnpm --filter web tick              # one full tick, verbose report
-pnpm --filter web tick --no-index   # news stages only (faster to iterate)
-pnpm --filter web calibrate         # re-read the similarity distribution from live feeds
+pnpm --filter web verify:approval   # 8 live checks + eth_call of the real calldata. Writes nothing.
+pnpm --filter web tick              # now also runs propose → intents → index → notify
 ```
 
 **Things that will cost you an hour if you rediscover them:**
+
+- **Read the real output before trusting the pipeline.** Both Phase 4 defects — a Google News
+  redirect on a spec, and a 2024 deadline on a market closing tomorrow — were invisible to the
+  tests and obvious in one `SELECT`. Print what the model actually produced.
+- **`eth_call` from the acting address is the cheapest possible proof.** `verify:approval` catches a
+  revoked role, a paused contract, a used spec hash and a wrong calldata encoding without signing
+  anything. Phase 5 should simulate every bet the same way — except the one it *wants* to revert.
+- **`onchain_intents` now has a `signer` column, and `claimIntent` filters on it.** If you add a new
+  intent kind, decide which it is. `SERVER` is the default and is right for agent wallets.
+- **The tick has two LLM budgets, not one.** `report.llm.callsMade` sums them. Adding a third stage
+  means a third budget, or clustering will starve it.
+- **Server actions are public HTTP endpoints.** `app/review/actions.ts` re-checks authority on the
+  server in every function; the page saying who is connected is a claim, not a fact.
 
 - **Read the whole error body before believing a status code.** Two sessions recorded Gemini as
   needing a credit card on the strength of `402`. The body said *prepayment credits depleted* —

@@ -664,3 +664,201 @@ demo day.
 
 **Related:** an earlier version logged `durationMs: 0` for failed calls, which made a 35-second
 timeout look free in the tick report and delayed finding this. Failures are now timed.
+
+---
+
+### ADR-035 — The proposer picks a resolution source by label; it never types a URL
+
+**Decided:** the market proposer's schema has no URL field. It returns a `resolutionSourceLabel`
+that must be one of the `SOURCE_n` labels we issued for that event's own articles, and
+deterministic code substitutes the real URL. A label we did not issue is discarded and the draft
+becomes `SCHEMA_REJECTED`. The same restriction applies to time: the model returns
+`closeInHours`, bounded, and deterministic code computes `closeTime` and `resolveDeadline`.
+
+**Why:** this is the one field of the spec that is written to the chain *and* points somewhere. A
+model that can type a destination can type one that does not exist, one that has expired, or one
+that is hostile — and no JSON schema can tell the difference, because at the API `resolutionSourceUrl`
+is a well-typed string whatever it contains. A model that can only pick from a menu can do none of
+those things. It is the same mechanism `lib/news/adjudicate.ts` uses for `pairLabel`, applied where
+the consequence is permanent rather than cosmetic.
+
+It also makes hard rule #3 mechanical rather than aspirational: the model proposes *which of our
+sources*, and deterministic code decides *what that means*.
+
+**Cost:** the model cannot nominate a resolution source outside the event's own coverage — the ECB's
+own website cannot be chosen for an ECB market unless a feed supplied it. That is a genuine loss of
+specificity, accepted because the alternative is trusting a generated URL.
+
+**Evidence:** `lib/proposer/draft.test.ts` asserts a URL placed in the label field is refused, and
+that no `https://` string reaches the model at all.
+
+---
+
+### ADR-036 — The proposer uses the FAST model chain, not the SMART one
+
+**Decided:** `draftProposal` calls `fastModelChain()` — `gemini-3.1-flash-lite` first.
+`GEMINI_MODELS_SMART` stays defined for Phase 5 but drafts nothing.
+
+**Why:** ADR-034 measured that `3.8-flash` returns 503 "high demand" and `3.5-flash-lite` times out,
+while `3.1-flash-lite` answered every call. A model that does not answer drafts nothing, however
+capable it would have been — and on the free tier the nominally-smarter chain is the one that does
+not answer. The task is also narrow by construction: fill seven constrained fields from five
+headlines, with every judgement call already removed into `schema.ts` and `validate.ts`.
+
+**Cost:** specs are drafted by a small model, and the quality shows — see the two defects under
+"what measurement changed" in `PROGRESS.md`. Both were fixed with deterministic checks rather than a
+bigger model, which is the correct direction anyway: a check holds when the model regresses.
+
+**Evidence:** live ticks. `3.1-flash-lite` drafted in 2.3s, 3.3s and 6.1s. One tick saw it fail and
+`3.5-flash-lite` answer in 1.4s, so the fallback is load-bearing and not decorative.
+
+---
+
+### ADR-037 — `OnChainIntent` gains a signer kind; the worker never signs an EXTERNAL intent
+
+**Decided:** `onchain_intents.signer` is `SERVER | EXTERNAL`. `claimIntent` excludes
+`EXTERNAL + PENDING` rows entirely, and `plannedSteps` — a pure function — decides what a pass may
+do. An `EXTERNAL` intent is signed by a browser wallet and only *settled* here.
+
+**Why:** the human gate means the key that creates a market is on no server we run, so the intent
+engine has to hold a row it cannot advance. Two ways of getting that wrong, both expensive:
+
+- **signing it** is impossible, and `getDeployerWallet()` would either throw or, worse, succeed and
+  create the market from the deployer — destroying the only claim the phase makes
+- **rebroadcasting it** is a plain crash: `signed_raw_tx` is null, because those bytes only ever
+  existed in the wallet
+
+A column rather than an inference from `from_address`, because Phase 5 adds agent wallets whose keys
+the server *does* hold, so "not the deployer" stops meaning "not ours".
+
+Exclusion in the claim query rather than claim-then-skip: claiming burns an attempt and pushes
+`next_attempt_at` forward, so an intent waiting ten minutes for a human would exhaust
+`MAX_ATTEMPTS` before anyone clicked approve.
+
+**Cost:** one more state to reason about, and ADR-027's "sign, persist, then broadcast" invariant now
+has a second form — for `EXTERNAL`, the wallet fixes the hash and the server verifies it.
+
+**Evidence:** `lib/intents/engine.test.ts` covers the full 6-status × 2-signer table, plus two
+invariants: no broadcast is ever planned without bytes, and no signature is ever planned for a key
+this process does not hold.
+
+---
+
+### ADR-038 — The reported transaction hash is verified against the node, never believed
+
+**Decided:** `attachExternalBroadcast` accepts a hash only after `eth_getTransaction` confirms a
+transaction exists with it *and* that its `from`, `to` and `data` match the authorised intent.
+
+**Why:** the caller is a browser saying "I sent this", and a browser can say anything. Without the
+check, anyone who could reach the server action could mark a proposal `APPROVED` by pasting an
+unrelated hash, and the human gate would be decorative. `data` is the load-bearing comparison: it is
+the calldata the server encoded from the stored spec, `specHash` included, so a wallet that signed a
+different question produces different calldata and is refused.
+
+The reverse direction is covered too — `prepareApproval` re-derives `specHash` from
+`proposals.spec` and refuses to proceed if the stored hash disagrees, so a row edited after the
+proposer wrote it cannot be signed.
+
+**Cost:** up to five short polls (~6s) after the wallet returns, because a node can legitimately not
+know a transaction for a second or two. Bounded, and it gives up rather than guessing.
+
+---
+
+### ADR-039 — Rejection is authenticated by a signature; approval is authenticated by the chain
+
+**Decided:** approving needs no server-side authentication beyond a courtesy check — the contract's
+`MARKET_CREATOR_ROLE` refuses anyone else. Rejecting requires an EIP-191 signature over a message
+naming the proposal, its spec hash, the reason and a timestamp, verified server-side.
+
+**Why:** the two are asymmetric. An approval proves itself, because only the authority's key can
+produce a transaction the contract accepts. A rejection leaves **no on-chain trace**, so "I am the
+authority" would be an unverified claim from a page, and anyone who could reach the server action
+could clear the review queue. Hard rule #7 makes the rejections the evidence that the gate is real;
+evidence anyone can forge is not evidence.
+
+The message text is built on the server and sent to the browser to be signed, so the string the
+wallet displays is the string the server verifies. Building it client-side would let the two drift,
+and a signature over text nobody checked authenticates nothing.
+
+**Cost:** rejecting costs a wallet prompt. The message says plainly that it moves no funds and sends
+no transaction.
+
+**Evidence:** `lib/approval/authority.test.ts` — wrong signer, replay against another proposal,
+reuse after the reason was edited, expiry, a future timestamp, and a malformed signature all fail.
+
+---
+
+### ADR-040 — An aggregator redirect degrades to the publisher's front page
+
+**Decided:** a resolution source URL is used verbatim when its host resolves to the publisher we
+credited. Otherwise it becomes `https://<publisher-domain>/`. An article from a publisher not on the
+independence allowlist cannot be a resolution source at all.
+
+**Why:** the first live proposer run put
+`https://news.google.com/rss/articles/CBMiqAFBVV95cUxQUkp6…` onto a spec. Phase 3 gets the
+*publisher* right — it reads Google News's `<source url>` element rather than trusting the link — but
+`raw_items.url` is still the redirect, and a value that is fine for "click through to read" is not
+fine for "this is where the outcome is settled": it is opaque on the explorer, it expires, and it
+does not demonstrably belong to the publisher named beside it.
+
+**The obvious fix was wrong, and measurement said so.** The first attempt excluded redirect links.
+Against the live database that starved the pipeline completely: **every** confirmed event's articles
+were Google News redirects. That is structural, not luck — confirmation requires two independent
+publishers, and only the aggregator carries one story from several of them, while the four direct
+publisher feeds each cover different stories and so produce single-publisher events that stay
+`OBSERVED` by design.
+
+The front page is real, publisher-owned and stable, which the redirect is not. It is coherent as a
+spec because "where to look" and "what to look for" are separate fields — `resolutionCriteria`
+carries the exact fact. And it is never fabricated: the domain comes from our own allowlist.
+
+**Cost:** a weaker resolution source on most markets. It is **shown to the reviewer as a warning**
+before approval and marked `redirect link` on the article it came from, rather than quietly
+substituted.
+
+**Revisit if:** we ever resolve Google News redirects at ingest. That needs a network round trip per
+article and a decoder for an undocumented format, which is why it is not in a 24-hour build.
+
+---
+
+### ADR-041 — The model's self-assessed risk is shown to the human, never used to filter
+
+**Decided:** `ambiguityRisk` is required in the schema and rendered as a warning in `/review`. It
+never causes a rejection.
+
+**Why:** a model that wanted its market approved would rate itself `LOW`. Treating a self-assessment
+as a gate is trusting the thing being gated. It is genuinely useful as a hint to a human — "the
+meeting date could move" is worth reading — and worthless as a control, and the difference matters
+enough to state in code.
+
+Everything that *does* reject is a property of the text, checkable without the model's cooperation:
+the label was issued or it was not, the question ends in "?" or it does not, the words are in the
+unresolvable list or they are not.
+
+**Related:** the model's own output is scanned with the same injection signatures the feed is
+scanned with. Text that has passed *through* a model after being derived from a hostile headline is
+still hostile, and `lib/proposer/validate.test.ts` asserts an echoed instruction is refused.
+
+---
+
+### ADR-042 — Notifications select on indexed columns, so they cannot fire early
+
+**Decided:** `runNotificationPass` announces a market only when `markets.onchain_id` and
+`markets.created_tx_hash` are both non-null and it has a `proposal_id`. Those columns are written
+only by the indexer, only from a confirmed `MarketCreated` log.
+
+**Why:** the exit criterion is "no notification fires before human approval", and the robust way to
+satisfy it is to make the *selector* incapable of matching early rather than to add a check that
+could be reordered away. An intent saying `BROADCAST` describes a transaction that may still be in
+a mempool and may yet revert; a `created_tx_hash` describes one the chain has confirmed. The notify
+stage also runs last in the tick, after the indexer, so within one tick the ordering is structural
+as well.
+
+`proposal_id IS NOT NULL` keeps the Phase 1 smoke-test markets and the Phase 2 crash-test market out
+of the feed: they are real transactions and they are not products.
+
+**Cost:** a notification lags market creation by up to one indexer pass. For a 3-second-block chain
+that is seconds, and the approval path runs the indexer inline so the demo does not wait.
+
+**Evidence:** four proposals sat `PENDING_REVIEW` through a live tick with
+`notify: eligible 0, created 0` — nothing to announce, because nothing was on chain.

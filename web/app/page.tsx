@@ -11,6 +11,7 @@ import {
   type EventRow,
   type PipelineCounts,
 } from "@/lib/news/dashboard";
+import { queueCounts, type QueueCounts } from "@/lib/proposer/queue";
 import { BORDERLINE_THRESHOLD, SAME_STORY_THRESHOLD } from "@/lib/news/similarity";
 import { REQUIRED_INDEPENDENT_SOURCES } from "@/lib/news/confirm";
 import { scanForInjection } from "@/lib/news/injection";
@@ -25,8 +26,8 @@ const PHASES = [
   { n: 0, name: "Foundations & rails", state: "done" },
   { n: 1, name: "Smart contract — deploy & verify", state: "done" },
   { n: 2, name: "Data layer & idempotency engine", state: "done" },
-  { n: 3, name: "News ingestion & 2-source confirmation", state: "current" },
-  { n: 4, name: "Proposer agent & human approval gate", state: "todo" },
+  { n: 3, name: "News ingestion & 2-source confirmation", state: "done" },
+  { n: 4, name: "Proposer agent & human approval gate", state: "current" },
   { n: 5, name: "Member agents & policy gate", state: "todo" },
   { n: 6, name: "Resolution, challenge window, payout", state: "todo" },
   { n: 7, name: "Dashboard & trust surface", state: "todo" },
@@ -38,6 +39,7 @@ type PipelineData = {
   events: EventRow[];
   flagged: Awaited<ReturnType<typeof flaggedItems>>;
   tick: Awaited<ReturnType<typeof lastTick>>;
+  queue: QueueCounts;
 };
 
 /**
@@ -52,13 +54,14 @@ async function loadPipeline(): Promise<{ data: PipelineData | null; error: strin
     return { data: null, error: "DATABASE_URL is not configured on this deployment." };
   }
   try {
-    const [counts, events, flagged, tick] = await Promise.all([
+    const [counts, events, flagged, tick, queue] = await Promise.all([
       pipelineCounts(),
       recentEventsWithArticles(14),
       flaggedItems(6),
       lastTick(),
+      queueCounts(),
     ]);
-    return { data: { counts, events, flagged, tick }, error: null };
+    return { data: { counts, events, flagged, tick, queue }, error: null };
   } catch (error) {
     return { data: null, error: error instanceof Error ? error.message : String(error) };
   }
@@ -111,6 +114,18 @@ export default async function Home() {
           </p>
 
           <nav className="mt-6 flex flex-wrap gap-2">
+            <Link
+              href="/review"
+              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
+            >
+              Human review
+              {pipeline.data !== null && pipeline.data.queue.pendingReview > 0 && (
+                <span className="ml-1.5 text-warn-500">
+                  {pipeline.data.queue.pendingReview}
+                </span>
+              )}{" "}
+              →
+            </Link>
             <Link
               href="/markets"
               className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
@@ -188,6 +203,60 @@ export default async function Home() {
             </div>
           )}
         </section>
+
+        {/* ---- Phase 4: the human gate. The counts are the claim, and they are live. ---- */}
+        {pipeline.data !== null && (
+          <section className="mb-10">
+            <SectionLabel>Human authority gate</SectionLabel>
+            <div className="rounded-lg border border-ink-700 bg-ink-900">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
+                <span
+                  className={`size-2 shrink-0 rounded-full ${
+                    pipeline.data.queue.pendingReview > 0 ? "live-dot bg-warn-500" : "bg-ink-600"
+                  }`}
+                />
+                <span className="font-mono text-xs text-ink-300">
+                  confirm → draft → <span className="text-warn-500">human</span> → chain
+                </span>
+                <Link
+                  href="/review"
+                  className="ml-auto rounded border border-signal-500/40 bg-signal-500/10 px-3 py-1.5 font-mono text-xs text-signal-500 transition-colors hover:border-signal-500/70 hover:bg-signal-500/20"
+                >
+                  Open the review queue →
+                </Link>
+              </div>
+
+              <dl className="grid grid-cols-2 divide-ink-800 sm:grid-cols-4 sm:divide-x">
+                <Stat label="Awaiting a human" value={String(pipeline.data.queue.pendingReview)}>
+                  <span className={pipeline.data.queue.pendingReview > 0 ? "text-warn-500" : "text-ink-400"}>
+                    drafted, not yet signed
+                  </span>
+                </Stat>
+                <Stat label="Approved" value={String(pipeline.data.queue.approved)}>
+                  <span className="text-ok-500">signed by the authority wallet</span>
+                </Stat>
+                <Stat label="Refused" value={String(pipeline.data.queue.rejected + pipeline.data.queue.schemaRejected)}>
+                  <span className="text-ink-400">
+                    {pipeline.data.queue.schemaRejected} by code, {pipeline.data.queue.rejected} by a human
+                  </span>
+                </Stat>
+                <Stat label="Events queued" value={String(pipeline.data.queue.awaitingProposal)}>
+                  <span className="text-ink-400">confirmed, not yet drafted</span>
+                </Stat>
+              </dl>
+
+              <p className="border-t border-ink-800 px-4 py-3 text-xs leading-relaxed text-ink-400">
+                An AI agent drafts every specification; a market exists only once a person signs{" "}
+                <span className="font-mono text-ink-300">createMarket</span> with a key held in a
+                browser wallet and{" "}
+                <span className="text-ink-300">on no server AuspeX runs</span>. Between those two
+                steps nothing is on chain and no member is notified — the proposer has no chain
+                client, and the notifier selects only on columns the indexer writes from confirmed
+                logs.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Events with their source articles — the thing a judge can actually check. */}
         {pipeline.data !== null && pipeline.data.events.length > 0 && (

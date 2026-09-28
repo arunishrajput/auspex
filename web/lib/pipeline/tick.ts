@@ -21,22 +21,31 @@ import { runIndexer, type IndexReport } from "../indexer/run";
 import { fetchAllFeeds, FEEDS } from "../news/feeds";
 import { ingestFeedResults, seedSources, type IngestReport } from "../news/ingest";
 import { runClusteringPass, type ClusterReport } from "../news/events";
+import { runProposerPass, type ProposeReport } from "../proposer/run";
+import { runNotificationPass, type NotifyReport } from "../notify/discord";
 import { LlmBudget, type LlmCallLog } from "../llm/client";
 import { isConfigured } from "../llm/gemini";
+import { runIntentWorker, type ProcessResult } from "../intents/engine";
 
 /**
- * LLM calls one tick may make, across every stage.
+ * LLM calls one tick may make, per stage.
  *
- * Four is deliberately small. Phase 3 spends them only on borderline cluster pairs, eight
- * pairs at a time, so the bound is 32 adjudications per tick — comfortably more than a
- * 48-hour window of news produces, while still being a number that cannot run away if the
- * similarity measure ever starts flagging everything as borderline.
+ * **Two budgets, not one shared allowance.** Clustering runs first, and with one pool a tick
+ * whose feeds happened to produce a lot of borderline pairs would spend everything before the
+ * proposer was asked anything — so the human review queue would starve exactly on the busy
+ * days when it has the most to look at. Separate budgets make each stage's ceiling independent
+ * of how the other one's day went.
+ *
+ * Four for clustering: eight pairs per call, so 32 adjudications per tick. Two for the
+ * proposer: one draft plus one fallback model, and a tick only ever considers a couple of
+ * events, because the queue is drained by a human and not by us.
  */
-const DEFAULT_LLM_CALLS_PER_TICK = 4;
+const DEFAULT_CLUSTER_CALLS = 4;
+const DEFAULT_PROPOSER_CALLS = 2;
 
-function llmBudgetSize(): number {
-  const raw = Number(optionalEnv("LLM_CALLS_PER_TICK") ?? DEFAULT_LLM_CALLS_PER_TICK);
-  return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : DEFAULT_LLM_CALLS_PER_TICK;
+function budgetSize(key: string, fallback: number): number {
+  const raw = Number(optionalEnv(key) ?? fallback);
+  return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : fallback;
 }
 
 export type StageError = { stage: string; error: string };
@@ -53,7 +62,11 @@ export type TickReport = {
   sourcesSeeded: number | null;
   ingest: IngestReport | null;
   cluster: ClusterReport | null;
+  propose: ProposeReport | null;
   index: IndexReport | null;
+  /** Externally-signed intents settled this tick. Server-signed ones have none to settle yet. */
+  intents: ProcessResult[] | null;
+  notify: NotifyReport | null;
   /** Stages that failed. An empty array means everything ran. */
   errors: StageError[];
 };
@@ -85,7 +98,10 @@ export async function runTick(options: TickOptions = {}): Promise<TickReport> {
   const startedAt = new Date();
   const now = options.now ?? startedAt;
   const errors: StageError[] = [];
-  const budget = new LlmBudget(llmBudgetSize());
+  const clusterBudget = new LlmBudget(budgetSize("LLM_CALLS_PER_TICK", DEFAULT_CLUSTER_CALLS));
+  const proposerBudget = new LlmBudget(
+    budgetSize("LLM_PROPOSER_CALLS_PER_TICK", DEFAULT_PROPOSER_CALLS),
+  );
 
   // 1 — the publisher allowlist. Idempotent, and cheap enough to reassert every tick rather
   //     than adding a migration step that can be forgotten.
@@ -97,28 +113,49 @@ export async function runTick(options: TickOptions = {}): Promise<TickReport> {
     return ingestFeedResults(results);
   });
 
-  // 3 — cluster and confirm. The only stage that may call a model, and it is budget-bounded.
-  const cluster = await stage("cluster", errors, () => runClusteringPass(now, budget));
+  // 3 — cluster and confirm. Budget-bounded; an unavailable model means "do not merge".
+  const cluster = await stage("cluster", errors, () => runClusteringPass(now, clusterBudget));
 
-  // 4 — chain indexing. Last because it is the stage whose inputs nothing else depends on.
+  // 4 — draft market proposals from confirmed events. Writes to the human review queue and
+  //     **nowhere else** — no transaction, no notification, no market. That is the phase's
+  //     central claim, and it is true here by omission: this stage has no chain client.
+  const propose = await stage("propose", errors, () =>
+    runProposerPass(proposerBudget, { now }),
+  );
+
+  // 5 — settle any transaction a human signed since the last tick. The worker cannot sign an
+  //     EXTERNAL intent, so all it does here is poll a receipt and record the outcome.
+  const intents = await stage("intents", errors, () => runIntentWorker({ limit: 3 }));
+
+  // 6 — chain indexing, which is what turns a confirmed `MarketCreated` log into a market row.
   const index =
     options.skipIndex === true
       ? null
       : await stage("index", errors, () => runIndexer());
+
+  // 7 — notify, strictly last. It selects on indexed columns, so it cannot fire for a market
+  //     that is not yet on chain even if every step above it went wrong.
+  const notify =
+    options.skipIndex === true
+      ? null
+      : await stage("notify", errors, () => runNotificationPass());
 
   const report: TickReport = {
     startedAt: startedAt.toISOString(),
     durationMs: Date.now() - startedAt.getTime(),
     llm: {
       configured: isConfigured(),
-      budget: budget.maxCalls,
-      callsMade: budget.spent,
-      calls: budget.entries(),
+      budget: clusterBudget.maxCalls + proposerBudget.maxCalls,
+      callsMade: clusterBudget.spent + proposerBudget.spent,
+      calls: [...clusterBudget.entries(), ...proposerBudget.entries()],
     },
     sourcesSeeded,
     ingest,
     cluster,
+    propose,
     index,
+    intents,
+    notify,
     errors,
   };
 
@@ -175,8 +212,33 @@ function summarise(report: TickReport): string {
     }
   }
 
+  if (report.propose !== null) {
+    parts.push(
+      `proposer: ${report.propose.proposed} queued for review, ` +
+        `${report.propose.schemaRejected} schema-rejected, ` +
+        `${report.propose.skippedNoSource} without a known publisher, ` +
+        `of ${report.propose.pending} waiting`,
+    );
+    if (report.propose.haltedBecause !== null) {
+      parts.push(`proposer halted: ${report.propose.haltedBecause}`);
+    }
+  }
+
+  if (report.intents !== null && report.intents.length > 0) {
+    parts.push(
+      `intents: ${report.intents.map((i) => `${i.status} (${i.note})`).join("; ")}`,
+    );
+  }
+
   if (report.index !== null) {
     parts.push(`indexed ${report.index.logsInserted} new logs`);
+  }
+
+  if (report.notify !== null && report.notify.created > 0) {
+    parts.push(
+      `notified ${report.notify.created} market(s): ` +
+        `${report.notify.sent} sent, ${report.notify.failed} failed, ${report.notify.skipped} skipped`,
+    );
   }
 
   if (report.errors.length > 0) {

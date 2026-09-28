@@ -59,10 +59,39 @@ async function main(): Promise<void> {
   }
   console.log();
 
+  if (report.propose !== null) {
+    const propose = report.propose;
+    console.log("Proposer  (writes to the human review queue and nowhere else)");
+    console.log(`  events awaiting   ${propose.pending}`);
+    console.log(`  attempted         ${propose.attempted}`);
+    console.log(`  queued for review ${propose.proposed}`);
+    console.log(`  schema-rejected   ${propose.schemaRejected}   <- kept as evidence, not retried`);
+    console.log(`  no model answer   ${propose.unavailable}   <- no row written, retried next tick`);
+    console.log(`  no known source   ${propose.skippedNoSource}   <- no allowlisted publisher to resolve at`);
+    if (propose.haltedBecause !== null) console.log(`  halted            ${propose.haltedBecause}`);
+    console.log();
+  }
+
+  if (report.intents !== null && report.intents.length > 0) {
+    console.log("Intents");
+    for (const result of report.intents) {
+      console.log(`  ${result.status.padEnd(10)} ${result.txHash ?? "-"}  ${result.note}`);
+    }
+    console.log();
+  }
+
   if (report.index !== null) {
     console.log("Chain index");
     console.log(`  blocks ${report.index.fromBlock}–${report.index.toBlock} of ${report.index.headBlock}`);
     console.log(`  logs   ${report.index.logsFetched} fetched, ${report.index.logsInserted} new`);
+    console.log();
+  }
+
+  if (report.notify !== null) {
+    const notify = report.notify;
+    console.log("Notify  (only for markets the indexer has already seen on chain)");
+    console.log(`  eligible ${notify.eligible}  created ${notify.created}  sent ${notify.sent}` +
+      `  failed ${notify.failed}  skipped ${notify.skipped}`);
     console.log();
   }
 

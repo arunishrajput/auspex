@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, hasDatabase } from "./db/client";
 import { chainEvents, markets as marketsTable } from "./db/schema";
 import { readAllMarkets, type OnChainMarket } from "./chain/auspex";
@@ -27,8 +27,22 @@ export type MarketView = OnChainMarket & {
   projectionDrift: string | null;
 };
 
+/**
+ * A market a human approved whose transaction has not been indexed yet.
+ *
+ * Deliberately a separate type from `MarketView`: there is no on-chain id, no pool and no
+ * state to read, because the contract has never heard of it. Rendering it as a market with
+ * empty fields would be claiming something the chain has not said.
+ */
+export type PendingMarket = {
+  specHash: string;
+  question: string;
+};
+
 export type MarketsPayload = {
   markets: MarketView[];
+  /** Approved and signed, not yet confirmed on chain. Shown apart, labelled off-chain. */
+  pending: PendingMarket[];
   /** Real error text when the chain could not be read. The page shows it rather than nothing. */
   chainError: string | null;
   /** Real error text when the database could not be read. Markets still render without it. */
@@ -81,6 +95,22 @@ async function readIndexedExtras(ids: number[]): Promise<Map<number, IndexedExtr
 }
 
 /**
+ * Markets approved off-chain whose `MarketCreated` log has not been indexed.
+ *
+ * `onchain_id IS NULL` is the whole condition: the indexer sets it when it adopts the row by
+ * spec hash, so a null id means "the chain has not confirmed this yet" and nothing else.
+ */
+async function readPendingMarkets(): Promise<PendingMarket[]> {
+  const rows = await db
+    .select({ specHash: marketsTable.specHash, question: marketsTable.question })
+    .from(marketsTable)
+    .where(isNull(marketsTable.onchainId))
+    .orderBy(desc(marketsTable.createdAt))
+    .limit(10);
+  return rows;
+}
+
+/**
  * Reads every market from the chain, then annotates with indexed detail.
  *
  * Never throws: a chain failure and a database failure are both reported as text the page
@@ -94,6 +124,7 @@ export async function getMarketsForDisplay(): Promise<MarketsPayload> {
   } catch (error) {
     return {
       markets: [],
+      pending: [],
       chainError: error instanceof Error ? error.message : String(error),
       indexError: null,
     };
@@ -108,15 +139,20 @@ export async function getMarketsForDisplay(): Promise<MarketsPayload> {
         betCount: null,
         projectionDrift: null,
       })),
+      pending: [],
       chainError: null,
       indexError: "DATABASE_URL is not configured for this deployment.",
     };
   }
 
   let extras = new Map<number, IndexedExtra>();
+  let pending: PendingMarket[] = [];
   let indexError: string | null = null;
   try {
-    extras = await readIndexedExtras(onChain.map((m) => m.onchainId));
+    [extras, pending] = await Promise.all([
+      readIndexedExtras(onChain.map((m) => m.onchainId)),
+      readPendingMarkets(),
+    ]);
   } catch (error) {
     indexError = error instanceof Error ? error.message : String(error);
   }
@@ -124,6 +160,7 @@ export async function getMarketsForDisplay(): Promise<MarketsPayload> {
   return {
     chainError: null,
     indexError,
+    pending,
     markets: onChain.map((m) => {
       const extra = extras.get(m.onchainId);
       // A disagreement between chain and projection is shown, not smoothed over. It means the

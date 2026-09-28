@@ -62,6 +62,7 @@ const RECEIPT_WAIT_MS = 45_000;
 const FALLBACK_GAS_LIMIT = 500_000n;
 
 export type IntentKind = OnchainIntent["kind"];
+export type IntentSigner = OnchainIntent["signer"];
 
 export type CreateIntentInput = {
   /** Derived from the business fact, never random. See the column comment in schema.ts. */
@@ -72,6 +73,12 @@ export type CreateIntentInput = {
   valueWei?: bigint;
   to?: string;
   from?: string;
+  /**
+   * `EXTERNAL` when the signature comes from a wallet this process cannot reach — the human
+   * authority's BridgeKey. The calldata is still encoded and frozen here, so what the wallet
+   * is asked to sign is what the server authorised, not what a browser assembled.
+   */
+  signer?: IntentSigner;
 };
 
 export type ProcessResult = {
@@ -96,11 +103,19 @@ export type ProcessResult = {
  */
 export async function createIntent(input: CreateIntentInput): Promise<OnchainIntent> {
   const data = auspexInterface.encodeFunctionData(input.functionName, input.args);
-  const from = (input.from ?? getDeployerWallet().address).toLowerCase();
+  const signer = input.signer ?? "SERVER";
+  // An EXTERNAL intent must never touch the deployer wallet, not even to read its address:
+  // `getDeployerWallet()` requires DEPLOYER_PRIVATE_KEY, and the whole point of the human gate
+  // is that creating a market works on a deployment that has no such key.
+  const from = (input.from ?? (signer === "SERVER" ? getDeployerWallet().address : "")).toLowerCase();
+  if (from === "") {
+    throw new Error("An EXTERNAL intent must name the address that will sign it.");
+  }
 
   const values = {
     idempotencyKey: input.idempotencyKey,
     kind: input.kind,
+    signer,
     fromAddress: from,
     toAddress: (input.to ?? AUSPEX_MARKET_ADDRESS).toLowerCase(),
     functionName: input.functionName,
@@ -155,9 +170,14 @@ export async function createIntent(input: CreateIntentInput): Promise<OnchainInt
  */
 export async function claimIntent(workerId: string): Promise<OnchainIntent | null> {
   return db.transaction(async (tx) => {
+    // An EXTERNAL intent that is still PENDING is waiting for a human to sign in their own
+    // wallet. It is excluded here rather than claimed-and-skipped: claiming would burn an
+    // attempt and push `next_attempt_at` forward every pass, so an intent sitting in the
+    // review queue for ten minutes would exhaust MAX_ATTEMPTS before anyone clicked approve.
     const found = await tx.execute<{ id: string }>(sql`
       select id from onchain_intents
       where status in ('PENDING', 'SIGNED', 'BROADCAST')
+        and not (signer = 'EXTERNAL' and status = 'PENDING')
         and attempts < ${MAX_ATTEMPTS}
         and next_attempt_at <= now()
       order by next_attempt_at asc, created_at asc
@@ -343,6 +363,103 @@ async function broadcastIntent(intent: OnchainIntent): Promise<OnchainIntent> {
   return updated;
 }
 
+/**
+ * Records a transaction that was signed and sent by a wallet outside this process.
+ *
+ * ## The hash is verified against the chain, never believed
+ *
+ * The caller is a browser reporting "I sent this". A browser can report any 32-byte string, so
+ * the hash is only accepted after the node confirms a transaction exists with it **and** that
+ * its `from`, `to` and `data` match the intent we authorised. Without that check, anyone who
+ * could reach the server action could mark a proposal approved by pasting an unrelated hash,
+ * and the human gate would be decorative.
+ *
+ * `data` is the load-bearing comparison: it is the calldata the server encoded from the
+ * approved spec, including the `specHash`. A wallet that signed anything else — a different
+ * question, a different close time — produces different calldata and is refused here.
+ *
+ * Idempotent: called twice with the same hash, the second call is a no-op that succeeds. That
+ * matters because the browser may retry, and a double-click must not become a second market.
+ */
+export async function attachExternalBroadcast(
+  intentId: string,
+  txHash: string,
+): Promise<{ ok: true; intent: OnchainIntent } | { ok: false; error: string }> {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+    return { ok: false, error: "That is not a transaction hash." };
+  }
+  const hash = txHash.toLowerCase();
+
+  const [intent] = await db
+    .select()
+    .from(onchainIntents)
+    .where(eq(onchainIntents.id, intentId))
+    .limit(1);
+
+  if (intent === undefined) return { ok: false, error: "No such intent." };
+  if (intent.signer !== "EXTERNAL") {
+    return { ok: false, error: "This intent is signed by the server, not by a wallet." };
+  }
+  if (intent.txHash !== null && intent.txHash.toLowerCase() !== hash) {
+    return {
+      ok: false,
+      error: `This intent already carries transaction ${intent.txHash}.`,
+    };
+  }
+  if (intent.txHash !== null) return { ok: true, intent };
+
+  // The node can legitimately not know a transaction for a second or two after the wallet
+  // returns its hash. A short bounded wait is the difference between "correct" and "correct
+  // most of the time"; it is not a retry loop, and it gives up rather than guessing.
+  const provider = getProvider();
+  let sent = null;
+  for (let attempt = 0; attempt < 5 && sent === null; attempt += 1) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+    sent = await provider.getTransaction(hash).catch(() => null);
+  }
+
+  if (sent === null) {
+    return { ok: false, error: "The node does not know that transaction hash." };
+  }
+  if (sent.from.toLowerCase() !== intent.fromAddress) {
+    return {
+      ok: false,
+      error: `That transaction was sent by ${sent.from}, not by the authority wallet.`,
+    };
+  }
+  if ((sent.to ?? "").toLowerCase() !== intent.toAddress) {
+    return { ok: false, error: "That transaction was not sent to the AuspeX contract." };
+  }
+  if (sent.data.toLowerCase() !== intent.data.toLowerCase()) {
+    return {
+      ok: false,
+      error: "That transaction's calldata is not the spec that was approved.",
+    };
+  }
+
+  const [updated] = await db
+    .update(onchainIntents)
+    .set({
+      status: "BROADCAST",
+      txHash: hash,
+      nonce: sent.nonce,
+      nextAttemptAt: sql`now()`,
+      updatedAt: new Date(),
+    })
+    .where(eq(onchainIntents.id, intentId))
+    .returning();
+
+  await record(
+    intentId,
+    "intent.broadcast",
+    `signed externally by ${sent.from} and verified against the node: ` +
+      `calldata, recipient and sender all match the authorised intent`,
+    { txHash: hash },
+  );
+
+  return { ok: true, intent: updated };
+}
+
 // ---------------------------------------------------------------------------
 // Settling
 // ---------------------------------------------------------------------------
@@ -446,6 +563,48 @@ async function settleIntent(intent: OnchainIntent): Promise<ProcessResult> {
 // ---------------------------------------------------------------------------
 
 /**
+ * What one pass should do with an intent, decided from the row alone. **Pure.**
+ *
+ * Extracted from `processIntent` because there are now two signer kinds and the wrong answer
+ * is expensive in both directions: signing an `EXTERNAL` intent is impossible (we hold no
+ * key), and rebroadcasting one is worse than impossible — `signedRawTx` is null, so the naive
+ * path throws inside a worker that is otherwise healthy.
+ *
+ * Exported so the table of cases is a test rather than a comment.
+ */
+export function plannedSteps(intent: Pick<OnchainIntent, "status" | "signer" | "signedRawTx">): {
+  sign: boolean;
+  broadcast: boolean;
+  settle: boolean;
+  /** Set when there is nothing to do, with the reason a reader needs. */
+  waitingFor: string | null;
+} {
+  const external = intent.signer === "EXTERNAL";
+  const idle = { sign: false, broadcast: false, settle: false };
+
+  switch (intent.status) {
+    case "PENDING":
+      return external
+        ? { ...idle, waitingFor: "a signature from the human authority's wallet" }
+        : { sign: true, broadcast: true, settle: true, waitingFor: null };
+    case "SIGNED":
+      return { sign: false, broadcast: true, settle: true, waitingFor: null };
+    case "BROADCAST":
+      // An externally-signed transaction has no stored bytes to resend — the wallet holds
+      // them. Re-polling its hash is the only step available, and the only one needed.
+      return {
+        sign: false,
+        broadcast: intent.signedRawTx !== null,
+        settle: true,
+        waitingFor: null,
+      };
+    default:
+      // CONFIRMED, REVERTED, ABANDONED. Terminal; a claim should never have produced one.
+      return { ...idle, waitingFor: `already ${intent.status}` };
+  }
+}
+
+/**
  * Drives one intent from wherever it is to wherever it can get in one pass.
  *
  * Every entry point is a resume point. The function does not know or care whether this is the
@@ -456,14 +615,40 @@ export async function processIntent(intent: OnchainIntent): Promise<ProcessResul
   let current = intent;
 
   try {
-    if (current.status === "PENDING") {
+    const plan = plannedSteps(current);
+
+    if (plan.waitingFor !== null) {
+      // Release the lease immediately so the row is claimable again the moment its state
+      // changes, and do not count this pass as an attempt against it.
+      await db
+        .update(onchainIntents)
+        .set({
+          attempts: sql`greatest(${onchainIntents.attempts} - 1, 0)`,
+          nextAttemptAt: sql`now()`,
+          claimedAt: null,
+          claimedBy: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(onchainIntents.id, current.id));
+
+      return {
+        intentId: current.id,
+        status: current.status,
+        txHash: current.txHash,
+        blockNumber: null,
+        revertReason: null,
+        note: `waiting for ${plan.waitingFor}`,
+      };
+    }
+
+    if (plan.sign) {
       current = await signIntent(current, getDeployerWallet());
       // Test-only fault injection. Simulates a hard kill between signing and broadcasting —
       // the window where a naive engine would later re-sign and double-send.
       crashPointReached("after_sign");
     }
 
-    if (current.status === "SIGNED" || current.status === "BROADCAST") {
+    if (plan.broadcast && (current.status === "SIGNED" || current.status === "BROADCAST")) {
       current = await broadcastIntent(current);
       crashPointReached("after_broadcast");
     }

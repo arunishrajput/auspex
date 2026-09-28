@@ -77,7 +77,20 @@ export type LlmCallLog = {
 
 export type LlmResult<T> =
   | { ok: true; value: T; model: string }
-  | { ok: false; reason: LlmFailureKind | "BUDGET_EXHAUSTED" | "SCHEMA_REJECTED"; detail: string };
+  | {
+      ok: false;
+      reason: LlmFailureKind | "BUDGET_EXHAUSTED" | "SCHEMA_REJECTED";
+      detail: string;
+      /**
+       * The model's verbatim text, when there was any.
+       *
+       * Set only for `SCHEMA_REJECTED` — the one failure where the response body is evidence
+       * rather than noise. Phase 4 stores it on the rejected proposal, so "the gate rejected
+       * this" can be read alongside what was actually rejected. Every other failure kind has
+       * no body worth keeping, and a transport error's message is already in `detail`.
+       */
+      raw?: string | null;
+    };
 
 /** Injectable transport so tests can force a 429 without a network or an API key. */
 export type Transport = typeof generateJson;
@@ -118,6 +131,7 @@ export async function callJson<T>(options: CallOptions<T>): Promise<LlmResult<T>
 
   let lastReason: LlmFailureKind | "SCHEMA_REJECTED" = "NETWORK";
   let lastDetail = "no model was attempted";
+  let lastRaw: string | null = null;
 
   for (const model of models) {
     if (!budget.consume()) {
@@ -143,6 +157,7 @@ export async function callJson<T>(options: CallOptions<T>): Promise<LlmResult<T>
         // these rows are the evidence that the validation gate is real — Phase 4 stores them.
         lastReason = "SCHEMA_REJECTED";
         lastDetail = parsed.error.message.slice(0, 300);
+        lastRaw = result.rawText.slice(0, 4000);
         budget.record({
           purpose, model, ok: false, reason: "SCHEMA_REJECTED",
           durationMs: result.durationMs, promptTokens: result.promptTokens,
@@ -165,6 +180,7 @@ export async function callJson<T>(options: CallOptions<T>): Promise<LlmResult<T>
 
       lastReason = failure.kind;
       lastDetail = failure.message;
+      lastRaw = null;
       // Measured, not zero. An earlier version recorded 0ms here, which made a 35-second
       // timeout invisible in the tick report — the single most expensive thing a tick can do
       // looked free, and the fix was delayed because nothing showed the cost.
@@ -178,5 +194,5 @@ export async function callJson<T>(options: CallOptions<T>): Promise<LlmResult<T>
     }
   }
 
-  return { ok: false, reason: lastReason, detail: lastDetail };
+  return { ok: false, reason: lastReason, detail: lastDetail, raw: lastRaw };
 }

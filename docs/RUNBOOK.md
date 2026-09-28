@@ -291,6 +291,15 @@ Local `.env.local` does not reach production. These are now pushed.
 | `TICK_SECRET` | Phase 3 | `POST /api/tick` |
 | `AGENT_KEY_ENC_SECRET` | Phase 3 (ahead of use) | Phase 5 agent keys |
 | `DISCORD_WEBHOOK_URL` | Phase 3 (ahead of use) | Phase 4 notifications |
+| `HUMAN_AUTHORITY_ADDRESS` | **Phase 4** | `/review` — unset means the page offers no approval at all |
+
+`HUMAN_AUTHORITY_ADDRESS` is a **public address, never a key**. `/review` needs it to encode the
+intent and to tell a reviewer which wallet to connect. Unset, the page says so and offers nothing,
+rather than defaulting to accepting whatever wallet turns up.
+
+Optional, all defaulted in code and all safe to leave unset: `LLM_CALLS_PER_TICK`,
+`LLM_PROPOSER_CALLS_PER_TICK`, `MARKET_MIN_CLOSE_HOURS`, `MARKET_MAX_CLOSE_HOURS`. Set the last two
+when a demo needs a market that closes during the event.
 
 **GitHub Actions** (the cron heartbeat): `TICK_SECRET`, `TICK_URL`.
 

@@ -140,13 +140,16 @@ MSTScan.
 **Ships (visible):** `/review` — the human gate, the centre of the whole thesis.
 
 **Exit criteria**
-- [ ] A confirmed event produces a schema-valid proposal.
-- [ ] A deliberately malformed model output is rejected and logged, and does **not** reach the queue.
-- [ ] Nothing goes on-chain and no notification fires before human approval.
+- [x] A confirmed event produces a schema-valid proposal.
+- [x] A deliberately malformed model output is rejected and logged, and does **not** reach the queue.
+- [x] Nothing goes on-chain and no notification fires before human approval.
 - [ ] Approving signs via BridgeKey and produces a real `createMarket` tx on MSTScan.
-- [ ] The on-chain `specHash` matches the hash of the approved spec.
-- [ ] Re-submitting the same approved spec is rejected by the contract (replay guard).
-- [ ] With `GEMINI_API_KEY` unset, a tick logs the failure, takes no action, and does not crash.
+      **Open — PROGRESS.md gap #13.** Unmeetable without the user's wallet, which is the property
+      the phase exists to establish. `pnpm --filter web verify:approval` is 8/8 on the live chain,
+      including an `eth_call` of the exact calldata from the authority address.
+- [x] The on-chain `specHash` matches the hash of the approved spec.
+- [x] Re-submitting the same approved spec is rejected by the contract (replay guard).
+- [x] With `GEMINI_API_KEY` unset, a tick logs the failure, takes no action, and does not crash.
 
 ---
 

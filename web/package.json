@@ -18,7 +18,8 @@
     "crash-test": "tsx scripts/crash-test.ts",
     "fixtures:capture": "tsx scripts/capture-fixtures.ts",
     "calibrate": "tsx scripts/calibrate.ts",
-    "tick": "tsx scripts/tick.ts"
+    "tick": "tsx scripts/tick.ts",
+    "verify:approval": "tsx scripts/verify-approval.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

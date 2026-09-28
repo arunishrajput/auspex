@@ -108,6 +108,39 @@ export default async function MarketsPage() {
           </div>
         )}
 
+        {/* Approved, signed, not yet confirmed. Kept visually separate from the list below
+            because these rows are NOT on chain, and a page that mixed them would be claiming
+            something the chain has not said. */}
+        {payload.pending.length > 0 && (
+          <section className="mb-8 overflow-hidden rounded-lg border border-warn-500/40 bg-warn-500/5">
+            <div className="flex flex-wrap items-center gap-2 border-b border-warn-500/20 px-4 py-2.5">
+              <span className="rounded border border-warn-500/40 bg-warn-500/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wide text-warn-500 uppercase">
+                off chain
+              </span>
+              <span className="font-mono text-[11px] text-ink-300">
+                approved by a human, transaction in flight — not yet on the contract
+              </span>
+            </div>
+            <ul className="divide-y divide-warn-500/20">
+              {payload.pending.map((row) => (
+                <li key={row.specHash} className="px-4 py-2.5">
+                  <p className="text-sm text-ink-200">{row.question}</p>
+                  <p className="mt-1 font-mono text-[11px] break-all text-ink-500">
+                    specHash {row.specHash}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <p className="border-t border-warn-500/20 px-4 py-2.5 text-xs leading-relaxed text-ink-400">
+              A row sits here between a human signing and the indexer reading{" "}
+              <span className="font-mono">MarketCreated</span> out of a confirmed log. When that
+              happens the indexer <span className="text-ink-300">adopts</span> this row by its
+              spec hash and it moves into the list below with its real market id. One that stays
+              here means the transaction has not confirmed — worth seeing rather than hiding.
+            </p>
+          </section>
+        )}
+
         <ul className="space-y-4">
           {payload.markets
             .slice()
