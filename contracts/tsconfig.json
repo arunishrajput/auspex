@@ -12,6 +12,9 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["hardhat.config.ts", "scripts/**/*.ts", "test/**/*.ts"],
+  // `types/` holds the typechain-generated bindings plus the module augmentation that makes
+  // ethers.deployContract("AuspexMarket") return a *typed* contract. Without it listed here,
+  // every call type-checks as an untyped BaseContract and a typo survives to runtime.
+  "include": ["hardhat.config.ts", "scripts/**/*.ts", "test/**/*.ts", "types/**/*.ts"],
   "exclude": ["node_modules", "artifacts", "cache"]
 }

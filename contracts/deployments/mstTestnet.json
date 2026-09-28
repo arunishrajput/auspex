@@ -1,0 +1,1546 @@
+{
+  "network": "mstTestnet",
+  "chainId": 91562037,
+  "explorer": "https://testnet.mstscan.com",
+  "deployedAt": "2026-09-28T16:51:29.141Z",
+  "contracts": {
+    "AuspexMarket": {
+      "address": "0xc4743d6295311AFead12161881Bfcf601B70104C",
+      "deployTxHash": "0x3b98b828b89bda4489bde9bded404afeb5dfe68d2703759184d74111d7dacd56",
+      "blockNumber": 5786343,
+      "constructorArguments": [
+        "0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24",
+        120
+      ],
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "uint64",
+              "name": "challengeWindow_",
+              "type": "uint64"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "AccessControlBadConfirmation",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "neededRole",
+              "type": "bytes32"
+            }
+          ],
+          "name": "AccessControlUnauthorizedAccount",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "AgentNotActive",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "attempted",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "cap",
+              "type": "uint256"
+            }
+          ],
+          "name": "AgentPerMarketCapExceeded",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "attempted",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "cap",
+              "type": "uint256"
+            }
+          ],
+          "name": "AgentPerTxCapExceeded",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "AlreadyClaimed",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "BettingClosed",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint64",
+              "name": "closeTime",
+              "type": "uint64"
+            }
+          ],
+          "name": "BettingStillOpen",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ChallengeWindowClosed",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint64",
+              "name": "endsAt",
+              "type": "uint64"
+            }
+          ],
+          "name": "ChallengeWindowOpen",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "EmptySpecHash",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "EnforcedPause",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ExpectedPause",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidAgentConfig",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint64",
+              "name": "closeTime",
+              "type": "uint64"
+            }
+          ],
+          "name": "InvalidCloseTime",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidConstructorArgs",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint8",
+              "name": "outcome",
+              "type": "uint8"
+            }
+          ],
+          "name": "InvalidOutcome",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint64",
+              "name": "resolveDeadline",
+              "type": "uint64"
+            },
+            {
+              "internalType": "uint64",
+              "name": "closeTime",
+              "type": "uint64"
+            }
+          ],
+          "name": "InvalidResolveDeadline",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "MarketAlreadySettled",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "MarketNotClosed",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "MarketNotOpen",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "MarketNotSettled",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "NothingToClaim",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ReentrancyGuardReentrantCall",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ResolutionNotProposed",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint64",
+              "name": "resolveDeadline",
+              "type": "uint64"
+            }
+          ],
+          "name": "ResolveDeadlineNotPassed",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint8",
+              "name": "bits",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "name": "SafeCastOverflowedUintDowncast",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "specHash",
+              "type": "bytes32"
+            }
+          ],
+          "name": "SpecHashAlreadyUsed",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint8",
+              "name": "challengeCount",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "required",
+              "type": "uint8"
+            }
+          ],
+          "name": "TooFewChallenges",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "TransferFailed",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            }
+          ],
+          "name": "UnknownMarket",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ZeroStake",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "agent",
+              "type": "address"
+            }
+          ],
+          "name": "AgentDeactivated",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "agent",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint128",
+              "name": "perTxCap",
+              "type": "uint128"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint128",
+              "name": "perMarketCap",
+              "type": "uint128"
+            }
+          ],
+          "name": "AgentRegistered",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "bettor",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "backsYes",
+              "type": "bool"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "isAgent",
+              "type": "bool"
+            }
+          ],
+          "name": "BetPlaced",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "claimant",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "paidTo",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "Claimed",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint64",
+              "name": "closedAt",
+              "type": "uint64"
+            }
+          ],
+          "name": "MarketClosed",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "specHash",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "creator",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "string",
+              "name": "question",
+              "type": "string"
+            },
+            {
+              "indexed": false,
+              "internalType": "string",
+              "name": "resolutionSourceUrl",
+              "type": "string"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint64",
+              "name": "closeTime",
+              "type": "uint64"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint64",
+              "name": "resolveDeadline",
+              "type": "uint64"
+            }
+          ],
+          "name": "MarketCreated",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint8",
+              "name": "outcome",
+              "type": "uint8"
+            }
+          ],
+          "name": "MarketFinalized",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "string",
+              "name": "reason",
+              "type": "string"
+            }
+          ],
+          "name": "MarketInvalidated",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "Paused",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "challenger",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "string",
+              "name": "reason",
+              "type": "string"
+            }
+          ],
+          "name": "ResolutionChallenged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "resolver",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint8",
+              "name": "outcome",
+              "type": "uint8"
+            },
+            {
+              "indexed": false,
+              "internalType": "string",
+              "name": "evidenceUrl",
+              "type": "string"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint64",
+              "name": "challengeEndsAt",
+              "type": "uint64"
+            }
+          ],
+          "name": "ResolutionProposed",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "previousAdminRole",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "newAdminRole",
+              "type": "bytes32"
+            }
+          ],
+          "name": "RoleAdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            }
+          ],
+          "name": "RoleGranted",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            }
+          ],
+          "name": "RoleRevoked",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "Unpaused",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "CHALLENGER_ROLE",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "DEFAULT_ADMIN_ROLE",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "MARKET_CREATOR_ROLE",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "MAX_CHALLENGES",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "OUTCOME_INVALID",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "OUTCOME_NO",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "OUTCOME_UNRESOLVED",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "OUTCOME_YES",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "RESOLVER_ROLE",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "STATE_CLOSED",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "STATE_FINALIZED",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "STATE_INVALIDATED",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "STATE_OPEN",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "STATE_RESOLUTION_PROPOSED",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "agent",
+              "type": "address"
+            }
+          ],
+          "name": "agentRemainingOnMarket",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "agentSpentOnMarket",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "agents",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "uint128",
+              "name": "perTxCap",
+              "type": "uint128"
+            },
+            {
+              "internalType": "uint128",
+              "name": "perMarketCap",
+              "type": "uint128"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "reason",
+              "type": "string"
+            }
+          ],
+          "name": "challengeResolution",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "challengeWindow",
+          "outputs": [
+            {
+              "internalType": "uint64",
+              "name": "",
+              "type": "uint64"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            }
+          ],
+          "name": "claim",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "claimed",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            }
+          ],
+          "name": "closeMarket",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "specHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "question",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "resolutionSourceUrl",
+              "type": "string"
+            },
+            {
+              "internalType": "uint64",
+              "name": "closeTime",
+              "type": "uint64"
+            },
+            {
+              "internalType": "uint64",
+              "name": "resolveDeadline",
+              "type": "uint64"
+            }
+          ],
+          "name": "createMarket",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "agent",
+              "type": "address"
+            }
+          ],
+          "name": "deactivateAgent",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            }
+          ],
+          "name": "finalizeResolution",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "reason",
+              "type": "string"
+            }
+          ],
+          "name": "forceInvalidate",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            }
+          ],
+          "name": "getMarket",
+          "outputs": [
+            {
+              "components": [
+                {
+                  "internalType": "bytes32",
+                  "name": "specHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "closeTime",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "resolveDeadline",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "challengeEndsAt",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint128",
+                  "name": "poolYes",
+                  "type": "uint128"
+                },
+                {
+                  "internalType": "uint128",
+                  "name": "poolNo",
+                  "type": "uint128"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "outcome",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "state",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "challengeCount",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "address",
+                  "name": "proposedBy",
+                  "type": "address"
+                },
+                {
+                  "internalType": "string",
+                  "name": "question",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "resolutionSourceUrl",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "evidenceUrl",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AuspexMarket.Market",
+              "name": "",
+              "type": "tuple"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            }
+          ],
+          "name": "getRoleAdmin",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "grantRole",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "hasRole",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            }
+          ],
+          "name": "invalidateStale",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "marketCount",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "pause",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "paused",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "backsYes",
+              "type": "bool"
+            }
+          ],
+          "name": "placeBet",
+          "outputs": [],
+          "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "previewPayout",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint8",
+              "name": "outcome",
+              "type": "uint8"
+            },
+            {
+              "internalType": "string",
+              "name": "evidenceUrl",
+              "type": "string"
+            }
+          ],
+          "name": "proposeResolution",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "agent",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "uint128",
+              "name": "perTxCap",
+              "type": "uint128"
+            },
+            {
+              "internalType": "uint128",
+              "name": "perMarketCap",
+              "type": "uint128"
+            }
+          ],
+          "name": "registerAgent",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "address",
+              "name": "callerConfirmation",
+              "type": "address"
+            }
+          ],
+          "name": "renounceRole",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "revokeRole",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "name": "specHashUsed",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "stakeNo",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "stakeYes",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes4",
+              "name": "interfaceId",
+              "type": "bytes4"
+            }
+          ],
+          "name": "supportsInterface",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "marketId",
+              "type": "uint256"
+            }
+          ],
+          "name": "totalPool",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "unpause",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ]
+    }
+  }
+}

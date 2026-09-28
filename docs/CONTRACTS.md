@@ -3,6 +3,11 @@
 The specification Phase 1 implements. One contract; the agent registry is folded in because splitting
 it would add a trust boundary and a deployment step without adding safety.
 
+**Deployed and verified** on MST Testnet (chain `91562037`):
+[`0xc4743d6295311AFead12161881Bfcf601B70104C`](https://testnet.mstscan.com/address/0xc4743d6295311AFead12161881Bfcf601B70104C#code)
+— constructor args `(0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24, 120)`.
+This document is kept in sync with that bytecode; where the two ever disagree, the chain wins.
+
 ```
 Solidity   0.8.28
 evmVersion cancun          (PUSH0/MCOPY/TSTORE verified live on chain 91562037)
@@ -55,8 +60,18 @@ can finalize. No privileged party — including us — can block a payout by goi
    └─ admin force-invalidate after repeated challenges
 ```
 
-**States:** `OPEN`, `CLOSED`, `RESOLUTION_PROPOSED`, `FINALIZED`, `INVALIDATED`.
+**States:** `OPEN = 0`, `CLOSED = 1`, `RESOLUTION_PROPOSED = 2`, `FINALIZED = 3`, `INVALIDATED = 4`.
 **Outcomes:** `UNRESOLVED = 0`, `YES = 1`, `NO = 2`, `INVALID = 3`.
+
+Two transitions the diagram above draws as automatic are really functions, both permissionless:
+
+- **`closeMarket(marketId)`** — moves `OPEN` to `CLOSED` once `closeTime` has passed. Anyone may
+  call it. It exists so the transition is an indexable event rather than an implicit one; betting is
+  gated on `closeTime` directly, so forgetting to call it can never let a late bet through.
+  `proposeResolution` also auto-closes an overdue market, so a forgotten call cannot strand funds.
+- **`invalidateStale(marketId)`** — anyone may invalidate a market whose `resolveDeadline` passed
+  with no resolution finalised; everyone is refunded. The counterpart to permissionless
+  finalisation: a resolver who never shows up cannot lock funds up either (ADR-021).
 
 ---
 
@@ -76,8 +91,11 @@ struct Market {
     address proposedBy;          // which resolver proposed the current outcome
     string  question;            // stored on-chain ON PURPOSE — see §8
     string  resolutionSourceUrl;
-    string  evidenceUrl;         // set at resolution
+    string  evidenceUrl;         // set at resolution, cleared by a successful challenge
 }
+
+// `_markets` is private because a public getter on a struct omits its `string` members.
+// getMarket(uint256) returns the whole record, strings included, for the dashboard and MSTScan.
 
 struct AgentConfig {
     address owner;               // winnings are paid HERE, never to the agent
@@ -86,15 +104,17 @@ struct AgentConfig {
     bool    active;
 }
 
-mapping(uint256 => Market)                              public markets;
+mapping(uint256 => Market)                              private _markets;   // read via getMarket()
 mapping(address => AgentConfig)                         public agents;
 mapping(uint256 => mapping(address => uint256))         public agentSpentOnMarket;
 mapping(uint256 => mapping(address => uint256))         public stakeYes;
 mapping(uint256 => mapping(address => uint256))         public stakeNo;
 mapping(uint256 => mapping(address => bool))            public claimed;
 mapping(bytes32 => bool)                                public specHashUsed;   // replay guard
-uint256 public marketCount;
-uint64  public challengeWindow;   // short (~120s) for the demo; stated honestly in the README
+uint256 public marketCount;      // ids start at 1; id 0 is never a market
+uint64  public immutable challengeWindow;   // 120s on the live deployment. IMMUTABLE — an admin who
+                                            // could shrink it to 0 would defeat the window (ADR-019)
+uint8   public constant MAX_CHALLENGES = 3; // challenges required before admin may force-invalidate
 ```
 
 ---
@@ -110,13 +130,21 @@ Inside `placeBet`, when the caller is a registered active agent:
 
 ```solidity
 AgentConfig memory a = agents[msg.sender];
-if (a.active) {
+bool isAgent = a.owner != address(0);          // REGISTERED, which is not the same as ACTIVE
+
+if (isAgent) {
+    if (!a.active) revert AgentNotActive();
     if (msg.value > a.perTxCap) revert AgentPerTxCapExceeded(msg.value, a.perTxCap);
     uint256 spent = agentSpentOnMarket[marketId][msg.sender] + msg.value;
     if (spent > a.perMarketCap) revert AgentPerMarketCapExceeded(spent, a.perMarketCap);
     agentSpentOnMarket[marketId][msg.sender] = spent;
 }
 ```
+
+**Registered and active are deliberately separate checks.** Branching on `a.active` alone has an
+inverted failure mode: a deactivated agent would fall out of the capped branch into the uncapped
+"anyone" path, so the safety control would *remove* the limit it exists to impose. A deactivated
+agent reverts `AgentNotActive` and cannot bet at all (ADR-020).
 
 Plus `whenNotPaused` — a global on-chain kill switch independent of the off-chain one.
 
@@ -168,6 +196,8 @@ sophisticated and be far harder to defend under questioning.
 proposeResolution(uint256 marketId, uint8 outcome, string calldata evidenceUrl)  // RESOLVER_ROLE
 challengeResolution(uint256 marketId, string calldata reason)                    // CHALLENGER_ROLE
 finalizeResolution(uint256 marketId)                                             // ANYONE
+invalidateStale(uint256 marketId)                                                // ANYONE, past deadline
+forceInvalidate(uint256 marketId, string calldata reason)                        // ADMIN, >= 3 challenges
 ```
 
 - `proposeResolution` requires `block.timestamp >= closeTime` and state `CLOSED`. Sets the outcome,
@@ -175,8 +205,12 @@ finalizeResolution(uint256 marketId)                                            
   moves to `RESOLUTION_PROPOSED`.
 - `challengeResolution` is valid only while `block.timestamp < challengeEndsAt`. Clears the proposed
   outcome, returns the market to `CLOSED`, increments `challengeCount`, emits the reason on-chain.
-- After `challengeCount` exceeds a threshold, admin may force `INVALIDATED` → full refunds.
 - `finalizeResolution` requires `block.timestamp >= challengeEndsAt` and moves to `FINALIZED`.
+- `forceInvalidate` requires `challengeCount >= MAX_CHALLENGES` (3) — the admin escape hatch only
+  unlocks once the deadlock is already a matter of public record, so it cannot be used to void an
+  inconvenient market (ADR-022). Everyone is refunded.
+- A challenge **clears** the proposed outcome, `proposedBy`, `challengeEndsAt` and `evidenceUrl`, so
+  the stored record never shows rejected evidence as current. The reason is emitted on-chain.
 
 **Honest framing, which belongs in the README verbatim:**
 
@@ -251,21 +285,37 @@ event AgentDeactivated(address indexed agent);
 ## 11. Custom errors
 
 ```solidity
-error NotMarketCreator();          error NotResolver();
-error MarketNotOpen();             error MarketClosed();
-error BettingClosed();             error ZeroStake();
-error SpecHashAlreadyUsed(bytes32 specHash);
+error UnknownMarket(uint256 marketId);
+error MarketNotOpen();             error MarketNotClosed();
+error MarketNotSettled();          error MarketAlreadySettled();
+error BettingClosed();             error BettingStillOpen(uint64 closeTime);
+error ZeroStake();
+error EmptySpecHash();             error SpecHashAlreadyUsed(bytes32 specHash);
+error InvalidCloseTime(uint64 closeTime);
+error InvalidResolveDeadline(uint64 resolveDeadline, uint64 closeTime);
 error AgentPerTxCapExceeded(uint256 attempted, uint256 cap);
 error AgentPerMarketCapExceeded(uint256 attempted, uint256 cap);
-error AgentNotActive();
+error AgentNotActive();            error InvalidAgentConfig();
 error ResolutionNotProposed();     error ChallengeWindowOpen(uint64 endsAt);
 error ChallengeWindowClosed();     error InvalidOutcome(uint8 outcome);
+error ResolveDeadlineNotPassed(uint64 resolveDeadline);
+error TooFewChallenges(uint8 challengeCount, uint8 required);
 error AlreadyClaimed();            error NothingToClaim();
-error TransferFailed();
+error TransferFailed();            error InvalidConstructorArgs();
 ```
 
+Two changes from the first draft of this list, both deliberate:
+
+- **`NotMarketCreator` / `NotResolver` are gone.** OpenZeppelin's `onlyRole` already reverts
+  `AccessControlUnauthorizedAccount(account, role)`, which carries strictly more information.
+  Duplicating the check to throw our own name would be a second code path for the same rule.
+- **`MarketClosed()` is gone**, because `MarketClosed` is the name of the *event* emitted when a
+  market closes, and Solidity will not allow both. `BettingClosed()` already covered the case.
+
 Named errors make the demo legible: the over-cap revert shows as
-`AgentPerTxCapExceeded(attempted, cap)` on MSTScan, not as an anonymous failure.
+`AgentPerTxCapExceeded(attempted, cap)` on MSTScan, not as an anonymous failure. Note that the MST
+RPC returns this data inside the JSON-RPC error *message* rather than the standard `data` field, so
+it must be decoded by hand — see ADR-023.
 
 ---
 
@@ -281,4 +331,8 @@ Named errors make the demo legible: the over-cap revert shows as
 | Challenge | challenge inside window returns to `CLOSED`; outside window reverts; re-proposal works; finalize before window reverts |
 | Finalize | permissionless after window; state transitions correct |
 | Claim | double claim reverts; agent claim pays **owner**; reentrancy attempt fails |
-| Pause | paused blocks `placeBet`; unpause restores |
+| Pause | paused blocks `placeBet`; unpause restores; **`claim` still works while paused** |
+| Stale market | `invalidateStale` refuses before `resolveDeadline`, refunds everyone after |
+
+**Result: 57 tests, all passing, none skipped** (`pnpm --filter contracts test`). Every `revert`
+path above asserts its specific custom error rather than merely that the call reverted.

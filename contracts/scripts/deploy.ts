@@ -17,10 +17,19 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEPLOYMENTS_DIR = join(__dirname, "..", "deployments");
 
-/** Contracts to deploy, in order. Phase 1 adds AuspexMarket here. */
-const TO_DEPLOY: Array<{ name: string; args: unknown[] }> = [
-  { name: "Ping", args: [] },
-];
+/**
+ * Seconds a proposed resolution stays challengeable. Immutable once deployed.
+ *
+ * 120s is short on purpose — a judge has to be able to watch a market go from resolved to
+ * paid out inside a demo. The README states this plainly as a limitation rather than
+ * pretending it is a production-grade dispute period.
+ */
+const CHALLENGE_WINDOW_SECONDS = 120;
+
+/** Contracts to deploy, in order. `deployer` is the address that will hold the roles. */
+function toDeploy(deployer: string): Array<{ name: string; args: unknown[] }> {
+  return [{ name: "AuspexMarket", args: [deployer, CHALLENGE_WINDOW_SECONDS] }];
+}
 
 type DeployRecord = {
   address: string;
@@ -70,7 +79,7 @@ async function main(): Promise<void> {
 
   const records: Record<string, DeployRecord> = {};
 
-  for (const { name, args } of TO_DEPLOY) {
+  for (const { name, args } of toDeploy(deployer.address)) {
     console.log(`Deploying ${name}...`);
     const factory = await ethers.getContractFactory(name);
     const contract = await factory.deploy(...args);

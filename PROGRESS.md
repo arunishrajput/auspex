@@ -8,8 +8,8 @@
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
 **Last updated:** 2026-09-28
-**Current status:** ✅ Phase 0 complete
-**Next phase:** **Phase 1 — Smart contract: build, test, deploy to MST Testnet, verify on MSTScan**
+**Current status:** ✅ Phase 1 complete
+**Next phase:** **Phase 2 — Data layer, chain client, idempotency engine**
 
 ---
 
@@ -18,8 +18,8 @@
 | Phase | Name | Status |
 |:--|:--|:--|
 | 0 | Foundations & rails | ✅ Complete |
-| 1 | Smart contract — build, test, deploy, verify | ⬜ **NEXT** |
-| 2 | Data layer + chain client + idempotency engine | ⬜ Not started |
+| 1 | Smart contract — build, test, deploy, verify | ✅ Complete |
+| 2 | Data layer + chain client + idempotency engine | ⬜ **NEXT** |
 | 3 | News ingestion, dedup, 2-source confirmation | ⬜ Not started |
 | 4 | Market proposer agent + human approval gate | ⬜ Not started |
 | 5 | Member agents + deterministic policy gate | ⬜ Not started |
@@ -34,6 +34,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 ## Real artifacts
 
 > Only verified, resolvable values go here. Never write a placeholder that looks real.
+> Every hash below was confirmed `status: ok` through `testnet.mstscan.com/api/v2` after the fact.
 
 | Artifact | Value | Status |
 |:--|:--|:--|
@@ -41,126 +42,193 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | **CI** (build/test/lint/secret+mock guards) | https://github.com/arunishrajput/auspex/actions | ✅ green |
 | **Live demo URL** | **https://auspex-web-mu.vercel.app** | ✅ public, live chain data |
 | Vercel project | `auspex-web` (team `arunish-rajputs-projects`), root dir `web` | ✅ auto-deploys on push |
-| Deployer wallet | `0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24` | ✅ funded, 10 tMSTC |
-| `AuspexMarket` contract address | _not deployed yet_ | ⬜ Phase 1 |
-| Deployment tx hash | _n/a_ | ⬜ Phase 1 |
-| Source verified on MSTScan | _n/a_ | ⬜ Phase 1 |
+| Deployer wallet | `0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24` | ✅ 9.976 tMSTC left |
+| **`AuspexMarket` contract** | **`0xc4743d6295311AFead12161881Bfcf601B70104C`** | ✅ chain `91562037` |
+| Deployment tx | `0x3b98b828b89bda4489bde9bded404afeb5dfe68d2703759184d74111d7dacd56` | ✅ block 5,786,343 |
+| **Source verified on MSTScan** | solc `v0.8.28`, evm `cancun`, optimizer on, runs 200 | ✅ `is_verified: true` |
+| Constructor args | `(0xc71dC478…4ad24, 120)` — admin, challengeWindow seconds | ✅ on explorer |
+| Smoke `createMarket` tx | `0xc0a699729bd41ba84903382f7b8d78efd667e4eb21e68f3a64738570637ffc73` | ✅ block 5,786,372 |
+| Smoke `placeBet` tx | `0x7a91667472052b5c5b2dbf264bc0b1279f0793ca1d1ab5b52e38ea37b22c973a` | ✅ block 5,786,373 |
+| Smoke run 2 `createMarket` | `0x1105fb143b6b9a073b1fff22cde224a530120cb9373fcc2ae260495a29ef66d6` | ✅ block 5,786,400 |
+| Smoke run 2 `placeBet` | `0x558dfdafdcdac157176058076c9dafcd825a525346806d2e45e9340213c8a0bf` | ✅ block 5,786,402 |
 | `createMarket` tx (human-approved) | _n/a_ | ⬜ Phase 4 |
 | `placeBet` tx (agent, within caps) | _n/a_ | ⬜ Phase 5 |
 | Over-cap bet tx (**expected revert**) | _n/a_ | ⬜ Phase 5 |
 | Resolution tx (with evidence URL) | _n/a_ | ⬜ Phase 6 |
 | Payout / claim tx | _n/a_ | ⬜ Phase 6 |
 
+**Two markets exist on-chain (ids 1 and 2)** — one per smoke-test run. Both are real, both are
+labelled as smoke tests, and neither is presented anywhere as a product market. MSTScan decodes
+their method names (`createMarket`, `placeBet`) because the source is verified.
+
+**Also on chain, no longer in the repo:** `Ping` at `0x540d73793f5AA5E605A0243EA3DfCF106D6558D8`
+(verified). It was the Phase 0 toolchain probe used to prove the deploy→verify pipeline works before
+`AuspexMarket` existed. Deleted from the repo per `docs/BUILD_PLAN.md`; it is claimed nowhere.
+
 ---
 
-## Phase 0 — what shipped
+## Phase 1 — what shipped
 
-**Repo & workspace** — pnpm workspace (`contracts/` Hardhat 3 + `web/` Next.js 16), `.gitignore`
-that makes secrets uncommittable, `.env.example` with placeholders only, public GitHub repo.
+**`contracts/contracts/AuspexMarket.sol`** — 0.8.28 / cancun / optimizer 200, on OpenZeppelin 5
+(`AccessControl`, `Pausable`, `ReentrancyGuard`, `SafeCast`). Implements `docs/CONTRACTS.md`:
+market lifecycle, parimutuel payout, the agent registry with per-tx and per-market caps, resolution
+with a challenge window, permissionless finalisation, pull-based `claim()`, a pause kill switch,
+custom errors throughout, and rich events for the indexer.
 
-**Contracts toolchain (validated, not assumed)** — Hardhat 3.18 + solc 0.8.28 + `evmVersion: cancun`
-+ OpenZeppelin 5; `chainDescriptors` + `verify.blockscout` pointing at `testnet.mstscan.com/api`;
-`Ping.sol` smoke test with 3 passing tests; `deploy.ts` (writes `deployments/<network>.json`, refuses
-wrong chain / zero balance) and `verify.ts`.
+**Three properties it enforces that a judge can check on the explorer:**
 
-**Web app** — Next.js 16 + React 19 + Tailwind 4, dark mission-control theme. `/` reads **live chain
-state on every load** and shows a real error rather than a placeholder if the RPC is down.
-`/api/rpc/[network]` proxy with a read-only method allowlist. `web/lib/chain.ts` is the single source
-of truth for network constants and explorer links.
+1. **Agent wallets hold no role.** They are entries in a registry, and every entry is a
+   *restriction*, never a permission. An agent cannot create a market, resolve one, pause, or
+   register agents — all asserted in tests.
+2. **Caps are enforced by the chain.** One wei over `perTxCap` reverts
+   `AgentPerTxCapExceeded(attempted, cap)`. The cumulative `perMarketCap` catches a series of
+   individually-legal bets. This holds even if our server is fully compromised.
+3. **Winnings are paid to the registered owner**, never to the agent wallet. A stolen agent key
+   cannot steal funds.
 
-**Tooling & CI** — `pnpm wallets:new`, `pnpm preflight` (checks RPC, explorer, wallet balance, DB,
-Gemini chain, deployed contract, and names which phase each failure blocks), `ci.yml` (build, tests,
-typecheck + guards that fail on committed secrets or `MOCK` in production source), `heartbeat.yml`.
+**`contracts/test/AuspexMarket.test.ts`** — **57 tests, all passing, none skipped.** Covers the
+whole `docs/CONTRACTS.md` §12 matrix. Every `revert` path asserts its *specific* custom error, not
+merely that the call reverted. Notable cases: exactly-at-cap vs one-wei-over, a deactivated agent
+being blocked rather than un-capped, hand-computed parimutuel payouts, integer-division dust left in
+the contract, `winningPool == 0` refunding everyone, a real re-entrancy attacker contract getting
+paid exactly once, and `claim()` still working while the contract is paused.
 
-**Docs** — `CLAUDE.md`, `PROGRESS.md`, and `docs/`: PRD, ARCHITECTURE, BUILD_PLAN, CONTRACTS,
-TRUST_MODEL, RUNBOOK, DEMO_SCRIPT, DECISIONS (**18 ADRs**, each with evidence).
+**Additions beyond the original spec** (each has an ADR):
+- `closeMarket` — permissionless `OPEN → CLOSED` once `closeTime` passes, so the transition is an
+  indexable event. `proposeResolution` auto-closes an overdue market so nothing can strand.
+- `invalidateStale` — permissionless refund path when a resolver never shows up (ADR-021).
+- `forceInvalidate` gated on 3 recorded challenges, so admin power is bounded (ADR-022).
+- `previewPayout` / `totalPool` / `agentRemainingOnMarket` / `getMarket` views for the dashboard.
 
-**Infrastructure set up automatically** — `.env.local` (chmod 600) with a generated deployer wallet,
-`AGENT_KEY_ENC_SECRET` and `TICK_SECRET`; a Gemini API key created and written without the value ever
-entering a log; Vercel project imported with root dir `web`; Deployment Protection disabled so the
-demo URL is publicly reachable.
+**`contracts/scripts/smoke.ts`** (`pnpm --filter contracts smoke:testnet`) — post-deploy check
+against the *real* chain: asserts all four roles landed on the deployer, creates a market, places a
+bet, reads the state back over the public RPC, and proves the replay guard rejects a duplicate
+`specHash` live. Re-runnable (the spec hash includes a timestamp).
+
+**`web/lib/contract.ts` + the status page** — `/` now reads the deployed contract on every load:
+`eth_getCode` (10,800 bytes), `marketCount()`, `challengeWindow()`. No fallback values; if the
+contract cannot be read the page shows the real error. The page no longer claims "not deployed yet".
+
+**`web/next.config.mjs`** — loads the repo-root `.env.local` locally so the monorepo keeps one
+secrets file (the same one hardhat reads). No-op on Vercel; never overrides an existing value.
 
 ### Exit criteria
 
 | Criterion | Result |
 |:--|:--|
-| `pnpm install` from clean clone | ✅ |
-| `pnpm compile` (solc 0.8.28 / cancun) | ✅ |
-| `pnpm -r build` / `test` / `lint` / `typecheck` | ✅ all green, 3 tests passing |
-| `pnpm preflight` reports RPC + chain `91562037` | ✅ |
-| Public GitHub repo, `main` pushed, CI green | ✅ |
-| No secret in git; `.env.local` ignored | ✅ verified with `git check-ignore` |
-| **Vercel URL loads and shows the real block height** | ✅ https://auspex-web-mu.vercel.app |
-| `docs/RUNBOOK.md` covers every manual step | ✅ |
+| `pnpm --filter contracts test` — all green, none skipped | ✅ 57/57 |
+| Every `revert` path has a test asserting its specific custom error | ✅ |
+| Contract deployed to chain `91562037`; address + tx recorded here | ✅ |
+| Contract shows **Verified** on `testnet.mstscan.com` with readable source | ✅ `is_verified: true` |
+| Deployer holds `DEFAULT_ADMIN_ROLE`, `MARKET_CREATOR_ROLE`, `RESOLVER_ROLE` | ✅ read live, +`CHALLENGER_ROLE` |
+| A manual `createMarket` + `placeBet` produces two real tx hashes | ✅ four, across two runs |
+| `pnpm -r build` / `lint` / `typecheck` | ✅ all green |
 
 ---
 
 ## Blocking items for you — `docs/RUNBOOK.md` has exact steps
 
-| # | Item | Blocks | Why Claude could not do it |
+| # | Item | Blocks | Status |
 |:--|:--|:--|:--|
-| §1 | **Enable Gemini billing** | Phases 3–5 | Cannot enter payment details |
-| §3 | **Accept Neon terms** (Vercel → Storage → Neon) | Phase 2 | Accepting third-party legal terms is the user's decision |
-| §4 | Discord webhook | Phase 4 notifications | Needs your Discord server |
-| §5 | BridgeKey install + seed phrase | Phase 4 approvals | Seed phrase custody must be yours |
+| §1 | **Enable Gemini billing** | Phases 3–5 | ⬜ **still blocking** — now fails `402`, not `503` |
+| §3 | Accept Neon terms | Phase 2 | ✅ **done** — `DATABASE_URL` is set in Vercel |
+| §4 | Discord webhook | Phase 4 notifications | ✅ **done** — `pnpm preflight` reports it set |
+| §5 | BridgeKey install + seed phrase | Phase 4 approvals | ⬜ needed by Phase 4, not Phase 2 |
 
-**Phase 1 is fully unblocked** — the deployer wallet is funded and nothing else in Phase 1 depends
-on the remaining items.
+**One thing to run before Phase 2** (I was blocked from doing it — pulling a live DB credential onto
+disk is denied to me by policy, correctly):
+
+```bash
+cd web && vercel env pull .env.local --environment=production
+```
+
+That writes `DATABASE_URL` into `web/.env.local` (git-ignored). Next.js reads it natively; the root
+loader in `next.config.mjs` will not override it. If you would rather keep one env file, copy just
+the `DATABASE_URL=` line into the root `.env.local` instead and delete the pulled one.
+
+**Phase 2 is otherwise unblocked** — the contract, its ABI and the deployment record all exist.
 
 ---
 
 ## Decisions already locked in
 
-Full rationale with evidence in `docs/DECISIONS.md` (ADR-001 … ADR-018):
+Full rationale with evidence in `docs/DECISIONS.md` (ADR-001 … ADR-024).
 
-- **Hardhat 3, not 2** — HH2's `ts-node` crashes on Node 26 (reproduced directly).
-- **Explorer is `testnet.mstscan.com`**, not `mstscan.com` (different chain).
-- **Fortuna VRF cut** — `eth_getCode` returns `0x` on testnet; it is a mainnet contract.
-- **`evmVersion: cancun`** — PUSH0/MCOPY/TSTORE verified executing via `eth_call` state overrides.
-- **Strings stored on-chain deliberately** — base fee is 0, so legibility on MSTScan is free.
-- **ethers v6 on the critical path**, not `@mstblockchain/mst-sdk`.
-- **Parimutuel payout**, not an AMM.
-- **Two independent agent limit layers** — off-chain policy gate + on-chain caps.
-- **EIP-1193/6963 via wagmi `injected()`** — no BridgeKey-specific code.
-- **ADR-017: Gemini free tier is not demo-viable** — 0/20 calls succeeded (all HTTP 503 capacity
-  errors), one earlier success took 159s, and the 2.5 series now 404s. Config uses comma-separated
-  **fallback chains** (`GEMINI_MODELS_FAST` / `GEMINI_MODELS_SMART`) with a 20s per-attempt timeout.
-- **ADR-018: the faucet leaks its dispensing wallet's private key** in its public JS bundle
-  (~504,908 tMSTC exposed). We fund only through the UI and never touch that key.
+From Phase 0: Hardhat 3 not 2 · explorer is `testnet.mstscan.com` · Fortuna VRF cut (no bytecode) ·
+`evmVersion: cancun` · strings on-chain deliberately · ethers v6 over the MST SDK · parimutuel not
+AMM · two independent agent limit layers · wagmi `injected()` · Gemini free tier not demo-viable
+(ADR-017) · faucet leaks its dispensing key (ADR-018).
+
+New in Phase 1:
+
+- **ADR-019 — `challengeWindow` is `immutable`.** An admin who could set it to 0 could propose and
+  finalise in one block, making the window decorative.
+- **ADR-020 — deactivating an agent blocks it entirely.** The naive `if (agent.active)` branch has an
+  inverted failure mode: deactivation would drop the agent into the *uncapped* path.
+- **ADR-021 — `invalidateStale` is permissionless.** A resolver who never shows up must not be able
+  to strand funds, the same way a silent one cannot block a payout.
+- **ADR-022 — `forceInvalidate` requires 3 recorded challenges.** An unconditional admin cancel would
+  sink the trust argument.
+- **ADR-023 — the MST RPC hides custom-error data in the error *message*.** ethers cannot auto-decode
+  it (`error.revert` is `null`). Phase 5's headline demo depends on rendering
+  `AgentPerTxCapExceeded(attempted, cap)`, so the decoder matters.
+- **ADR-024 — storage `ReentrancyGuard`, not the TSTORE one.** Cancun was probed via `eth_call`, not
+  exercised in a real transaction, and the guarded function is the one that pays people.
 
 ---
 
 ## Known gaps
 
-**1. Gemini currently unusable until billing is enabled (RUNBOOK §1).**
-Measured 0/20 successful calls, all HTTP 503 "high demand". Blocks Phases 3–5. Does not block
-Phase 1 or 2. The pipeline's fail-safe path handles it correctly, but a demo with no AI output is
-a bad demo.
+**1. Gemini still unusable — and the failure mode changed.** It now returns **HTTP 402** for every
+model (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-flash-lite-latest`), where Phase 0
+saw `503` capacity errors. 402 is a billing response, so RUNBOOK §1 is now the definitive fix rather
+than a hopeful one. Blocks Phases 3–5. The fail-safe path handles it (no action, log, continue), but
+a demo with no AI output is a bad demo.
 
-**2. Production env vars not yet pushed to Vercel.** Deferred on purpose: the Phase 0 status page
-needs none, and `DATABASE_URL` does not exist yet. Do it with `vercel env add` (RUNBOOK §8) rather
-than pasting into the dashboard, so values stay out of shell history and transcripts.
+**2. Resolution is trusted, by design.** A small set of authorised resolvers submits outcomes with an
+evidence URL. The challenge window, permissionless `finalizeResolution` and permissionless
+`invalidateStale` bound what one bad or absent resolver can do — but this is **not** a decentralised
+oracle. This belongs in the README verbatim; claiming otherwise is the one thing that could
+genuinely sink the submission.
+
+**3. The 120s challenge window is demo-scale, not production-scale.** Immutable, so it is honest and
+unchangeable rather than quietly tunable. Say so in the README.
+
+**4. `web/lib/contract.ts` hand-writes two ABI fragments** rather than importing the generated ABI.
+Fine for a two-call status panel; Phase 2 replaces it with the full typed client and should delete
+the fragments so there is one ABI source of truth.
 
 ---
 
 ## What the next session needs to know
 
-**Start Phase 1: the smart contract.** Read `docs/CONTRACTS.md` first — it is the full spec (roles,
-lifecycle, parimutuel payout, agent caps, challenge window, custom errors, and the required test
-matrix). `docs/BUILD_PLAN.md` has the Phase 1 exit criteria.
+**Start Phase 2: data layer, chain client, idempotency engine.** Read `docs/BUILD_PLAN.md` Phase 2
+and `docs/ARCHITECTURE.md` for the entity list.
 
-The deployer wallet is funded (10 tMSTC), so Phase 1 can go all the way through deploy **and**
-MSTScan verification in one session.
+The deployed ABI is at `contracts/deployments/mstTestnet.json` (committed — address, ABI,
+constructor args, tx hash, block) and typechain bindings are regenerated into
+`contracts/types/ethers-contracts/` on every `pnpm compile`. **Index from block 5,786,343** — the
+deployment block; there is nothing before it.
 
 **Toolchain notes that will save time:**
-- Hardhat 3 API: `hre.network.getOrCreate(name)`; `connect()` is deprecated. In tests use
-  `await network.create()` for a fresh isolated EDR instance.
-- Anything imported in a test must be an explicit dependency — pnpm isolates transitive packages
-  (this is why `chai` had to be added directly).
-- `pnpm doctor` is a **built-in pnpm command**; ours is `pnpm preflight`.
-- `next lint` was removed in Next 16 — lint is ESLint 9 flat config using `eslint-config-next`'s
-  native flat exports (FlatCompat/eslintrc breaks on v16).
+- Hardhat 3 tests: `const { ethers, networkHelpers } = await network.create()`.
+  `networkHelpers.loadFixture(namedFn)` snapshots; the fixture receives the `NetworkConnection`.
+  Time travel is `networkHelpers.time.increase / increaseTo / latest`.
+- **Chai matchers take `ethers` as their first argument in Hardhat 3**:
+  `expect(tx).to.changeEtherBalance(ethers, alice, amount)`. The HH2 signature fails with a
+  confusing "Expected string or addressable" error. Gas is excluded by default (`includeFee: false`).
+- **typechain still emits a Hardhat-2-shaped module augmentation**, so `ethers.deployContract("X")`
+  is *not* overload-resolved to the typed contract — it comes back as `ethers.Contract`, and
+  `.connect()` on that returns an untyped `BaseContract`. `skipLibCheck` hides the underlying error.
+  Work around it by naming the generated type: `(await ethers.deployContract(...)) as unknown as X`,
+  or use `X__factory.connect(address, signer)` in scripts. `contracts/tsconfig.json` must include
+  `types/**/*.ts`.
+- **Decoding a revert on MST needs the helper in `contracts/scripts/smoke.ts`** (`extractRevertData`)
+  — the RPC puts the ABI data in the error message, not `error.data`. Phase 5 needs this in the web
+  app; consider lifting it into `web/lib/chain/` as a shared util.
 - Verify with the exact deployed settings: solc 0.8.28, `evmVersion: cancun`, optimizer runs 200.
-- Prove the deploy→verify flow with `Ping.sol` first, then delete it once `AuspexMarket` is deployed
-  and verified.
+  `pnpm --filter contracts verify:testnet` already does this from the deployment record.
+- Anything imported in a test must be an explicit dependency — pnpm isolates transitive packages.
+- `next lint` was removed in Next 16 — lint is ESLint 9 flat config.
 - Vercel auto-deploys `main` to https://auspex-web-mu.vercel.app — a broken build there is public.
+- `NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS` is set in Vercel for production, preview **and** development.

@@ -38,8 +38,17 @@ jobs:
       - name: Test contracts
         run: pnpm --filter contracts test
 
+      # Must run after `compile`: it typechecks against the typechain bindings, which are
+      # generated into the git-ignored contracts/types/. Without this step a test that calls a
+      # method which does not exist still passes review — it resolves to an untyped BaseContract.
+      - name: Typecheck contracts
+        run: pnpm --filter contracts typecheck
+
       - name: Typecheck web
         run: pnpm --filter web typecheck
+
+      - name: Lint web
+        run: pnpm --filter web lint
 
       - name: Build web
         run: pnpm --filter web build

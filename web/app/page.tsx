@@ -1,14 +1,15 @@
-import { MST_TESTNET, explorerUrl, formatMstc } from "@/lib/chain";
+import { MST_TESTNET, explorerUrl, formatMstc, shortHash } from "@/lib/chain";
 import { getChainHealth } from "@/lib/rpc";
+import { getContractStatus } from "@/lib/contract";
 
 // Always read live chain state — never serve a cached block height.
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const PHASES = [
-  { n: 0, name: "Foundations & rails", state: "current" },
-  { n: 1, name: "Smart contract — deploy & verify", state: "todo" },
-  { n: 2, name: "Data layer & idempotency engine", state: "todo" },
+  { n: 0, name: "Foundations & rails", state: "done" },
+  { n: 1, name: "Smart contract — deploy & verify", state: "done" },
+  { n: 2, name: "Data layer & idempotency engine", state: "current" },
   { n: 3, name: "News ingestion & 2-source confirmation", state: "todo" },
   { n: 4, name: "Proposer agent & human approval gate", state: "todo" },
   { n: 5, name: "Member agents & policy gate", state: "todo" },
@@ -18,7 +19,7 @@ const PHASES = [
 ] as const;
 
 export default async function Home() {
-  const health = await getChainHealth();
+  const [health, contract] = await Promise.all([getChainHealth(), getContractStatus()]);
 
   return (
     <main className="grid-backdrop min-h-dvh">
@@ -113,6 +114,68 @@ export default async function Home() {
           )}
         </section>
 
+        {/* The Phase 1 artifact. Every number below is an eth_call, made on this page load. */}
+        <section className="mb-10">
+          <SectionLabel>Deployed contract</SectionLabel>
+
+          {contract.deployed ? (
+            <div className="rounded-lg border border-ink-700 bg-ink-900">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-ink-800 px-4 py-2.5">
+                <span className="live-dot size-2 rounded-full bg-ok-500" />
+                <span className="font-mono text-xs text-ink-300">AuspexMarket</span>
+                <a
+                  href={explorerUrl("address", contract.address)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-xs text-signal-500 underline-offset-2 hover:underline"
+                >
+                  {shortHash(contract.address, 10, 8)} ↗
+                </a>
+                <span className="ml-auto font-mono text-[11px] text-ok-500">
+                  verified source on MSTScan
+                </span>
+              </div>
+
+              <dl className="grid grid-cols-2 divide-ink-800 sm:grid-cols-3 sm:divide-x">
+                <Stat label="Bytecode" value={`${contract.bytecodeBytes.toLocaleString("en-US")} B`}>
+                  <span className="text-ink-400">eth_getCode — the contract exists</span>
+                </Stat>
+                <Stat label="Markets created" value={String(contract.marketCount)}>
+                  <span className="text-ink-400">marketCount() read live</span>
+                </Stat>
+                <Stat
+                  label="Challenge window"
+                  value={`${contract.challengeWindowSeconds}s`}
+                >
+                  <span className="text-ink-400">immutable — short for the demo</span>
+                </Stat>
+              </dl>
+
+              <p className="border-t border-ink-800 px-4 py-3 text-xs leading-relaxed text-ink-400">
+                Agent wallets hold <span className="text-ink-300">no role</span> in this
+                contract. They can place a bet within an on-chain cap and claim — nothing
+                else — and their winnings are paid to a registered owner address, never to
+                the agent. An over-cap bet is refused by the chain, not by our server.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3">
+              <p className="font-mono text-sm text-warn-500">
+                {contract.address === null
+                  ? "NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS is not set for this deployment"
+                  : `contract not readable at ${contract.address}`}
+              </p>
+              {contract.address !== null && (
+                <p className="mt-2 font-mono text-xs text-ink-400">{contract.error}</p>
+              )}
+              <p className="mt-2 text-xs text-ink-400">
+                This panel reads the contract over the public RPC on every load. It shows the
+                real failure rather than a placeholder.
+              </p>
+            </div>
+          )}
+        </section>
+
         {/* Network reference */}
         <section className="mb-10">
           <SectionLabel>Network</SectionLabel>
@@ -127,7 +190,17 @@ export default async function Home() {
               note="not mstscan.com — that indexes a different chain"
             />
             <Row label="Faucet" value={MST_TESTNET.faucetUrl} href={MST_TESTNET.faucetUrl} />
-            <Row label="Contract" value="not deployed yet — Phase 1" muted last />
+            {contract.address === null ? (
+              <Row label="Contract" value="address not configured for this deployment" muted last />
+            ) : (
+              <Row
+                label="Contract"
+                value={contract.address}
+                href={explorerUrl("address", contract.address)}
+                note="AuspexMarket, verified source"
+                last
+              />
+            )}
           </dl>
         </section>
 
@@ -144,7 +217,11 @@ export default async function Home() {
               >
                 <span
                   className={`size-1.5 shrink-0 rounded-full ${
-                    phase.state === "current" ? "bg-warn-500" : "bg-ink-600"
+                    phase.state === "done"
+                      ? "bg-ok-500"
+                      : phase.state === "current"
+                        ? "bg-warn-500"
+                        : "bg-ink-600"
                   }`}
                 />
                 <span className="w-16 shrink-0 font-mono text-xs text-ink-400">
@@ -152,11 +229,14 @@ export default async function Home() {
                 </span>
                 <span
                   className={`text-sm ${
-                    phase.state === "current" ? "text-ink-100" : "text-ink-400"
+                    phase.state === "todo" ? "text-ink-400" : "text-ink-100"
                   }`}
                 >
                   {phase.name}
                 </span>
+                {phase.state === "done" && (
+                  <span className="ml-auto font-mono text-[11px] text-ok-500">complete</span>
+                )}
                 {phase.state === "current" && (
                   <span className="ml-auto font-mono text-[11px] text-warn-500">
                     in progress

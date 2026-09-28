@@ -288,3 +288,116 @@ may reasonably ask how we funded our wallets.
 
 **Cost:** the faucet UI has a reCAPTCHA, so wallet funding is a manual step. Accepted — solving
 CAPTCHAs is out of bounds.
+
+---
+
+### ADR-019 — `challengeWindow` is immutable; there is no admin setter
+
+**Decided:** `challengeWindow` is an `immutable` set in the constructor (120s on the live
+deployment). No function can change it.
+
+**Why:** the challenge window is the only thing standing between a single resolver's opinion and a
+final payout. An admin who could shrink it to zero could propose an outcome and finalise it in the
+same block, which would make the window decorative. A setter would have to be explained away in
+front of a judge; an `immutable` explains itself.
+
+**Cost:** changing the window means redeploying. Given a 120s window chosen for demo legibility,
+that is a non-cost.
+
+**Evidence:** `challengeWindow()` reads `120` on
+`0xc4743d6295311AFead12161881Bfcf601B70104C`; constructor args are visible on MSTScan.
+
+---
+
+### ADR-020 — Deactivating an agent blocks it entirely rather than un-capping it
+
+**Decided:** `placeBet` treats *registered* (`agents[caller].owner != 0`) and *active* as separate
+checks. A registered-but-inactive agent reverts `AgentNotActive`.
+
+**Why:** the obvious implementation — `if (agent.active) { ...enforce caps... }` — has an inverted
+failure mode that is easy to miss in review: deactivating an agent would drop it out of the capped
+branch and into the uncapped "anybody can bet" path. The safety control would *remove* the limit it
+exists to impose. A test asserts a deactivated agent cannot bet 50 tMSTC, not merely that it cannot
+bet over its cap.
+
+**Cost:** one extra branch, and a deactivated agent cannot place even a tiny bet. That is the
+intended meaning of deactivation.
+
+**Evidence:** `contracts/test/AuspexMarket.test.ts` — "blocks a deactivated agent entirely —
+deactivation must not un-cap it".
+
+---
+
+### ADR-021 — A silent resolver cannot lock funds: `invalidateStale` is permissionless
+
+**Decided:** anyone may call `invalidateStale(marketId)` once `resolveDeadline` has passed with no
+resolution finalised. The market becomes `INVALIDATED` and every bettor is refunded their exact
+stake.
+
+**Why:** `docs/CONTRACTS.md` already made permissionless `finalizeResolution` a stated property —
+"no privileged party can block a payout by going silent". That guarantee only covered a resolver who
+*had* proposed something. A resolver who never showed up at all would have left funds stranded in the
+contract with no way out. This closes that hole using `resolveDeadline`, which was otherwise a stored
+field nothing read.
+
+**Cost:** ~10 lines, and a market whose resolver is merely late can be invalidated by anyone once the
+deadline passes. The deadline is set at creation, so that is a scheduling decision, not an accident.
+
+**Alternative rejected:** an admin-only rescue. It would reintroduce exactly the trusted party the
+permissionless design exists to remove.
+
+---
+
+### ADR-022 — Admin `forceInvalidate` is gated on 3 recorded challenges
+
+**Decided:** the admin escape hatch requires `challengeCount >= MAX_CHALLENGES` (3). It cannot be
+used on a market that has not visibly deadlocked on-chain.
+
+**Why:** an unconditional "admin can cancel any market" function is a hole big enough to sink the
+trust argument — it would let us void a market we disliked and refund our way out. Gating it on
+three challenges already recorded on-chain means the justification is public before the power is
+available.
+
+**Cost:** a market that needs cancelling for some other reason has to go the honest route —
+`proposeResolution(INVALID, evidenceUrl)`, which still passes through the challenge window.
+
+**Evidence:** tests assert `TooFewChallenges(0, 3)` before the challenges and success after them.
+
+---
+
+### ADR-023 — The MST RPC hides custom-error data in the error *message*
+
+**Decided:** decode revert data ourselves — check `error.data`, then `error.info.error.data`, then
+scrape the hex out of `error.message` — and run it through `Interface.parseError`.
+
+**Why:** on a reverting `eth_call`, MST Testnet returns
+`"execution reverted: 0x594f797d<abi-encoded args>"` as the JSON-RPC error *message*, with no
+standard `data` field. ethers v6 therefore cannot decode it: `error.revert` comes back `null` and
+naive string matching on the error name fails. This is not theoretical — it broke the first run of
+the post-deploy smoke test.
+
+**Why it matters beyond the script:** Phase 5's whole demo beat is pointing at a transaction that
+shows `AgentPerTxCapExceeded(attempted, cap)`. If the UI can only render "execution reverted", the
+most important piece of evidence in the submission becomes illegible.
+
+**Cost:** ~10 lines of defensive parsing, kept in one helper rather than scattered.
+
+**Evidence:** `contracts/scripts/smoke.ts` prints
+`SpecHashAlreadyUsed(0x1b9f…)` decoded from a live revert;
+`keccak256("SpecHashAlreadyUsed(bytes32)")[0:4] == 0x594f797d` confirms the selector.
+
+---
+
+### ADR-024 — Storage-based `ReentrancyGuard`, not the transient-storage one
+
+**Decided:** use OpenZeppelin's classic `ReentrancyGuard` even though the chain is Cancun-capable
+and `ReentrancyGuardTransient` (TSTORE) is available.
+
+**Why:** TSTORE support on MST Testnet was verified with `eth_call` state-override probes, not with
+a real state-changing transaction. The one function that guard protects is `claim()` — the function
+that pays people. Betting payouts on an EVM feature we have probed but not exercised in production
+trades a real risk for a saving that is worth nothing here, because `baseFeePerGas` is 0.
+
+**Cost:** two storage slots' worth of gas per claim, on a chain where gas is free.
+
+**Revisit if:** a later phase exercises TSTORE in a real transaction and it behaves.

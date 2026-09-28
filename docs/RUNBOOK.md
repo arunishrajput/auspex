@@ -29,6 +29,11 @@ These were completed automatically during Phase 0. Listed so you know what exist
 "experiencing high demand" on 0/20 calls** across five models. The one earlier success took 159
 seconds. This is capacity contention, not quota — retrying does not fix it. See ADR-017.
 
+**Update, later the same day (end of Phase 1):** `pnpm preflight` now reports **HTTP 402** for every
+model in both chains, not 503. A 402 is an explicit billing response, so this step is no longer a
+hopeful workaround for congestion — it is the actual fix, and nothing in Phases 3–5 will work until
+it is done.
+
 Claude cannot enter payment details, so this step is yours.
 
 1. Open **https://aistudio.google.com/api-keys**
@@ -72,11 +77,24 @@ pnpm preflight        # "Deployer wallet" should show a non-zero balance
 
 ---
 
-## ⬜ §3 — Neon Postgres  ·  *blocks: Phase 2*
+## ✅ §3 — Neon Postgres  ·  *blocks: Phase 2*  ·  **DONE 2026-09-28**
 
-Started for you in the Vercel dashboard, then stopped at the terms screen — **accepting Neon's
-Terms and Privacy Policy is your decision, not Claude's**, and it shares your Vercel ID and email
-with Neon.
+You accepted the terms and created the database; `DATABASE_URL` is now set in the `auspex-web`
+Vercel project for Production and Preview (confirmed via `vercel env ls`).
+
+**One step remains, and it has to be you:** pulling a live database credential onto disk is denied
+to Claude by policy. Run this once, from `web/`:
+
+```bash
+cd web && vercel env pull .env.local --environment=production
+```
+
+Next.js reads `web/.env.local` natively, and the root-env loader in `next.config.mjs` will not
+override it. If you prefer one env file for the monorepo, copy just the `DATABASE_URL=` line into
+the root `.env.local` and delete the pulled one.
+
+<details>
+<summary>Original instructions, kept for reference</summary>
 
 **Option A — via Vercel (recommended, auto-injects `DATABASE_URL` into the deployment):**
 
@@ -96,9 +114,14 @@ string (host contains `-pooler`) into `.env.local` as `DATABASE_URL`.
 
 > If you see `too many connections` later, you used the direct string instead of the pooled one.
 
+</details>
+
 ---
 
-## §4 — Discord webhook  ·  *blocks: Phase 4 notifications*
+## ✅ §4 — Discord webhook  ·  *blocks: Phase 4 notifications*  ·  **DONE**
+
+`DISCORD_WEBHOOK_URL` is set in `.env.local` and `pnpm preflight` reports it. Steps kept below in
+case the webhook needs recreating.
 
 Two minutes, no bot token, no approval flow.
 
@@ -118,7 +141,10 @@ land in real time, seconds after the on-chain market is confirmed, is worth more
 
 ---
 
-## §5 — BridgeKey wallet + MST Testnet  ·  *blocks: Phase 1 deploy, Phase 4 approvals*
+## §5 — BridgeKey wallet + MST Testnet  ·  *blocks: Phase 4 approvals*
+
+> Phase 1 deployed without this — it used the generated deployer key in `.env.local`. BridgeKey is
+> needed when a **human** signs `createMarket` from the `/review` queue in Phase 4.
 
 BridgeKey is the track's recommended wallet and is how the human authority signs `createMarket`.
 
@@ -176,16 +202,22 @@ pipeline heartbeat.
 
 Local `.env.local` does not reach production. Push the same values up.
 
-**Vercel** (from the repo root, after `vercel link`):
+**Already set** (confirm any time with `cd web && vercel env ls`):
+
+| Variable | Environments | Set by |
+|:--|:--|:--|
+| `DATABASE_URL` + the `POSTGRES_*` / `PG*` set | Production, Preview | the Neon integration (§3) |
+| `NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS` | Production, Preview, Development | Phase 1 |
+
+**Vercel** (the project is already linked from `web/`):
 
 ```bash
-vercel env add DATABASE_URL production
+cd web
 vercel env add GEMINI_API_KEY production
 vercel env add DISCORD_WEBHOOK_URL production
 vercel env add AGENT_KEY_ENC_SECRET production
 vercel env add TICK_SECRET production
 vercel env add DEPLOYER_PRIVATE_KEY production
-vercel env add NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS production   # after Phase 1
 ```
 
 Each command prompts for the value — paste it at the prompt so it never lands in shell history.
