@@ -79,19 +79,39 @@ pnpm preflight        # "Deployer wallet" should show a non-zero balance
 
 ## ✅ §3 — Neon Postgres  ·  *blocks: Phase 2*  ·  **DONE 2026-09-28**
 
-You accepted the terms and created the database; `DATABASE_URL` is now set in the `auspex-web`
-Vercel project for Production and Preview (confirmed via `vercel env ls`).
+You accepted the terms and created the database; `DATABASE_URL` is set in the `auspex-web`
+Vercel project for Production and Preview, and `DATABASE_URL` + `DATABASE_URL_UNPOOLED` are now
+in the repo-root `.env.local` for local work. **Nothing left to do here.**
 
-**One step remains, and it has to be you:** pulling a live database credential onto disk is denied
-to Claude by policy. Run this once, from `web/`:
+### ⚠️ `vercel env pull` does not work for these — and it does not tell you so
+
+The Neon integration marks every variable it creates as **sensitive**, which means Vercel will
+never decrypt them again — not in the dashboard, not through the API. `vercel env pull` still
+reports success and still writes the file; the values in it are the literal string
+`"[SENSITIVE]"`. Anything reading them fails later with a confusing URL parse error rather than
+"this credential is missing". This is what blocked the start of Phase 2.
+
+Get them from Neon instead, which owns them:
 
 ```bash
-cd web && vercel env pull .env.local --environment=production
+neonctl projects list --org-id org-royal-flower-52404323
+neonctl connection-string main --project-id jolly-queen-98097073 \
+  --database-name neondb --role-name neondb_owner --pooled   # → DATABASE_URL
+neonctl connection-string main --project-id jolly-queen-98097073 \
+  --database-name neondb --role-name neondb_owner            # → DATABASE_URL_UNPOOLED
 ```
 
-Next.js reads `web/.env.local` natively, and the root-env loader in `next.config.mjs` will not
-override it. If you prefer one env file for the monorepo, copy just the `DATABASE_URL=` line into
-the root `.env.local` and delete the pulled one.
+`neonctl` opens a browser once to authenticate, then works non-interactively. Note the
+`--org-id`: the account has two organisations and the Vercel-managed one
+(`org-royal-flower-52404323`) holds this project. Without the flag the CLI stops on an
+interactive picker and hangs any script.
+
+**Both URLs are needed and they are not interchangeable.** The pooled one (host contains
+`-pooler`) is PgBouncer in transaction mode and is what the app uses. Migrations must use the
+direct one — PgBouncer rejects the session-level statements DDL issues.
+
+Delete `web/.env.local` if a `vercel env pull` ever recreates it: Next.js gives it precedence
+over the repo-root file, so its `[SENSITIVE]` placeholders would silently shadow the real values.
 
 <details>
 <summary>Original instructions, kept for reference</summary>

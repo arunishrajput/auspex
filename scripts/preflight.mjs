@@ -215,19 +215,77 @@ async function checkGemini() {
 // ---------------------------------------------------------------------------
 async function checkDatabase() {
   const url = env.DATABASE_URL;
+
   if (!url || url.includes("user:password@host")) {
     record("Neon Postgres", false, "DATABASE_URL not set — see docs/RUNBOOK.md §3", "Phase 2+");
     return;
   }
-  if (!url.includes("-pooler")) {
+
+  // `vercel env pull` writes this literal string for any variable the Neon integration marked
+  // sensitive, while reporting success. A preflight that only asks "is it set?" would pass.
+  // That exact trap blocked the start of Phase 2 — see docs/RUNBOOK.md §3.
+  if (url.includes("[SENSITIVE]")) {
     record(
       "Neon Postgres",
-      true,
-      "set, but this looks like the DIRECT connection string — use the POOLED one for serverless",
+      false,
+      'DATABASE_URL is the literal "[SENSITIVE]" — vercel env pull cannot decrypt it. ' +
+        "Use `neonctl connection-string`. See docs/RUNBOOK.md §3.",
+      "Phase 2+",
     );
     return;
   }
-  record("Neon Postgres", true, "DATABASE_URL set (pooled)");
+
+  // Actually connect. "The variable is set" is not the property that matters; "the database
+  // answers and has a schema" is, and it is one query away.
+  const startedAt = Date.now();
+  try {
+    const { Client } = await import("pg");
+    const parsed = new URL(url);
+    const mode = parsed.searchParams.get("sslmode");
+    parsed.searchParams.delete("sslmode");
+
+    const client = new Client({
+      connectionString: parsed.toString(),
+      ssl: mode !== "disable" ? { rejectUnauthorized: true } : undefined,
+      // Neon's free tier scales the compute to zero; a cold start was seen at ~25s.
+      connectionTimeoutMillis: 45_000,
+    });
+
+    await client.connect();
+    const { rows } = await client.query(
+      "select count(*)::int as tables from information_schema.tables where table_schema = 'public'",
+    );
+    await client.end();
+
+    const tables = rows[0]?.tables ?? 0;
+    const elapsed = Date.now() - startedAt;
+
+    if (tables === 0) {
+      record(
+        "Neon Postgres",
+        false,
+        `connected in ${elapsed}ms but the schema is empty — run \`pnpm --filter web db:migrate\``,
+        "Phase 2+",
+      );
+      return;
+    }
+
+    record(
+      "Neon Postgres",
+      true,
+      `connected in ${elapsed}ms, ${tables} tables` +
+        (url.includes("-pooler")
+          ? ""
+          : " — WARNING: direct string, use the POOLED one for serverless"),
+    );
+  } catch (error) {
+    record(
+      "Neon Postgres",
+      false,
+      `could not connect: ${error instanceof Error ? error.message : String(error)}`,
+      "Phase 2+",
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

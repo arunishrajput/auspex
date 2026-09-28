@@ -50,6 +50,13 @@ jobs:
       - name: Lint web
         run: pnpm --filter web lint
 
+      # The pure suites — log projection, revert decoding, spec hashing — run here.
+      # lib/db/schema.test.ts SKIPS: it creates and drops a real database on Neon, and this
+      # repository is public so the credential is deliberately not a CI secret. It is run
+      # locally before every schema change and its result is recorded in PROGRESS.md.
+      - name: Test web
+        run: pnpm --filter web test
+
       - name: Build web
         run: pnpm --filter web build
 

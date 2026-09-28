@@ -1,4 +1,5 @@
 import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 /**
  * Local-only: merge the repo-root `.env.local` into this app's environment.
@@ -11,7 +12,9 @@ import { readFileSync, existsSync } from "node:fs";
  * this is a no-op there. Existing values always win; nothing here ever overwrites them.
  */
 function loadRootEnv() {
-  const path = new URL("../.env.local", import.meta.url);
+  // fileURLToPath, not the URL itself: Node 26 deprecates passing a URL to fs.existsSync,
+  // and the warning would print on every single build.
+  const path = fileURLToPath(new URL("../.env.local", import.meta.url));
   if (!existsSync(path)) return;
 
   for (const line of readFileSync(path, "utf8").split("\n")) {

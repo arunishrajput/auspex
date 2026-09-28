@@ -120,13 +120,22 @@ The requirement: *a crashed and re-run worker must not double-create a market or
 one `Proposal` per `Event`, one `AgentDecision` per `(market, member, round)`). Workers claim rows
 with `SELECT ... FOR UPDATE SKIP LOCKED`, so two concurrent ticks never touch the same row.
 
-**On-chain.** The dangerous window is "we broadcast, then crashed before recording the hash". So:
+**On-chain.** The dangerous window is "we broadcast, then crashed before recording the hash".
+Writing the row before broadcasting narrows that window but does not close it — the process can
+still die between `eth_sendRawTransaction` returning and the `UPDATE` committing, and a retry
+that re-signs produces a *second* transaction. So the transaction is **signed before it is
+broadcast**, and the signed bytes are persisted first (ADR-027):
 
-1. Write the `OnChainIntent` row **before** broadcasting, with a UUID idempotency key.
-2. Claim the intent under a row lock.
-3. **If `tx_hash` is already set, poll the receipt — never re-send.**
-4. Persist `tx_hash` immediately on broadcast, before waiting for confirmation.
-5. Explicit nonce management; retry with backoff only from a known-safe state.
+1. Write the `OnChainIntent` row **before** anything touches the chain, keyed on a business fact.
+2. Claim it under `FOR UPDATE SKIP LOCKED`, taking a time-bounded lease.
+3. Sign, and persist the **signed raw transaction and its hash**. The hash is now fixed.
+4. Broadcast those exact bytes. Any recovery re-broadcasts the *same* bytes, which the network
+   deduplicates by hash — so no crash point can yield two transactions.
+5. Poll the receipt; a revert is a terminal state with its custom error decoded, not a failure.
+
+Nonces come from `max(node pending count, our highest recorded nonce + 1)` under a Postgres
+advisory lock on the sending address. `pnpm --filter web crash-test` demonstrates the whole thing
+against the real testnet by killing the worker with `process.exit(1)` at two different points.
 
 **And the contract independently refuses duplicates.** `createMarket` takes a `bytes32 specHash` and
 reverts on a hash it has already seen. So even if every off-chain guarantee failed simultaneously, a
@@ -207,8 +216,15 @@ with BridgeKey and with any other MST-compatible wallet.
 | `agent_decisions` | Every proposal + gate outcome + reasons | **`UNIQUE(market_id, member_id, round)`** |
 | `onchain_intents` | Every intended chain write | **`UNIQUE(idempotency_key)`** |
 | `chain_events` | Indexed logs | `UNIQUE(tx_hash, log_index)` |
-| `notifications` | In-app feed + Discord delivery state | — |
+| `indexer_cursors` | How far the indexer has read, per stream | `name` primary key |
+| `notifications` | In-app feed + Discord delivery state | `UNIQUE(dedupe_key)` |
 | `audit_log` | Append-only: actor, action, reason, tx hash | append-only |
+
+`indexer_cursors` was not in the original plan and is deliberately **not** derived from
+`MAX(block_number)` of `chain_events`: a range of blocks containing no logs at all is still
+progress, and re-scanning it on every tick would grow without bound. The cursor is an
+optimisation, not a correctness mechanism — losing it costs a rescan and nothing else, because
+the projection is a pure fold (ADR-026).
 
 `audit_log` is the spine of the `/audit` page and of the "every decision is logged with a reason"
 guarantee. Nothing deletes from it.

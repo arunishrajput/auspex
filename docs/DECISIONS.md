@@ -401,3 +401,113 @@ trades a real risk for a saving that is worth nothing here, because `baseFeePerG
 **Cost:** two storage slots' worth of gas per claim, on a chain where gas is free.
 
 **Revisit if:** a later phase exercises TSTORE in a real transaction and it behaves.
+
+---
+
+### ADR-025 — One Postgres driver (`pg`), not Neon's serverless HTTP client
+
+**Decided:** connect with `pg` + `drizzle-orm/node-postgres` everywhere — Vercel, scripts and
+tests alike — rather than `@neondatabase/serverless`.
+
+**Why:** the central idempotency mechanism in `docs/ARCHITECTURE.md` §4 is
+`SELECT … FOR UPDATE SKIP LOCKED` **inside a transaction**. Neon's HTTP driver issues each
+statement as its own request and cannot hold one open, so the row lock that stops two concurrent
+ticks claiming the same intent would simply not exist. Neon's WebSocket `Pool` can hold a
+transaction, but it only speaks to Neon — so the migration tests could never run against anything
+else, and neither could a judge cloning the repo.
+
+`pg` speaks the ordinary Postgres wire protocol, which Neon serves on its pooler endpoint and
+which any local Postgres serves too. One driver, one code path.
+
+**Cost:** a TCP + TLS handshake on a cold lambda instead of a single HTTP request. Measured at
+~0.5s from here, against ~10-25s when Neon's free tier has scaled the compute to zero — the
+driver is not what makes a cold start slow.
+
+**Also decided here:** TLS is on by default and only `sslmode=disable` turns it off
+(`lib/db/ssl.ts`). Deriving "use TLS" from the *presence* of `sslmode` means a connection string
+that omits it connects in clear text. The migration test caught exactly that.
+
+---
+
+### ADR-026 — The indexer's projection is a pure fold that de-duplicates its own input
+
+**Decided:** `lib/indexer/project.ts` takes a list of decoded logs and returns market state, with
+no database, no network and no clock — and it discards a repeated `(txHash, logIndex)` itself
+rather than trusting the caller to have done so.
+
+**Why a fold:** replay then costs nothing to reason about. Re-reading from the deployment block
+recomputes the same answer from the same inputs, so "have I processed this log before?" is never
+asked. It also means Phase 2's exit criterion — *the indexer reconstructs correct market state
+from the Phase 1 smoke-test events* — is a unit test over logs captured from the real chain, not
+an integration test needing a live database.
+
+**Why it de-duplicates anyway:** `chain_events` already refuses duplicates with
+`UNIQUE(tx_hash, log_index)`, so in the running system the fold never sees one. But `BetPlaced`
+*adds* to a pool, so a duplicate silently doubles someone's money, and a function whose
+correctness depends on its caller having deduplicated is one refactor away from being wrong. The
+test that asserts this failed on the first run and is the reason the guard exists.
+
+**Cost:** one `Set` of `"hash:index"` strings per projection.
+
+---
+
+### ADR-027 — Sign, persist, *then* broadcast — so a crash cannot produce a second transaction
+
+**Decided:** `lib/intents/engine.ts` builds and signs a transaction, writes the **signed raw
+bytes and their hash** to `onchain_intents`, and only then broadcasts.
+
+    PENDING ──sign──> SIGNED ──broadcast──> BROADCAST ──receipt──> CONFIRMED | REVERTED
+
+**The problem it solves:** "write a row, then send" narrows the dangerous window but does not
+close it. A process can die between `eth_sendRawTransaction` returning and the `UPDATE`
+committing, leaving a transaction on chain that no row knows about. Retrying then re-signs — and
+a re-signed transaction with a fresh nonce is a **second transaction**.
+
+**Why this closes it:** a signed transaction is immutable and its hash is fixed before it leaves
+the process. Every recovery path is therefore a *rebroadcast of identical bytes*, which the
+network deduplicates by hash:
+
+| crash point | recovery | transactions on chain |
+|---|---|---|
+| after signing, before broadcast | rebroadcast stored bytes | 1 |
+| after broadcast, before receipt | rebroadcast stored bytes (`already known`) | 1 |
+| after receipt, before commit | re-poll the stored hash | 1 |
+
+A retry is not "try again", it is "finish the thing that was already decided".
+
+**Supporting choices:** nonce selection is `max(node pending count, our highest recorded nonce + 1)`
+under a Postgres advisory lock on the sending address — the node's count can lag a transaction we
+sent moments ago, and our records cannot know about one sent by the deploy script. Claiming a row
+takes a **lease** (`next_attempt_at` pushed forward) rather than holding the transaction open
+across a 45-second receipt wait, which would exhaust a free-tier connection pool. An intent that
+reached `SIGNED` is never abandoned, however many attempts fail: its transaction may be in a
+mempool right now, and forgetting it is how a duplicate gets sent later.
+
+**Evidence:** `pnpm --filter web crash-test` kills the worker with `process.exit(1)` at both
+points against the real testnet. Result: hash `0xeabf2271…befe83` unchanged across both crashes,
+one intent row, one `MarketCreated` log, `marketCount()` 2 → 3.
+
+**And the contract refuses duplicates independently.** `createMarket` reverts on a `specHash` it
+has seen. Two mechanisms, neither relying on the other.
+
+---
+
+### ADR-028 — `/markets` reads the chain directly; the database only annotates
+
+**Decided:** the markets page calls `getMarket()` on the contract for every market and renders
+*those* numbers. Indexed rows supply only what a `view` call cannot — the creating transaction
+hash and the bet count — and are labelled as indexed.
+
+**Why:** the failure mode of a mirror is silently showing yesterday's numbers as though they were
+current. A prediction market whose pool balances are stale is worse than one that admits it
+cannot reach the chain. Reading the contract directly means a broken, lagging or sleeping indexer
+cannot put a wrong number on the page; the page shows the real error instead.
+
+It also gives the projection an independent check for free: when the two disagree, the page says
+so in an `indexer drift` badge rather than hiding it.
+
+**Cost:** one `eth_call` per market per page load. At three markets on a 3-second-block chain
+with zero base fee, this is not a cost.
+
+**Revisit if:** market count grows past roughly fifty, at which point the reads should be batched
+or the projection trusted with a freshness indicator.

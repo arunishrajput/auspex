@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { MST_TESTNET, explorerUrl, formatMstc, shortHash } from "@/lib/chain";
 import { getChainHealth } from "@/lib/rpc";
-import { getContractStatus } from "@/lib/contract";
+import { getContractStatus } from "@/lib/chain/status";
 
 // Always read live chain state — never serve a cached block height.
 export const dynamic = "force-dynamic";
@@ -42,6 +43,15 @@ export default async function Home() {
           <p className="mt-4 font-mono text-sm text-signal-400">
             AI proposes. Humans and the chain decide.
           </p>
+
+          <nav className="mt-6 flex flex-wrap gap-2">
+            <Link
+              href="/markets"
+              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
+            >
+              Markets →
+            </Link>
+          </nav>
         </header>
 
         {/* Live chain status — the honest part: this is a real RPC read, every load. */}
@@ -136,12 +146,17 @@ export default async function Home() {
                 </span>
               </div>
 
-              <dl className="grid grid-cols-2 divide-ink-800 sm:grid-cols-3 sm:divide-x">
+              <dl className="grid grid-cols-2 divide-ink-800 sm:grid-cols-4 sm:divide-x">
                 <Stat label="Bytecode" value={`${contract.bytecodeBytes.toLocaleString("en-US")} B`}>
                   <span className="text-ink-400">eth_getCode — the contract exists</span>
                 </Stat>
                 <Stat label="Markets created" value={String(contract.marketCount)}>
-                  <span className="text-ink-400">marketCount() read live</span>
+                  <Link
+                    href="/markets"
+                    className="text-signal-500 underline-offset-2 hover:underline"
+                  >
+                    view all →
+                  </Link>
                 </Stat>
                 <Stat
                   label="Challenge window"
@@ -149,7 +164,16 @@ export default async function Home() {
                 >
                   <span className="text-ink-400">immutable — short for the demo</span>
                 </Stat>
+                <Stat label="Kill switch" value={contract.paused ? "PAUSED" : "live"}>
+                  <span className="text-ink-400">paused() read live</span>
+                </Stat>
               </dl>
+
+              {contract.configWarning !== null && (
+                <p className="border-t border-warn-500/40 bg-warn-500/5 px-4 py-2.5 font-mono text-[11px] text-warn-500">
+                  {contract.configWarning}
+                </p>
+              )}
 
               <p className="border-t border-ink-800 px-4 py-3 text-xs leading-relaxed text-ink-400">
                 Agent wallets hold <span className="text-ink-300">no role</span> in this
@@ -161,13 +185,9 @@ export default async function Home() {
           ) : (
             <div className="rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3">
               <p className="font-mono text-sm text-warn-500">
-                {contract.address === null
-                  ? "NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS is not set for this deployment"
-                  : `contract not readable at ${contract.address}`}
+                contract not readable at {contract.address}
               </p>
-              {contract.address !== null && (
-                <p className="mt-2 font-mono text-xs text-ink-400">{contract.error}</p>
-              )}
+              <p className="mt-2 font-mono text-xs text-ink-400">{contract.error}</p>
               <p className="mt-2 text-xs text-ink-400">
                 This panel reads the contract over the public RPC on every load. It shows the
                 real failure rather than a placeholder.
@@ -190,17 +210,13 @@ export default async function Home() {
               note="not mstscan.com — that indexes a different chain"
             />
             <Row label="Faucet" value={MST_TESTNET.faucetUrl} href={MST_TESTNET.faucetUrl} />
-            {contract.address === null ? (
-              <Row label="Contract" value="address not configured for this deployment" muted last />
-            ) : (
-              <Row
-                label="Contract"
-                value={contract.address}
-                href={explorerUrl("address", contract.address)}
-                note="AuspexMarket, verified source"
-                last
-              />
-            )}
+            <Row
+              label="Contract"
+              value={contract.address}
+              href={explorerUrl("address", contract.address)}
+              note="AuspexMarket, verified source"
+              last
+            />
           </dl>
         </section>
 
