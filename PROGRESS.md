@@ -39,6 +39,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | Artifact | Value | Status |
 |:--|:--|:--|
 | **Public GitHub repo** | https://github.com/arunishrajput/auspex | ✅ pushed |
+| **CI (build/test/lint/secret+mock guards)** | https://github.com/arunishrajput/auspex/actions | ✅ green |
 | `AuspexMarket` contract address | _not deployed yet_ | ⬜ Phase 1 |
 | Deployment tx hash | _n/a_ | ⬜ Phase 1 |
 | Source verified on MSTScan | _n/a_ | ⬜ Phase 1 |
