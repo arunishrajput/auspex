@@ -1,0 +1,29 @@
+{
+  "name": "contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "build": "hardhat compile",
+    "typecheck": "tsc --noEmit",
+    "clean": "hardhat clean",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network mstTestnet",
+    "verify:testnet": "hardhat run scripts/verify.ts --network mstTestnet"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.1.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^4.0.0",
+    "@types/chai": "^5.0.1",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.10.0",
+    "chai": "^5.1.2",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.4",
+    "hardhat": "^3.18.0",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,58 @@
+name: Pipeline heartbeat
+
+# Advances the AuspeX pipeline state machine on a schedule.
+#
+# This is the BACKGROUND driver. The dashboard's "Run tick" button is the one used
+# during a live demo, because GitHub's cron is best-effort: it can be delayed under
+# load, and GitHub pauses scheduled workflows on public repos after ~60 days of
+# inactivity. Never let a demo depend on this firing on time.
+#
+# Free on public repositories, which we need anyway for the buildathon.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: # lets you trigger a tick by hand from the Actions tab
+
+concurrency:
+  group: heartbeat
+  cancel-in-progress: false # never cut a tick short mid-transaction
+
+jobs:
+  tick:
+    name: Advance pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: POST /api/tick
+        env:
+          TICK_URL: ${{ secrets.TICK_URL }}
+          TICK_SECRET: ${{ secrets.TICK_SECRET }}
+        run: |
+          if [ -z "$TICK_URL" ] || [ -z "$TICK_SECRET" ]; then
+            echo "TICK_URL or TICK_SECRET not configured — skipping."
+            echo "Set them with: gh secret set TICK_URL / gh secret set TICK_SECRET"
+            exit 0
+          fi
+
+          # --fail-with-body so a non-2xx still prints the server's explanation.
+          http_code=$(curl --silent --show-error --location \
+            --max-time 120 \
+            --write-out "%{http_code}" \
+            --output /tmp/tick-response.json \
+            --request POST "$TICK_URL" \
+            --header "Content-Type: application/json" \
+            --header "Authorization: Bearer $TICK_SECRET" \
+            --data '{"source":"github-actions"}')
+
+          echo "HTTP $http_code"
+          cat /tmp/tick-response.json || true
+          echo
+
+          # A tick that takes no action is a valid outcome (fail-safe on LLM errors),
+          # so only a transport/server failure is a workflow failure.
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Tick endpoint returned $http_code"
+            exit 1
+          fi

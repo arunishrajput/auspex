@@ -1,0 +1,26 @@
+{
+  "name": "auspex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AuspeX — human-gated, AI-researched prediction markets on MST Blockchain",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "dev": "pnpm --filter web dev",
+    "compile": "pnpm --filter contracts compile",
+    "deploy:testnet": "pnpm --filter contracts deploy:testnet",
+    "verify:testnet": "pnpm --filter contracts verify:testnet",
+    "wallets:new": "node scripts/new-wallet.mjs",
+    "preflight": "node scripts/preflight.mjs"
+  },
+  "devDependencies": {
+    "ethers": "^6.17.0",
+    "typescript": "^5.9.2"
+  }
+}

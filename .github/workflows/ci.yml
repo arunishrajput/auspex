@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref — keeps the free-tier minutes for real work.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Compile contracts
+        run: pnpm --filter contracts compile
+
+      - name: Test contracts
+        run: pnpm --filter contracts test
+
+      - name: Typecheck web
+        run: pnpm --filter web typecheck
+
+      - name: Build web
+        run: pnpm --filter web build
+
+      # Hard rule #2: no mock data may reach a production build.
+      # Phase 7 replaces this grep with a real check against the Provenance component.
+      - name: Guard against mock data in production build
+        run: |
+          if grep -rn --include="*.ts" --include="*.tsx" \
+               -e 'origin="MOCK"' -e "origin={'MOCK'}" -e 'DataOrigin.MOCK' \
+               web/app web/components web/lib 2>/dev/null; then
+            echo "::error::MOCK provenance found in production source. See CLAUDE.md hard rule #2."
+            exit 1
+          fi
+          echo "No MOCK provenance in production source."
+
+      # Secrets must never be committed. Cheap, catches the expensive mistake.
+      - name: Guard against committed secrets
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example'; then
+            echo "::error::An .env file is tracked by git. Secrets must live only in .env.local."
+            exit 1
+          fi
+          if git grep -nIE '(DEPLOYER_PRIVATE_KEY|GEMINI_API_KEY|AGENT_KEY_ENC_SECRET)[[:space:]]*=[[:space:]]*["'"'"']?(0x[0-9a-fA-F]{64}|AIza[0-9A-Za-z_-]{20,})' -- . ':(exclude).env.example'; then
+            echo "::error::A real-looking secret is committed."
+            exit 1
+          fi
+          echo "No committed secrets detected."

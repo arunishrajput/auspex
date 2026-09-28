@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/*
+ * AuspeX — mission-control aesthetic.
+ * Dark, dense, monospace-leaning. Every number on screen is real chain or DB state,
+ * so the design's job is to make provenance legible, not to decorate.
+ */
+
+@theme {
+  --color-ink-950: #07090d;
+  --color-ink-900: #0b0e14;
+  --color-ink-850: #10141c;
+  --color-ink-800: #161b26;
+  --color-ink-700: #212837;
+  --color-ink-600: #323b4f;
+  --color-ink-400: #6b7893;
+  --color-ink-300: #9aa6bf;
+  --color-ink-100: #dfe5f1;
+
+  --color-signal-500: #3ba1ff;
+  --color-signal-400: #6fbcff;
+
+  --color-ok-500: #26c281;
+  --color-warn-500: #e8b339;
+  --color-bad-500: #f0524d;
+  --color-human-500: #a97bff;
+
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: var(--color-ink-950);
+  color: var(--color-ink-100);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle grid backdrop — reads as instrumentation, not decoration. */
+.grid-backdrop {
+  background-image:
+    linear-gradient(to right, rgba(107, 120, 147, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(107, 120, 147, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.live-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}

@@ -1,0 +1,16 @@
+packages:
+  - contracts
+  - web
+
+# pnpm >=11 blocks dependency lifecycle scripts unless listed here.
+# Each of these has a legitimate postinstall (native binary or protobuf codegen)
+# that our toolchain needs. Anything not listed stays blocked by default.
+allowBuilds:
+  '@google/genai': true
+  '@nomicfoundation/edr': true
+  esbuild: true
+  keccak: true
+  protobufjs: true
+  secp256k1: true
+  sharp: true
+  unrs-resolver: true
