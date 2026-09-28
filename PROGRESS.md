@@ -7,9 +7,9 @@
 > Session protocol and hard rules live in `CLAUDE.md`. Phase tasks and exit criteria live in
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
-**Last updated:** 2026-09-28
-**Current status:** ✅ Phase 2 complete
-**Next phase:** **Phase 3 — News ingestion, dedup, 2-source confirmation**
+**Last updated:** 2026-09-29
+**Current status:** ✅ Phase 3 complete
+**Next phase:** **Phase 4 — Market proposer agent + human approval gate**
 
 ---
 
@@ -20,8 +20,8 @@
 | 0 | Foundations & rails | ✅ Complete |
 | 1 | Smart contract — build, test, deploy, verify | ✅ Complete |
 | 2 | Data layer + chain client + idempotency engine | ✅ Complete |
-| 3 | News ingestion, dedup, 2-source confirmation | ⬜ **NEXT** |
-| 4 | Market proposer agent + human approval gate | ⬜ Not started |
+| 3 | News ingestion, dedup, 2-source confirmation | ✅ Complete |
+| 4 | Market proposer agent + human approval gate | ⬜ **NEXT** |
 | 5 | Member agents + deterministic policy gate | ⬜ Not started |
 | 6 | Resolution, challenge window, payout | ⬜ Not started |
 | 7 | Dashboard polish + trust page | ⬜ Not started |
@@ -70,6 +70,93 @@ decodes their method names (`createMarket`, `placeBet`) because the source is ve
 
 ---
 
+## Phase 3 — what shipped
+
+### The blocker that was not a blocker
+
+**Gemini works, on the free tier, with no card.** Two sessions recorded this as "the one real
+blocker" needing billing. The actual error, read in full for the first time, was:
+
+> `Your prepayment credits are depleted.` — HTTP 402, on *every* model including Gemma.
+
+That is **project-scoped prepay exhaustion, not an account-wide billing wall**. A key created in
+a Google Cloud project with no billing account attached falls straight back to the free tier and
+works. `pnpm preflight` is now **9/9 green**. The lesson worth keeping: two sessions inferred the
+cause from a status code instead of reading the body.
+
+The key now in `.env.local` belongs to project `agentforge-gemini-free`. The old key is untouched.
+
+### The pipeline
+
+**`web/lib/news/`** — ingest → cluster → confirm, every stage bounded and idempotent.
+
+- `feeds.ts` — 8 keyless feeds (3 Google News queries, 4 publisher RSS, 1 GDELT). Each fetch is
+  individually timed out and individually caught: **a failing feed is not a failing tick**.
+- `parse.ts` — hand-rolled RSS/Atom/GDELT extraction. The load-bearing part is taking the
+  publisher from Google News's `<source url>` rather than the link; trusting the link would
+  attribute every story on Earth to `news.google.com` and make the two-source rule meaningless.
+- `sources.ts` — a curated 50-publisher independence allowlist. Unknown publishers are ingested
+  and displayed but **never counted** toward confirmation.
+- `normalize.ts` / `similarity.ts` / `cluster.ts` — pure, no I/O, no clock.
+- `confirm.ts` — the two-source rule, with syndication discounting.
+- `events.ts` — persistence, fully batched (ADR-033).
+
+**`web/lib/llm/`** — `prompt.ts` (sealed `<untrusted_content>`), `gemini.ts` (transport +
+error classification), `client.ts` (budget, fallback, Zod re-validation). `callJson` **never
+throws and never returns unvalidated data** — it returns a discriminated union, so a 429 is an
+ordinary value every caller must handle rather than an exception someone forgets to catch.
+
+**`web/lib/pipeline/tick.ts`** — each stage caught individually; the tick completes and reports
+what failed. `POST /api/tick` (secret-authenticated) and a **Run tick** button on `/`.
+
+### What measurement changed
+
+Almost every number in this phase came from data, not from the plan. Four things were wrong
+before they were measured:
+
+| Found | Fix |
+|:--|:--|
+| Stemmer folded `rates`→`rat` while leaving `rate` — pushing the two forms it was meant to unify *further apart* | `-es` restricted to genuine plural contexts; `-ing` rule dropped |
+| Plan's 0.6/0.4 bands did not fit the measure; and adding article summaries made discrimination **worse**, inverting the ranking on a true/false pair | Cluster on headlines only; bands 0.50/0.25, read off the live distribution (ADR-031) |
+| One INSERT per cluster ⇒ **420-second tick** against a 60-second function limit | Batch every write (ADR-033) |
+| `invisible-characters` fired on three Guardian articles — their own typesetting, not an attack | Signature scoped to headlines (ADR-032) |
+
+Two smaller ones: `cleanText` stripped tags *before* decoding entities, so Google News's
+entity-encoded markup survived into the database and the prompt; and `weightedJaccard(a,b)` and
+`(b,a)` differ in the last bits (float addition is not associative), which made clustering depend
+on database row order until the argument order was canonicalised.
+
+**The honest headline finding:** two genuinely different reports of one story score ~0.44, and two
+genuinely *unrelated* stories score ~0.37 — **interleaved**, not separated. No lexical threshold
+can tell them apart. That is why the borderline band exists and why the model is consulted only
+inside it. ADR-031 has the evidence table.
+
+### Live results
+
+Three consecutive real ticks against real feeds and the real database:
+
+```
+tick 1   228 items, 69 publishers, 190 events, 2 CONFIRMED      420s   (pre-batching)
+tick 2   228 fetched /   9 new     — idempotent                  91s   (post-batching)
+tick 3   228 fetched /   1 new     — idempotent                  48s   (+ model reorder)
+```
+
+Current state: **238 articles · 106 publishers · 198 events · 3 CONFIRMED**, with confirmed
+events carrying NPR + BBC + CBS, Guardian + NYT + AP, and CNN + Axios.
+
+### Exit criteria
+
+| Criterion | Result |
+|:--|:--|
+| A tick ingests real articles from ≥3 independent publishers | ✅ **106 publishers** |
+| Two genuinely different reports of one story cluster into a single `Event` | ✅ live (Guardian+NYT+AP on one ECB decision) and in `cluster.test.ts` |
+| An `Event` with only one publisher domain stays `OBSERVED` | ✅ `confirm.test.ts`, and 195 such events on the dashboard |
+| Re-running the same tick creates zero duplicate `RawItem` rows | ✅ 228 fetched → 1 new |
+| An injected string is flagged **and visibly delimited in the prompt sent** | ✅ `prompt.test.ts` end-to-end, plus the worked-example panel on `/` |
+| LLM calls per tick are bounded and logged; a forced 429 leaves state consistent | ✅ `client.test.ts` forces all 10 failure kinds; budget bound asserted |
+| `pnpm -r build` / `lint` / `typecheck` / `test` | ✅ **199 tests** (57 contracts + 142 web), zero build warnings |
+
+---
 ## Phase 2 — what shipped
 
 ### The data layer
@@ -235,25 +322,28 @@ secrets file (the same one hardhat reads). No-op on Vercel; never overrides an e
 
 | # | Item | Blocks | Status |
 |:--|:--|:--|:--|
-| §1 | **Enable Gemini billing** | Phases 3–5 | ⬜ **the one real blocker** — fails `402` on every model |
-| §3 | Neon Postgres | Phase 2 | ✅ **done** — credentials in root `.env.local`, 14 tables migrated |
-| §4 | Discord webhook | Phase 4 notifications | ✅ **done** |
-| §5 | BridgeKey install + seed phrase | Phase 4 approvals | ⬜ needed by Phase 4, not Phase 3 |
+| §1 | ~~Enable Gemini billing~~ | Phases 3–5 | ✅ **resolved without billing** — see below |
+| §3 | Neon Postgres | Phase 2 | ✅ done |
+| §4 | Discord webhook | Phase 4 notifications | ✅ done |
+| §5 | **BridgeKey install + fund that address** | Phase 4 approvals | ⬜ **the only open item** |
+| §8 | Secrets into Vercel + GitHub | Phase 3 in production | ✅ **done this session** |
 
-**§3 is resolved, and how matters.** The previous session left `vercel env pull` as a manual step.
-It does not work: the Neon integration marks its variables **sensitive**, so Vercel can never
-decrypt them again and the pull writes the literal string `"[SENSITIVE]"` while reporting success.
-The credentials came from `neonctl` instead (RUNBOOK §3 has the exact commands), and
-`pnpm preflight` now **actually connects** rather than checking the variable is merely set —
-which is the check that would have caught this immediately.
+**§1 was never a billing wall.** The 402 body says `Your prepayment credits are depleted` — that
+is *project-scoped* prepay exhaustion. A key in a project with no billing account attached uses
+the free tier and works. No card was added. `pnpm preflight` is 9/9.
 
-**Needed before Phase 3 ships to production, not before it is built:** `TICK_SECRET`,
-`GEMINI_API_KEY` and `AGENT_KEY_ENC_SECRET` exist in the root `.env.local` but are **not set in
-Vercel** (`vercel env ls` shows only the Neon variables and the contract address). `POST /api/index`
-and `/api/tick` will return `503` on the deployed site until they are. That is deliberate — the
-route refuses to run unauthenticated rather than defaulting to open.
+**§8 is done.** Pushed to Vercel (production + preview): `GEMINI_API_KEY`, `TICK_SECRET`,
+`AGENT_KEY_ENC_SECRET`, `DISCORD_WEBHOOK_URL`, `GEMINI_MODELS_FAST`, `GEMINI_MODELS_SMART`,
+`GEMINI_TIMEOUT_MS`. Pushed to GitHub Actions: `TICK_SECRET`, `TICK_URL`. So the heartbeat and
+`POST /api/tick` now work on the deployed site.
 
----
+**`DEPLOYER_PRIVATE_KEY` was deliberately NOT pushed to Vercel.** Nothing in the deployed app
+signs a transaction yet — the indexer only reads. Phase 5 is when that changes, and it should be
+a conscious decision then rather than a key sitting in production for two phases first.
+
+**§5 is yours and it is the only thing left.** Phase 4's human gate signs `createMarket` from
+BridgeKey, so that wallet must exist and hold tMSTC. Claude will not create a wallet or handle a
+seed phrase. RUNBOOK §5 has the network values; the faucet has a reCAPTCHA.
 
 ## Decisions already locked in
 
@@ -293,127 +383,146 @@ New in Phase 2:
 - **ADR-028 — `/markets` reads the chain directly; the database only annotates.** The failure mode
   of a mirror is silently showing yesterday's numbers as current.
 
+New in Phase 3:
+
+- **ADR-029 — no MinHash.** It exists to avoid all-pairs comparison at millions of documents; we
+  cap at 200, where all-pairs measures under 20ms. It is an approximation, so it adds false
+  negatives to the one stage where a false negative silently stalls the pipeline.
+- **ADR-030 — an unavailable model means "do not merge".** Failing to merge costs a tick; wrongly
+  merging manufactures a second source, confirms a story that does not exist, and puts a
+  fabricated question in front of a human. The directions are not symmetric, so the default is
+  the no-op — by construction, not by a catch block.
+- **ADR-031 — cluster on headlines; thresholds measured, not inherited.** Adding article summaries
+  made discrimination *worse* and inverted the ranking on a true/false pair. And the true and
+  false pairs are interleaved in the 0.35–0.44 range, so no threshold separates them — the band
+  is drawn to contain that ambiguity rather than pretend it away.
+- **ADR-032 — the injection scanner is triage, not defence.** Flagged items are still processed;
+  dropping them would make a blocklist load-bearing and let anyone delete stories by looking
+  malicious. `invisible-characters` is headline-scoped because scanning bodies flagged the
+  Guardian's own typesetting every tick.
+- **ADR-033 — batch every write.** Round trips, not work, were the cost: 420s → 48s.
+- **ADR-034 — prefer the model that answers, not the newest.** `3.5-flash-lite` timed out twice
+  and 503'd once; `3.1-flash-lite` answered every time.
+
 ---
 
 ## Known gaps
 
-**1. Gemini still unusable — and the failure mode changed.** It now returns **HTTP 402** for every
-model (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-flash-lite-latest`), where Phase 0
-saw `503` capacity errors. 402 is a billing response, so RUNBOOK §1 is now the definitive fix rather
-than a hopeful one. Blocks Phases 3–5. The fail-safe path handles it (no action, log, continue), but
-a demo with no AI output is a bad demo.
+**1. ~~Gemini unusable.~~** ✅ **Closed.** Free tier, no billing. See above and RUNBOOK §1.
 
-**2. Resolution is trusted, by design.** A small set of authorised resolvers submits outcomes with an
-evidence URL. The challenge window, permissionless `finalizeResolution` and permissionless
-`invalidateStale` bound what one bad or absent resolver can do — but this is **not** a decentralised
-oracle. This belongs in the README verbatim; claiming otherwise is the one thing that could
-genuinely sink the submission.
+**2. Resolution is trusted, by design.** A small set of authorised resolvers submits outcomes with
+an evidence URL. The challenge window, permissionless `finalizeResolution` and permissionless
+`invalidateStale` bound what one bad or absent resolver can do — but this is **not** a
+decentralised oracle. This belongs in the README verbatim.
 
-**3. The 120s challenge window is demo-scale, not production-scale.** Immutable, so it is honest and
-unchangeable rather than quietly tunable. Say so in the README.
+**3. The 120s challenge window is demo-scale.** Immutable, so it is honest and unchangeable
+rather than quietly tunable. Say so in the README.
 
-**4. ~~`web/lib/contract.ts` hand-writes two ABI fragments.~~** ✅ **Closed in Phase 2.** The file is
-deleted; `lib/chain/deployment.ts` reads the committed deploy record and is the only ABI source.
+**4. ~~`lib/contract.ts` hand-writes ABI fragments.~~** ✅ Closed in Phase 2.
 
-**5. The DB test suite does not run in CI.** `web/lib/db/schema.test.ts` creates and drops a real
-database on Neon, and this repository is public, so the credential is deliberately not a CI secret.
-CI runs the 28 pure tests and the suite skips with a loud warning. It is run locally before any
-schema change — this session's run: **9/9 passing against a fresh database**. The honest framing is
-that CI proves the *logic*, and a local run proves the *migrations*.
+**5. The DB test suite does not run in CI.** `schema.test.ts` creates and drops a real database on
+Neon and this repo is public, so the credential is deliberately not a CI secret. CI runs the 133
+pure tests; the DB suite skips with a loud warning. Run locally before any schema change — this
+session: **9/9 against a fresh database**.
 
-**6. Re-org handling is a confirmation depth (3 blocks) and nothing more.** On a 3-second-block
-testnet that is a reasonable trade; it is not mainnet-grade, and `docs/ARCHITECTURE.md` §11 says so.
-A deep re-org would leave `chain_events` holding orphaned logs, which the projection would still
-fold in. `/markets` reads pools from the contract rather than the projection partly for this reason.
+**6. Re-org handling is a confirmation depth (3 blocks) and nothing more.** Honest on a
+3-second-block testnet; not mainnet-grade. `docs/ARCHITECTURE.md` §11 says so.
 
-**7. Indexing is ~9 seconds per pass, dominated by network latency** (Neon in `aws-us-east-1`,
-roughly half a second per round trip from here, plus a 10–25s cold start when the free tier has
-scaled to zero). Fine for a tick; it would need attention if a tick ever had to finish in one second.
+**7. ~~Indexing is ~9s per pass.~~** Still true, and now the smaller half of a tick. A full tick
+measures **48s locally**, dominated by laptop→Neon round trips (~0.5s each). On Vercel the
+function and the database are in the same region, so that component largely disappears —
+**but this has not yet been measured in production.** Verify it early in Phase 4; `maxDuration`
+on `/api/tick` is 60.
 
-**8. The intent engine currently signs with the deployer key only.** That is correct for Phase 2 —
-`createMarket` needs `MARKET_CREATOR_ROLE`. Phase 4 moves market creation to a BridgeKey signature,
-and Phase 5 adds per-member agent wallets with encrypted keys. `lib/intents/signer.ts` is the single
-place that touches key material and is where both land.
+**8. The intent engine signs with the deployer key only.** Correct through Phase 3. Phase 4 moves
+market creation to a BridgeKey signature; Phase 5 adds per-member agent wallets.
 
----
+**9. GDELT fails most ticks.** It is slow (12.6s measured for a *minimal* query, against a 12s
+default timeout — now given 25s) and rate-limits hard to 429 on repeat calls. Left in the feed
+list deliberately: the other seven feeds supply 100+ publishers, and a visibly degraded feed that
+does not take the tick down is a live demonstration of hard rule #6. If it looks bad on demo day,
+drop it from `FEEDS` — nothing depends on it.
+
+**10. Confirmation leans on the LLM more than the deterministic path does.** Because independent
+reports of one story score ~0.44 (below the 0.50 merge threshold), most genuine two-source merges
+come from the borderline adjudication. With no LLM the pipeline still ingests, deduplicates and
+displays honestly, but confirms rarely. This is a consequence of ADR-030's fail-safe direction,
+not an accident — but it means **the demo wants the LLM working**, and the 4-call budget only
+covers ~32 of the ~25 borderline pairs a busy tick produces.
+
+**11. Borderline adjudications are not cached.** Each tick re-plans from scratch and re-asks about
+pairs it already resolved, so budget is spent re-deriving known answers. Cross-publisher pairs are
+prioritised (a same-publisher merge cannot create a second independent source), which limits the
+damage. A `pair_adjudications` table would fix it properly; deferred as it needs a migration.
+
+**12. No favicon.** `/favicon.ico` 404s in the browser console. Cosmetic, one file, not done.
 
 ## What the next session needs to know
 
-**Start Phase 3: news ingestion, dedup, 2-source confirmation.** Read `docs/BUILD_PLAN.md` Phase 3.
-The pipeline's first stage writes into `raw_items` → `events` → `event_items`, all of which exist
-and are migrated.
+**Start Phase 4: market proposer agent + human approval gate.** Read `docs/BUILD_PLAN.md` Phase 4.
+There are **3 `CONFIRMED` events sitting in the database right now**, which is exactly the input
+Phase 4 consumes. `proposals` is migrated and empty.
 
-**Everything Phase 2 built is available and tested. Do not rebuild any of it.**
+**Everything Phase 3 built is available and tested. Do not rebuild any of it.**
 
 | You need | Use | Notes |
 |:--|:--|:--|
-| Database | `import { db } from "@/lib/db/client"` | lazy; importing never throws |
-| Schema | `@/lib/db/schema` | `sources`, `rawItems`, `events`, `eventItems` are waiting |
-| Chain reads | `@/lib/chain/auspex` | `readMarket`, `readAllMarkets`, `readMarketCount` |
-| Contract ABI/address | `@/lib/chain/deployment` | **the only ABI** — never write a second one |
-| Writing to chain | `createIntent()` + `runIntentWorker()` from `@/lib/intents/engine` | nothing else may broadcast |
-| Revert decoding | `describeRevert()` from `@/lib/chain/revert` | already handles the MST message-scraping quirk |
-| Spec hashing | `computeSpecHash()` from `@/lib/chain/spec` | key-sorted and canonical; Phase 4 needs this |
+| Confirmed events to propose on | `events` where `status = 'CONFIRMED'` | 3 waiting |
+| Calling a model safely | `callJson()` from `@/lib/llm/client` | never throws; returns a union |
+| Delimiting untrusted text | `buildUserMessage()` from `@/lib/llm/prompt` | **mandatory** — hard rule #4 |
+| A per-tick call budget | `new LlmBudget(n)` | pass it in; never a module global |
+| Injection flags for an item | `raw_items.injection_flags` | already populated |
+| Adding a stage to the tick | `lib/pipeline/tick.ts` → `stage()` | wrap it, so a failure is recorded not thrown |
+| Writing to chain | `createIntent()` + `runIntentWorker()` | nothing else may broadcast |
+| Spec hashing | `computeSpecHash()` from `@/lib/chain/spec` | Phase 4 needs this |
 
-**Ingestion is a straight application of the pattern already proved here:** insert with
-`ON CONFLICT DO NOTHING` against `UNIQUE(source_id, source_guid)`, and let the constraint be the
-mechanism rather than a safety net behind a `SELECT` first. `lib/indexer/run.ts:persistLogs` is the
-worked example — it returns the count of rows actually inserted, which is how a report can honestly
-say "0 new" on a replay.
+**The Phase 4 proposer is the same shape as `lib/news/adjudicate.ts`.** Read it first — it is the
+worked example of the whole pattern: trusted system instruction, untrusted text sealed in a
+user message, `ResponseSchema` at the API, Zod re-validation, and **a check that the model's
+output refers to something we actually sent** (it discards any `pairLabel` we did not issue).
+That last check is the one the API-side schema cannot do, and Phase 4's `SCHEMA_REJECTED` rows
+are supposed to be exactly this.
 
 **Commands added this phase:**
 
 ```bash
-pnpm --filter web db:migrate        # apply migrations (uses the DIRECT connection string)
-pnpm --filter web db:generate       # generate a migration after editing schema.ts
-pnpm --filter web index             # one indexing pass from the cursor
-pnpm --filter web index:replay      # ignore the cursor, re-read from the deploy block
-pnpm --filter web crash-test        # the idempotency proof — creates a REAL market on chain
-pnpm --filter web fixtures:capture  # re-capture indexer test fixtures from the live chain
-pnpm preflight                      # now genuinely connects to Postgres
+pnpm --filter web tick              # one full tick, verbose report
+pnpm --filter web tick --no-index   # news stages only (faster to iterate)
+pnpm --filter web calibrate         # re-read the similarity distribution from live feeds
 ```
 
 **Things that will cost you an hour if you rediscover them:**
 
-- **`vercel env pull` cannot retrieve the Neon variables.** They are marked sensitive, so it writes
-  the literal string `"[SENSITIVE]"` and reports success. Use `neonctl` — RUNBOOK §3 has the exact
-  commands including the `--org-id` needed to stop it dropping into an interactive picker.
-- **Neon needs BOTH connection strings.** `DATABASE_URL` (pooled) for the app, `DATABASE_URL_UNPOOLED`
-  (direct) for migrations — PgBouncer in transaction mode rejects the session-level statements DDL
-  issues. Both are in the root `.env.local`.
-- **`tsx` runs `web/*.ts` as CJS** because `web/package.json` has no `"type": "module"`. Top-level
-  `await` fails to transform. Wrap script bodies in `async function main()`.
-- **Never reference a git-ignored file through `new URL(literal, import.meta.url)` in bundled code.**
-  Turbopack treats it as a static *asset reference* and resolves it at build time, so `next build`
-  died in CI with `Module not found: Can't resolve '../.env.local'` — and had passed locally only
-  because the file happened to be on disk. `lib/env.ts` resolves from `process.cwd()` instead.
-  This shipped broken in `f564576` and was fixed in `5e621a9`; the Vercel production deploy for the
-  bad commit shows `Error`. Both are in the history on purpose.
-- **Node's `fileURLToPath` also throws once Turbopack has bundled the module** — the bundle's `URL`
-  is a different realm's class, so the `instanceof` check inside Node fails. Only
-  `lib/db/migrate.ts` and the scripts use it now, and none of them is in the app's module graph.
-- **To check a change the way CI will see it**, clone the repo into a scratch directory with
-  `git clone --local` and run the CI steps there. The clone has no `.env.local`, which is the
-  condition that catches this entire class of bug. Do not move the real `.env.local` aside.
-- **Never open a pool at module scope.** `lib/db/client.ts` exports `db` as a lazy `Proxy` because
-  `drizzle(getPool())` at import time made a missing `DATABASE_URL` fail the *build*, before the
-  page's own `hasDatabase()` check could render an honest error.
-- **Neon free tier scales to zero**; the first connection can take 10–25 seconds. Timeouts are set to
-  45s and vitest's to 120s. A slow database must never look like a broken one.
-- The RPC serves a full 0→head `eth_getLogs` range with an address filter in ~450ms, so chunking is
-  insurance rather than necessity. `CHUNK_BLOCKS = 500_000` in `lib/indexer/run.ts`.
+- **Read the whole error body before believing a status code.** Two sessions recorded Gemini as
+  needing a credit card on the strength of `402`. The body said *prepayment credits depleted* —
+  project-scoped, fixed with a new key in a project that has no billing account.
+- **A tick is round-trip-bound, not CPU-bound.** 19,900 similarity comparisons take under 20ms;
+  400 sequential Neon round trips take 400 seconds. Batch writes, and never put a query inside a
+  per-row loop. ADR-033.
+- **Next 16 writes `web/AGENTS.md` and `web/CLAUDE.md` on every `next dev`.** The generated
+  `CLAUDE.md` would sit below the repo-root one that carries the session protocol. Disabled with
+  `agentRules: false` in `next.config.mjs` — do not remove it.
+- **`turbopackIgnore` on `lib/env.ts`'s `fs` calls is load-bearing for deploy size.** Without it
+  Turbopack traces the entire project into the serverless bundle.
+- **Thresholds in `similarity.ts` are empirical.** If you change the feed list, re-run
+  `pnpm --filter web calibrate` — they are only as good as the distribution they came from.
+- **`scanForInjection(title, body)` takes two arguments now**, not a spread. Some signatures are
+  headline-scoped.
+- **Google News entity-encodes its HTML**, so `cleanText` strips tags, decodes, then strips again.
+  Removing either pass puts raw markup in the database and in the prompt.
+- **Postgres cannot `ON CONFLICT` against a row in its own `VALUES` list** — it raises "cannot
+  affect row a second time". De-duplicate a batch in memory first; Google News returns the same
+  story under two topic queries routinely.
 
 **Still true from earlier phases:**
 
-- The deployed ABI is at `contracts/deployments/mstTestnet.json`; typechain bindings regenerate into
-  `contracts/types/ethers-contracts/` on every `pnpm compile`. **Index from block 5,786,343.**
-- Hardhat 3 tests: `const { ethers, networkHelpers } = await network.create()`;
-  `networkHelpers.loadFixture(namedFn)`; time travel via `networkHelpers.time.*`.
-- **Chai matchers take `ethers` first in Hardhat 3**: `expect(tx).to.changeEtherBalance(ethers, alice, amount)`.
-- **typechain emits a Hardhat-2-shaped augmentation**, so `ethers.deployContract("X")` is not
-  overload-resolved. Name the generated type, or use `X__factory.connect(address, signer)`.
-- Anything imported in a test must be an explicit dependency — pnpm isolates transitive packages.
-  (`pg` had to be added to the *root* devDependencies for `scripts/preflight.mjs` to import it.)
-- `next lint` was removed in Next 16 — lint is ESLint 9 flat config.
+- `vercel env pull` cannot retrieve the Neon variables (marked sensitive; writes `[SENSITIVE]`).
+  Use `neonctl` — RUNBOOK §3.
+- Neon needs **both** connection strings: pooled for the app, direct for migrations.
+- `tsx` runs `web/*.ts` as CJS; wrap script bodies in `async function main()`.
+- Never reference a git-ignored file through `new URL(literal, import.meta.url)` in bundled code.
+- Neon free tier scales to zero; first connection can take 10–25s. Slow is not broken.
+- To check a change the way CI will, `git clone --local` into a scratch directory and run there —
+  the clone has no `.env.local`, which is the condition that catches a whole class of bug.
+- Index from block **5,786,343**. The deployed ABI is `contracts/deployments/mstTestnet.json`.
 - Vercel auto-deploys `main` to https://auspex-web-mu.vercel.app — a broken build there is public.
-- `NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS` is set in Vercel for production, preview **and** development.

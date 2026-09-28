@@ -511,3 +511,156 @@ with zero base fee, this is not a cost.
 
 **Revisit if:** market count grows past roughly fifty, at which point the reads should be batched
 or the projection trusted with a freshness indicator.
+
+---
+
+### ADR-029 — No MinHash. Exact comparison, because the plan's reason for MinHash does not apply
+
+**Decided:** `docs/BUILD_PLAN.md` specified "normalise → shingle → MinHash/Jaccard". MinHash is
+not implemented. Clustering compares all pairs exactly.
+
+**Why:** MinHash exists to avoid all-pairs comparison when you have millions of documents. A tick
+clusters at most 200 items, which is 19,900 comparisons of small string sets — **measured at
+under 20ms**, against a tick that spends 20 seconds on network I/O. So it buys nothing here, and
+it is an *approximation*, which means false negatives. A false negative in this stage means two
+reports of one story fail to merge and the event never reaches its second source, so the pipeline
+silently stalls.
+
+Hard rule #10 says prefer the boring solution you can fully defend. Exact comparison at this
+scale is both faster to defend and strictly more correct.
+
+**Cost:** clustering is O(n²) and would need revisiting above a few thousand items per pass.
+`MAX_ITEMS_PER_CLUSTER_PASS` makes that bound explicit rather than implicit.
+
+**Revisit if:** a pass ever needs to consider more than ~2,000 items.
+
+---
+
+### ADR-030 — An unavailable model means "do not merge"
+
+**Decided:** borderline pairs (0.25–0.50) with no model verdict are **not** merged. A rate limit,
+a timeout, a billing failure and a malformed response all converge on the same outcome: no merge.
+
+**Why:** the two failure directions are not symmetric.
+
+- *Failing to merge* two reports of one story leaves two events each holding one source.
+  `CONFIRMED` needs two, so nothing confirms and nothing happens. A quiet no-op.
+- *Wrongly merging* two different stories produces one event carrying two genuinely independent
+  publishers. That **confirms**, proposes a market about a story that does not exist, and puts a
+  fabricated question in front of a human and eventually on-chain.
+
+One failure costs a tick. The other attacks the credibility of the whole system. So the default
+is the no-op, and it is the default *by construction*: `planClusters` merges on an explicit
+`true` and on nothing else, so every unavailability path reaches it as an absent map entry.
+
+**Cost:** with no LLM configured, confirmation depends on finding pairs above 0.50 — which in
+practice means near-identical headlines, which syndication discounting then collapses. The
+honest statement is that the deterministic pipeline alone ingests, deduplicates and displays,
+but confirms rarely.
+
+**Evidence:** `cluster.test.ts` asserts the unmerged default and that a `false` verdict keeps a
+pair apart; `client.test.ts` forces every failure kind and asserts none throws.
+
+---
+
+### ADR-031 — Cluster on headlines only, and set the thresholds from measured data
+
+**Decided:** similarity is IDF-weighted Jaccard over **headline** tokens. Bands are 0.50 (merge)
+and 0.25 (ignore), replacing the plan's 0.60 / 0.40.
+
+**Why the plan's numbers went:** a threshold is a property *of a measure*. The plan's 0.6/0.4 was
+written before this measure existed. `pnpm --filter web calibrate` reads the real distribution off
+live feeds, and it was run before choosing.
+
+**Why headlines and not headline + summary** — measured on 228 articles from 70 publishers:
+
+| Pair                                    | title | title+summary | truth     |
+|-----------------------------------------|-------|---------------|-----------|
+| ECB raises rates — AP vs NYT            | 0.438 | 0.420         | same      |
+| Fed raises rates — ABC News vs ABC13    | 0.424 | 0.382         | same      |
+| Najaf flights — Reuters vs Al Jazeera   | 0.357 | 0.211         | same      |
+| Taiwan CB holds vs ECB hikes            | 0.370 | **0.411**     | different |
+
+Including the summary moves true pairs *down* and the false pair *up* — it inverts the ranking on
+the last two rows. Summaries are mostly shared boilerplate, so they add vocabulary two unrelated
+finance stories have in common while diluting the rare entity names that distinguish them. A
+headline is written to be discriminating in twelve words, and it is the one field every source
+supplies.
+
+**Why the band is wide:** the two genuinely-different pairs in the sample (0.370, 0.354) sit
+*interleaved* with true pairs (0.373, 0.360). **No threshold separates them.** The band is drawn
+to contain that ambiguity rather than to pretend it away, and the model is asked only inside it.
+
+**Cost:** empirical constants, only as good as the distribution they were read from. The script
+that produced them is committed, so they are checkable and re-derivable.
+
+---
+
+### ADR-032 — The injection scanner is triage, not defence, and it is scoped per signature
+
+**Decided:** deterministic signatures mark items; flagged items are **still processed**. The
+`invisible-characters` signature reads the headline only.
+
+**Why flagged items are not dropped:** dropping them would make a blocklist load-bearing, and
+blocklists are bypassable by definition. It would also hand anyone who can get a headline into
+Google News a way to *delete* stories from the pipeline by making them look malicious. The real
+defence is structural — news text never enters a system instruction, it is sealed inside
+`<untrusted_content>` in a user-role message, and every model output is schema-constrained at the
+API and re-validated with Zod.
+
+**Why the scope restriction:** scanning article bodies for zero-width characters flagged three
+Guardian articles on the first live tick — U+200B, U+200C and U+2060 through the standfirsts.
+That is the Guardian's typesetting, not an attack. A badge that fires on a major publisher's
+ordinary output every tick teaches the Phase 4 reviewer to ignore it, which is worse than having
+no badge. A *headline* has no legitimate reason to carry a zero-width joiner, so the signature
+still fires where it means something.
+
+**Cost:** an injection hidden only in body whitespace is not flagged. It is still delimited,
+still sealed, and still cannot reach a system instruction.
+
+**Evidence:** `injection.test.ts` covers both directions; the dashboard's worked-example panel
+shows the sealed prompt for a constructed hostile headline.
+
+---
+
+### ADR-033 — Batch every write in a tick; round trips, not work, are the cost
+
+**Decided:** the clustering pass writes events, members, audit rows and confirmations in batched
+statements, and skips updates for rows whose state did not change.
+
+**Why:** the first implementation issued one `INSERT` per cluster and two queries per event. On
+200 items that is ~400 sequential round trips, and against Neon in `aws-us-east-1` (~0.5s per
+round trip from a laptop) **one tick took 420 seconds**. A Vercel function has 60. The computation
+was never the problem — 19,900 similarity comparisons take under 20ms.
+
+Batched, the same tick measures **48 seconds** locally, and most of that remainder is still
+laptop→Neon latency that does not exist in production, where the function and the database are in
+the same region.
+
+**Cost:** the write path is harder to read than a loop. The comments say why, and the alternative
+does not fit in the runtime it has to run in.
+
+**Evidence:** three consecutive live ticks — 420s, then 91s after batching, then 48s after also
+reordering the model chain.
+
+---
+
+### ADR-034 — Prefer the model that answers, not the newest one
+
+**Decided:** the fast chain is `gemini-3.1-flash-lite` first, `gemini-3.5-flash-lite` second.
+Per-call timeout is 22s.
+
+**Why:** measured across live ticks, `3.5-flash-lite` timed out twice and returned 503 once, while
+`3.1-flash-lite` answered every time it was asked, in 4.9–6.1 seconds. Leading with the newer model
+meant the budget was being spent on retries.
+
+The timeout is a trade rather than a maximum: successful calls measured 5.2–13.6s so it must clear
+~15s, but the timeout is also the price of a *failure*, and at 35s a single hung model consumed
+more of the tick than every other stage combined.
+
+**Cost:** we are one model version behind on this path. The chain means a 3.1 outage still falls
+through. Both are overridable by environment variable without a deploy, which is what matters on
+demo day.
+
+**Related:** an earlier version logged `durationMs: 0` for failed calls, which made a 35-second
+timeout look free in the tick report and delayed finding this. Failures are now timed.

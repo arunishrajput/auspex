@@ -32,6 +32,12 @@ loadRootEnv();
 const nextConfig = {
   reactStrictMode: true,
 
+  // Next 16 writes its own `AGENTS.md` and a `CLAUDE.md` containing `@AGENTS.md` into this
+  // package on every dev start. That file would sit *below* the repo-root `CLAUDE.md` that
+  // carries this project's session protocol and hard rules, and a generated file silently
+  // shadowing the one a session is told to read first is a bad failure mode. Off.
+  agentRules: false,
+
   // The pipeline workers run inside route handlers and use Node APIs (crypto for
   // agent-key encryption, ethers for signing), so they must not be bundled for edge.
   serverExternalPackages: ["ethers"],

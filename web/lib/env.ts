@@ -41,9 +41,15 @@ export function loadRootEnv(): void {
   loaded = true;
 
   for (const path of candidatePaths()) {
-    if (!existsSync(path)) continue;
+    // `turbopackIgnore` stops Turbopack tracing the *whole project* into the serverless bundle.
+    // Because the path is computed from `process.cwd()` rather than written as a literal,
+    // static analysis cannot bound it, so it conservatively includes every source file and the
+    // public folder in the deployed function — slower deploys, and eventually a size limit.
+    // The comment changes nothing at runtime: this still reads the repo-root `.env.local` when
+    // one exists, and is a no-op on Vercel where the real variables are already in `process.env`.
+    if (!existsSync(/* turbopackIgnore: true */ path)) continue;
 
-    for (const line of readFileSync(path, "utf8").split("\n")) {
+    for (const line of readFileSync(/* turbopackIgnore: true */ path, "utf8").split("\n")) {
       const match = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
       if (match === null) continue;
       const [, key, rawValue] = match;

@@ -108,8 +108,17 @@ Faucet    : https://faucet.masterstroke.academy
   as cheap insurance and a caching point, not because it is strictly required.
 - **`@mstblockchain/mst-sdk` is a thin ethers-v6 wrapper** (v1.0.0, no types, broken install
   instructions in its README). **Use ethers v6 directly** on the critical path.
-- **Gemini model IDs**: use `gemini-3.5-flash-lite` (high volume) and `gemini-3.8-flash` (judgement).
-  The 2.5 series is superseded. SDK is `@google/genai` v2.x.
+- **Gemini works on the free tier with no billing.** An HTTP 402 here means *prepay credits
+  depleted on that Google Cloud project*, not an account-wide billing requirement — read the
+  error body, not just the status. A key created in a project with no billing account attached
+  uses the free tier. RUNBOOK §1 has the exact `gcloud` commands.
+- **Gemini model IDs, ordered by what actually responds** (measured 2026-09-29, not assumed):
+  `gemini-3.1-flash-lite` answered every live call in ~5s; `gemini-3.5-flash-lite` timed out or
+  503'd on three of four; `gemini-3.8-flash` returns 503 "high demand". So the fast chain leads
+  with **3.1-flash-lite**. The 2.5 series now 404s for new users. Order is overridable at runtime
+  via `GEMINI_MODELS_FAST` — change it without a deploy if a model degrades on demo day.
+- **We call Gemini over `fetch`, not `@google/genai`.** The SDK collapses a billing 402 and a
+  capacity 503 into one thrown `Error`, and those demand different responses. See ADR-031.
 
 ## Stack
 
@@ -134,6 +143,10 @@ pnpm deploy:testnet       # deploy to MST Testnet
 pnpm verify:testnet       # verify source on MSTScan
 pnpm wallets:new          # generate a fresh wallet (prints address; key to .env.local by hand)
 pnpm preflight               # check env + RPC + DB + LLM reachability
+
+pnpm --filter web tick       # run one pipeline tick (ingest → cluster → confirm → index)
+pnpm --filter web calibrate  # re-read the similarity distribution from live feeds
+pnpm --filter web crash-test # the Phase 2 idempotency proof (creates a REAL market on chain)
 ```
 
 ## Repo layout

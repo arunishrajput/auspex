@@ -1,0 +1,85 @@
+/**
+ * Runs one pipeline tick from the command line.
+ *
+ *   pnpm --filter web tick              # full tick, including the chain indexer
+ *   pnpm --filter web tick --no-index   # news stages only
+ *
+ * Identical to what `POST /api/tick` runs. Having both matters: the HTTP route is what the
+ * cron and the dashboard button call, and this is what you use to watch a tick's output while
+ * developing, without needing `TICK_SECRET` or a running server.
+ */
+
+import { runTick } from "../lib/pipeline/tick";
+
+async function main(): Promise<void> {
+  const skipIndex = process.argv.includes("--no-index");
+
+  console.log(`AuspeX tick — ${new Date().toISOString()}${skipIndex ? "  (news only)" : ""}\n`);
+
+  const report = await runTick({ skipIndex });
+
+  if (report.ingest !== null) {
+    const ingest = report.ingest;
+    console.log("Ingest");
+    console.log(`  feeds          ${ingest.feedsOk}/${ingest.feedsAttempted} ok`);
+    console.log(`  items fetched  ${ingest.itemsFetched}`);
+    console.log(`  items NEW      ${ingest.itemsInserted}   <- 0 on a replay, by construction`);
+    console.log(`  publishers     ${ingest.distinctPublishers}`);
+    console.log(`  injection hits ${ingest.flaggedForInjection}`);
+    for (const failure of ingest.feedErrors) {
+      console.log(`  ! ${failure.feedId}: ${failure.error}`);
+    }
+    console.log();
+  }
+
+  if (report.cluster !== null) {
+    const cluster = report.cluster;
+    console.log("Cluster + confirm");
+    console.log(`  candidates       ${cluster.candidates}`);
+    console.log(`  comparisons      ${cluster.comparisons.toLocaleString("en-US")}`);
+    console.log(`  borderline pairs ${cluster.borderlinePairs}`);
+    console.log(`  adjudicated      ${cluster.adjudicated}`);
+    console.log(`  events created   ${cluster.eventsCreated}`);
+    console.log(`  members attached ${cluster.membersAttached}`);
+    console.log(`  events CONFIRMED ${cluster.eventsConfirmed}`);
+    if (cluster.deferredMerges > 0) console.log(`  deferred merges  ${cluster.deferredMerges}`);
+    if (cluster.adjudicationHalted !== null) {
+      console.log(`  halted           ${cluster.adjudicationHalted}`);
+    }
+    console.log();
+  }
+
+  console.log("LLM");
+  console.log(`  configured  ${report.llm.configured}`);
+  console.log(`  calls       ${report.llm.callsMade} of ${report.llm.budget} budgeted`);
+  for (const call of report.llm.calls) {
+    const outcome = call.ok ? "ok" : (call.reason ?? "failed");
+    const tokens = call.promptTokens === null ? "" : `  ${call.promptTokens}→${call.outputTokens} tok`;
+    console.log(`    ${call.purpose}  ${call.model ?? "-"}  ${outcome}  ${call.durationMs}ms${tokens}`);
+  }
+  console.log();
+
+  if (report.index !== null) {
+    console.log("Chain index");
+    console.log(`  blocks ${report.index.fromBlock}–${report.index.toBlock} of ${report.index.headBlock}`);
+    console.log(`  logs   ${report.index.logsFetched} fetched, ${report.index.logsInserted} new`);
+    console.log();
+  }
+
+  if (report.errors.length > 0) {
+    console.log("Stage errors (the tick still completed — hard rule #6)");
+    for (const failure of report.errors) console.log(`  ! ${failure.stage}: ${failure.error}`);
+    console.log();
+  }
+
+  console.log(`Done in ${report.durationMs}ms.`);
+
+  // A failing stage is a non-zero exit so CI and the heartbeat notice, even though the tick
+  // itself deliberately completed.
+  if (report.errors.length > 0) process.exitCode = 1;
+}
+
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exitCode = 1;
+});

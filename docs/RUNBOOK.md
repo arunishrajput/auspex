@@ -23,34 +23,57 @@ These were completed automatically during Phase 0. Listed so you know what exist
 
 ---
 
-## ⬜ §1 — Enable Gemini billing  ·  *blocks: Phases 3–5*
+## ✅ §1 — Gemini  ·  **RESOLVED 2026-09-29, with no billing**
 
-**Why this is needed.** Measured on 2026-09-28: the Gemini **free tier returned HTTP 503
-"experiencing high demand" on 0/20 calls** across five models. The one earlier success took 159
-seconds. This is capacity contention, not quota — retrying does not fix it. See ADR-017.
+**Nothing to do here.** Kept because the diagnosis is worth not repeating.
 
-**Update, later the same day (end of Phase 1):** `pnpm preflight` now reports **HTTP 402** for every
-model in both chains, not 503. A 402 is an explicit billing response, so this step is no longer a
-hopeful workaround for congestion — it is the actual fix, and nothing in Phases 3–5 will work until
-it is done.
+### What was actually wrong
 
-Claude cannot enter payment details, so this step is yours.
+Phase 0 saw HTTP 503 and called it capacity contention. Phase 1 saw HTTP 402 and called it a
+missing billing account, making this section "the one real blocker". Both were inferences from a
+status code. Reading the **body** settled it:
 
-1. Open **https://aistudio.google.com/api-keys**
-2. Find the row **AuspeX MST Buildathon** (project: *Gemini CLI*).
-3. Click **Set up billing** in that row and follow the Google Cloud prompts to attach a billing
-   account.
-4. Verify it worked:
-
-```bash
-pnpm preflight        # "Gemini API" should go green and report which model answered
+```json
+{ "error": { "code": 402,
+  "message": "Your prepayment credits are depleted. Please go to AI Studio ...",
+  "status": "RESOURCE_EXHAUSTED" } }
 ```
 
-**Expected cost:** a few dollars at most for the whole hackathon. The pipeline sends short prompts,
-bounded per tick, and caches by content hash.
+That is **prepay exhaustion on one Google Cloud project**, not an account-level requirement to
+add a card. Every model returned it, including Gemma, because the balance is project-scoped.
 
-> If you would rather not add a card, say so — the alternatives are a local Ollama model (free, but
-> the deployed app cannot reach it, so ticks must run from your laptop) or a different provider.
+### The fix, which took two commands
+
+The old key lived in project `gen-lang-client-0780734527` ("Gemini CLI"), whose prepay balance is
+at zero. A key created in a project with **no billing account attached** falls back to the free
+tier:
+
+```bash
+gcloud services enable generativelanguage.googleapis.com --project=agentforge-gemini-free
+gcloud services api-keys create --project=agentforge-gemini-free \
+  --display-name="AuspeX MST Buildathon" \
+  --api-target=service=generativelanguage.googleapis.com
+gcloud services api-keys get-key-string <key-resource-name> --format='value(keyString)'
+```
+
+The result went into `GEMINI_API_KEY` in the repo-root `.env.local` and into Vercel (§8).
+`pnpm preflight` reports **9/9 green**. The old key was left alone.
+
+### What the free tier actually gives you
+
+Measured 2026-09-29 across live ticks:
+
+| Model | Behaviour |
+|:--|:--|
+| `gemini-3.1-flash-lite` | answered every call, 4.9–6.1s |
+| `gemini-3.5-flash-lite` | two timeouts and one 503 out of four calls |
+| `gemini-3.8-flash` | 503 "high demand" |
+
+So the chain leads with **3.1-flash-lite** (ADR-034). If a model starts failing on demo day,
+`GEMINI_MODELS_FAST` is an environment variable — reorder it, no deploy needed.
+
+> If you ever *do* want paid capacity, add prepay credits at https://ai.studio/projects. Nothing
+> in the code changes; it is the same API.
 
 ---
 
@@ -161,7 +184,7 @@ land in real time, seconds after the on-chain market is confirmed, is worth more
 
 ---
 
-## §5 — BridgeKey wallet + MST Testnet  ·  *blocks: Phase 4 approvals*
+## ⬜ §5 — BridgeKey wallet + MST Testnet  ·  *blocks: Phase 4*  ·  **THE ONLY OPEN ITEM**
 
 > Phase 1 deployed without this — it used the generated deployer key in `.env.local`. BridgeKey is
 > needed when a **human** signs `createMarket` from the `/review` queue in Phase 4.
@@ -218,36 +241,37 @@ pipeline heartbeat.
 
 ---
 
-## §8 — Secrets into Vercel and GitHub  ·  *blocks: Phase 0 deploy / Phase 3 heartbeat*
+## ✅ §8 — Secrets into Vercel and GitHub  ·  **DONE 2026-09-29**
 
-Local `.env.local` does not reach production. Push the same values up.
+Local `.env.local` does not reach production. These are now pushed.
 
-**Already set** (confirm any time with `cd web && vercel env ls`):
+**Vercel** (`auspex-web`, Production **and** Preview):
 
-| Variable | Environments | Set by |
+| Variable | Set by | Needed for |
 |:--|:--|:--|
-| `DATABASE_URL` + the `POSTGRES_*` / `PG*` set | Production, Preview | the Neon integration (§3) |
-| `NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS` | Production, Preview, Development | Phase 1 |
+| `DATABASE_URL` + the `POSTGRES_*` / `PG*` set | Neon integration (§3) | everything |
+| `NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS` | Phase 1 | contract reads |
+| `GEMINI_API_KEY` | Phase 3 | borderline adjudication |
+| `GEMINI_MODELS_FAST` / `GEMINI_MODELS_SMART` / `GEMINI_TIMEOUT_MS` | Phase 3 | tuning without a deploy |
+| `TICK_SECRET` | Phase 3 | `POST /api/tick` |
+| `AGENT_KEY_ENC_SECRET` | Phase 3 (ahead of use) | Phase 5 agent keys |
+| `DISCORD_WEBHOOK_URL` | Phase 3 (ahead of use) | Phase 4 notifications |
 
-**Vercel** (the project is already linked from `web/`):
+**GitHub Actions** (the cron heartbeat): `TICK_SECRET`, `TICK_URL`.
+
+**`DEPLOYER_PRIVATE_KEY` is deliberately absent from Vercel.** Nothing in the deployed app signs
+a transaction — the indexer only reads, and market creation in Phase 4 is signed by a human in
+their own wallet. It should be added when something actually needs it (Phase 5), as a conscious
+decision, rather than sitting in production for two phases first.
+
+To add or rotate one:
 
 ```bash
-cd web
-vercel env add GEMINI_API_KEY production
-vercel env add DISCORD_WEBHOOK_URL production
-vercel env add AGENT_KEY_ENC_SECRET production
-vercel env add TICK_SECRET production
-vercel env add DEPLOYER_PRIVATE_KEY production
+cd web && vercel env add <NAME> production   # prompts for the value; nothing lands in shell history
+gh secret set <NAME>                         # for GitHub Actions
 ```
 
-Each command prompts for the value — paste it at the prompt so it never lands in shell history.
-
-**GitHub Actions** (for the cron heartbeat):
-
-```bash
-gh secret set TICK_SECRET
-gh secret set TICK_URL          # https://<your-vercel-app>.vercel.app/api/tick
-```
+Confirm any time with `cd web && vercel env ls` and `gh secret list`.
 
 ---
 

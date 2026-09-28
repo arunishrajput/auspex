@@ -16,7 +16,9 @@
     "index": "tsx scripts/index-chain.ts",
     "index:replay": "tsx scripts/index-chain.ts --replay",
     "crash-test": "tsx scripts/crash-test.ts",
-    "fixtures:capture": "tsx scripts/capture-fixtures.ts"
+    "fixtures:capture": "tsx scripts/capture-fixtures.ts",
+    "calibrate": "tsx scripts/calibrate.ts",
+    "tick": "tsx scripts/tick.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",
