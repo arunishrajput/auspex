@@ -84,8 +84,7 @@ so you completed this step.
 
 Deployer address: `0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24`
 
-Still to do when you set up BridgeKey (§5): fund your **BridgeKey address** too — the human
-authority signs `createMarket` from it. Same faucet, same flow.
+✅ The BridgeKey address is funded too (50 tMSTC) — see §5.
 
 Re-check balances any time with:
 
@@ -184,19 +183,45 @@ land in real time, seconds after the on-chain market is confirmed, is worth more
 
 ---
 
-## ⬜ §5 — BridgeKey wallet + MST Testnet  ·  *blocks: Phase 4*  ·  **THE ONLY OPEN ITEM**
+## ✅ §5 — BridgeKey wallet + MST Testnet  ·  **DONE 2026-09-29**
 
-> Phase 1 deployed without this — it used the generated deployer key in `.env.local`. BridgeKey is
-> needed when a **human** signs `createMarket` from the `/review` queue in Phase 4.
+**Complete. No action needed.** This is the wallet the human authority signs `createMarket` from
+in Phase 4.
 
-BridgeKey is the track's recommended wallet and is how the human authority signs `createMarket`.
+| Item | Value |
+|:--|:--|
+| Address | `0xA9F68fDf84388fa548a685085E2bee0e5b311fF1` |
+| Balance | 50 tMSTC, verified against `testnetrpc.mstblockchain.com` |
+| Chain | `91562037` ✅ |
+| `MARKET_CREATOR_ROLE` | ✅ granted — tx `0xe4ed912c309db55a0cfa51e597ad4845369714a51fe77b0c282e39b8cc932069` |
 
-1. Install the Chrome extension:
-   **https://chromewebstore.google.com/detail/bridgekey/bfjojdcfenehemjgjlepdjomkpginlkg**
-2. Create a wallet, save the seed phrase **offline**. This is a testnet wallet — still, never paste
-   the seed anywhere, including to Claude.
-3. Add the MST Testnet network. If BridgeKey has MST built in, select it and confirm the chain ID
-   matches. Otherwise add a custom network with exactly these values:
+**The balance was verified against our own RPC, not against the wallet UI.** BridgeKey ships a
+built-in "MST Testnet" entry, and `mstscan.com` indexes a *different* chain — so a wallet can
+show a confident balance that our contract cannot see. Querying our RPC for the address and
+getting 50 tMSTC back is what actually proves the network is right.
+
+### Granting a role (for Phase 5 and 6)
+
+```bash
+ROLE=MARKET_CREATOR_ROLE TO=0x… pnpm --filter contracts grant:testnet
+ROLE=RESOLVER_ROLE       TO=0x… pnpm --filter contracts grant:testnet
+ROLE=RESOLVER_ROLE       TO=0x… REVOKE=true pnpm --filter contracts grant:testnet
+```
+
+The script refuses to run if the signer is not an admin, refuses an address with contract code,
+exits without sending anything if the role is already held, and reads the role back over the RPC
+afterwards rather than trusting the receipt.
+
+`RESOLVER_ROLE` is deliberately **not** on the BridgeKey wallet yet. Phase 6 is not blocked (the
+deployer holds it), and granting a capability two phases before anything uses it is how least
+privilege stops meaning anything.
+
+### If you ever need to recreate this wallet
+
+1. Install: **https://chromewebstore.google.com/detail/bridgekey/bfjojdcfenehemjgjlepdjomkpginlkg**
+2. Create a wallet. Save the recovery phrase **on paper**. Never paste it anywhere — not into a
+   file, not into a chat, not to Claude. Nothing in this repository needs it.
+3. Select **MST Testnet**, or add it manually with exactly these values:
 
 ```
 Network Name    : MST Testnet
@@ -206,13 +231,21 @@ Currency Symbol : tMSTC
 Block Explorer  : https://testnet.mstscan.com
 ```
 
-> If any of these disagree with what the wallet pre-fills, trust this table — these were verified
-> directly against the chain. In particular the explorer is `testnet.mstscan.com`, **not**
-> `mstscan.com`, which indexes a different chain.
+> If the wallet pre-fills anything different, trust this table — these were verified directly
+> against the chain. The explorer is `testnet.mstscan.com`, **not** `mstscan.com`.
 
-4. Our app uses the standard EIP-1193 / EIP-6963 injected-provider interface, so **MetaMask with the
-   same custom network also works** if BridgeKey gives you trouble. Nothing in the code is
-   BridgeKey-specific. Use BridgeKey for the demo since the track recommends it.
+4. Fund it at **https://faucet.masterstroke.academy** (reCAPTCHA, so this step is manual).
+5. Verify it landed on the right chain — the check that catches a wrong network:
+
+```bash
+pnpm preflight     # or query the RPC directly for the address's balance
+```
+
+6. Grant the role with the command above, then record the address and tx hash in `PROGRESS.md`.
+
+The app uses the standard EIP-1193 / EIP-6963 injected-provider interface, so **MetaMask with
+the same custom network also works**. Nothing in the code is BridgeKey-specific; use BridgeKey
+for the demo since the track recommends it.
 
 ---
 
@@ -280,7 +313,8 @@ Confirm any time with `cd web && vercel env ls` and `gh secret list`.
 Run through this before judging, not during.
 
 - [ ] `pnpm preflight` all green (RPC, chain ID 91562037, DB, Gemini, contract reachable).
-- [ ] Deployer and BridgeKey wallets both funded.
+- [ ] Deployer (`0xc71dC478…`) and BridgeKey (`0xA9F68fDf…`) both funded.
+- [ ] BridgeKey still holds `MARKET_CREATOR_ROLE` and **nothing else** — that is the trust claim.
 - [ ] Contract shows **Verified** on `https://testnet.mstscan.com/address/<address>`.
 - [ ] Public Vercel URL loads in a **private window** with no wallet installed.
 - [ ] Discord channel visible on a second screen.

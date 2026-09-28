@@ -43,6 +43,8 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | **Live demo URL** | **https://auspex-web-mu.vercel.app** | ✅ public, live chain data |
 | Vercel project | `auspex-web` (team `arunish-rajputs-projects`), root dir `web` | ✅ auto-deploys on push |
 | Deployer wallet | `0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24` | ✅ 9.976 tMSTC left |
+| **Human authority wallet (BridgeKey)** | **`0xA9F68fDf84388fa548a685085E2bee0e5b311fF1`** | ✅ 50 tMSTC, chain `91562037` |
+| **`grantRole(MARKET_CREATOR_ROLE)` → BridgeKey** | **`0xe4ed912c309db55a0cfa51e597ad4845369714a51fe77b0c282e39b8cc932069`** | ✅ block 5,790,485, `result: success` |
 | **`AuspexMarket` contract** | **`0xc4743d6295311AFead12161881Bfcf601B70104C`** | ✅ chain `91562037` |
 | Deployment tx | `0x3b98b828b89bda4489bde9bded404afeb5dfe68d2703759184d74111d7dacd56` | ✅ block 5,786,343 |
 | **Source verified on MSTScan** | solc `v0.8.28`, evm `cancun`, optimizer on, runs 200 | ✅ `is_verified: true` |
@@ -328,7 +330,7 @@ secrets file (the same one hardhat reads). No-op on Vercel; never overrides an e
 | §1 | ~~Enable Gemini billing~~ | Phases 3–5 | ✅ **resolved without billing** — see below |
 | §3 | Neon Postgres | Phase 2 | ✅ done |
 | §4 | Discord webhook | Phase 4 notifications | ✅ done |
-| §5 | **BridgeKey install + fund that address** | Phase 4 approvals | ⬜ **the only open item** |
+| §5 | BridgeKey install + fund + role grant | Phase 4 approvals | ✅ **done 2026-09-29** |
 | §8 | Secrets into Vercel + GitHub | Phase 3 in production | ✅ **done this session** |
 
 **§1 was never a billing wall.** The 402 body says `Your prepayment credits are depleted` — that
@@ -344,9 +346,31 @@ the free tier and works. No card was added. `pnpm preflight` is 9/9.
 signs a transaction yet — the indexer only reads. Phase 5 is when that changes, and it should be
 a conscious decision then rather than a key sitting in production for two phases first.
 
-**§5 is yours and it is the only thing left.** Phase 4's human gate signs `createMarket` from
-BridgeKey, so that wallet must exist and hold tMSTC. Claude will not create a wallet or handle a
-seed phrase. RUNBOOK §5 has the network values; the faucet has a reCAPTCHA.
+**§5 is done — every manual blocker is now closed.** The BridgeKey wallet
+`0xA9F68fDf84388fa548a685085E2bee0e5b311fF1` exists, holds 50 tMSTC verified against our own RPC
+(so it is genuinely on chain `91562037`, not a look-alike network), and now holds
+`MARKET_CREATOR_ROLE` — tx `0xe4ed912c…932069`, block 5,790,485, `result: success` on MSTScan.
+
+**The role boundary is the trust claim, and it is checkable on chain:**
+
+| Role | BridgeKey (human) | Deployer |
+|:--|:--|:--|
+| `DEFAULT_ADMIN_ROLE` | ❌ | ✅ |
+| `MARKET_CREATOR_ROLE` | ✅ | ✅ |
+| `RESOLVER_ROLE` | ❌ | ✅ |
+| `CHALLENGER_ROLE` | ❌ | ✅ |
+
+The human wallet can create markets **and nothing else**. It cannot resolve, pause, or grant
+roles. From Phase 4 onward, a market can only come into existence through a signature from a key
+no server holds.
+
+`RESOLVER_ROLE` was deliberately **not** granted. Phase 6 is not blocked — the deployer holds it —
+and granting a capability two phases before anything uses it is how least privilege quietly
+stops meaning anything. When Phase 6 wants the human to resolve:
+`ROLE=RESOLVER_ROLE TO=0xA9F6… pnpm --filter contracts grant:testnet`.
+
+The recovery phrase is the user's alone. It was never requested, never shared, and is not needed
+by anything in this repository.
 
 ## Decisions already locked in
 

@@ -11,7 +11,8 @@
     "clean": "hardhat clean",
     "deploy:testnet": "hardhat run scripts/deploy.ts --network mstTestnet",
     "verify:testnet": "hardhat run scripts/verify.ts --network mstTestnet",
-    "smoke:testnet": "hardhat run scripts/smoke.ts --network mstTestnet"
+    "smoke:testnet": "hardhat run scripts/smoke.ts --network mstTestnet",
+    "grant:testnet": "hardhat run scripts/grant-role.ts --network mstTestnet"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.1.0"
