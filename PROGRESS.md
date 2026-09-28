@@ -383,10 +383,18 @@ pnpm preflight                      # now genuinely connects to Postgres
   issues. Both are in the root `.env.local`.
 - **`tsx` runs `web/*.ts` as CJS** because `web/package.json` has no `"type": "module"`. Top-level
   `await` fails to transform. Wrap script bodies in `async function main()`.
-- **Node's `fileURLToPath` throws once Turbopack has bundled the module** — the bundle's `URL` is a
-  different realm's class, so the `instanceof` check inside Node fails. `lib/env.ts` reads
-  `.pathname` and `decodeURIComponent`s it instead. (The checkout path contains spaces, so the
-  decode is not optional.)
+- **Never reference a git-ignored file through `new URL(literal, import.meta.url)` in bundled code.**
+  Turbopack treats it as a static *asset reference* and resolves it at build time, so `next build`
+  died in CI with `Module not found: Can't resolve '../.env.local'` — and had passed locally only
+  because the file happened to be on disk. `lib/env.ts` resolves from `process.cwd()` instead.
+  This shipped broken in `f564576` and was fixed in `5e621a9`; the Vercel production deploy for the
+  bad commit shows `Error`. Both are in the history on purpose.
+- **Node's `fileURLToPath` also throws once Turbopack has bundled the module** — the bundle's `URL`
+  is a different realm's class, so the `instanceof` check inside Node fails. Only
+  `lib/db/migrate.ts` and the scripts use it now, and none of them is in the app's module graph.
+- **To check a change the way CI will see it**, clone the repo into a scratch directory with
+  `git clone --local` and run the CI steps there. The clone has no `.env.local`, which is the
+  condition that catches this entire class of bug. Do not move the real `.env.local` aside.
 - **Never open a pool at module scope.** `lib/db/client.ts` exports `db` as a lazy `Proxy` because
   `drizzle(getPool())` at import time made a missing `DATABASE_URL` fail the *build*, before the
   page's own `hasDatabase()` check could render an honest error.
