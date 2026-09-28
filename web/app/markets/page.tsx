@@ -153,9 +153,15 @@ export default async function MarketsPage() {
         <footer className="mt-10 border-t border-ink-800 pt-6">
           <p className="text-xs leading-relaxed text-ink-400">
             Markets 1–2 are Phase 1 smoke tests and market 3 is the Phase 2 idempotency crash
-            test — all three are labelled as such in their own question text. They are real
-            transactions on chain {MST_TESTNET.id}, not seeded demo data. The first market
-            created by the actual pipeline arrives in Phase 4, through a human approval.
+            test — all three are labelled as such in their own question text, and none is a
+            product market. They are real transactions on chain {MST_TESTNET.id}, not seeded demo
+            data. <span className="text-ink-300">Everything from market 4 onward is the real
+            pipeline</span>: an AI agent drafted the question from two independently-confirmed news
+            reports, a person read it as a checklist, and the market exists because they signed for
+            it. You can tell the two apart without trusting us — check the{" "}
+            <span className="font-mono">from</span> address of each creating transaction on MSTScan.
+            Markets 1–3 came from the deployer; 4 onward came from the human authority wallet, which
+            holds <span className="font-mono">MARKET_CREATOR_ROLE</span> and no other role.
           </p>
         </footer>
       </div>

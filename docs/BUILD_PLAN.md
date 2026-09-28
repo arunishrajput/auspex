@@ -143,10 +143,8 @@ MSTScan.
 - [x] A confirmed event produces a schema-valid proposal.
 - [x] A deliberately malformed model output is rejected and logged, and does **not** reach the queue.
 - [x] Nothing goes on-chain and no notification fires before human approval.
-- [ ] Approving signs via BridgeKey and produces a real `createMarket` tx on MSTScan.
-      **Open — PROGRESS.md gap #13.** Unmeetable without the user's wallet, which is the property
-      the phase exists to establish. `pnpm --filter web verify:approval` is 8/8 on the live chain,
-      including an `eth_call` of the exact calldata from the authority address.
+- [x] Approving signs via BridgeKey and produces a real `createMarket` tx on MSTScan.
+      **Four of them** — markets 4–7, blocks 5,793,477–485, all sent by `0xA9F68fDf…311fF1`.
 - [x] The on-chain `specHash` matches the hash of the approved spec.
 - [x] Re-submitting the same approved spec is rejected by the contract (replay guard).
 - [x] With `GEMINI_API_KEY` unset, a tick logs the failure, takes no action, and does not crash.

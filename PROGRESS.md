@@ -8,7 +8,7 @@
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
 **Last updated:** 2026-09-29
-**Current status:** ⚠️ Phase 4 complete with one known gap (see below)
+**Current status:** ✅ Phase 4 complete — all exit criteria met, 4 human-approved markets on chain
 **Next phase:** **Phase 5 — Member agents + deterministic policy gate**
 
 ---
@@ -21,7 +21,7 @@
 | 1 | Smart contract — build, test, deploy, verify | ✅ Complete |
 | 2 | Data layer + chain client + idempotency engine | ✅ Complete |
 | 3 | News ingestion, dedup, 2-source confirmation | ✅ Complete |
-| 4 | Market proposer agent + human approval gate | ⚠️ Complete, 1 gap |
+| 4 | Market proposer agent + human approval gate | ✅ Complete |
 | 5 | Member agents + deterministic policy gate | ⬜ **NEXT** |
 | 6 | Resolution, challenge window, payout | ⬜ Not started |
 | 7 | Dashboard polish + trust page | ⬜ Not started |
@@ -59,18 +59,29 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | **`POST /api/tick` in production** | 200 in **14.9s**, 0 stage errors, 3 LLM calls | ✅ verified 2026-09-29 |
 | Pipeline state (live) | 255 articles · 106 publishers · 215 events · 3 `CONFIRMED` | ✅ real feeds |
 | Gemini free-tier key | project `agentforge-gemini-free`, no billing account | ✅ `preflight` 9/9 |
-| **`/review` — the human gate** | **https://auspex-web-mu.vercel.app/review** | ✅ 4 real proposals queued |
-| Approval dry run (`pnpm --filter web verify:approval`) | 8/8 live checks, `eth_call createMarket` → market #4 | ✅ role, pause, replay guard, calldata |
-| `createMarket` tx (human-approved) | _pending the user's BridgeKey signature_ | ⚠️ gap #13 |
+| **`/review` — the human gate** | **https://auspex-web-mu.vercel.app/review** | ✅ 4 proposals drafted, reviewed, approved |
+| Approval dry run (`pnpm --filter web verify:approval`) | 8/8 live checks, `eth_call createMarket` | ✅ role, pause, replay guard, calldata |
+| **`createMarket` #4 — human-approved** | **`0x2e70a1cbe7bd72b33e68afdc4742c0416b2eee3ed3ed4297bf938d2be825a504`** | ✅ block 5,793,477, `result: success` |
+| **`createMarket` #5 — human-approved** | **`0xf8d8e41c64c0ea4d57860ee5cbc72f46b8ef4c3659d0d3feaa3b6e083e41c32e`** | ✅ block 5,793,480, `result: success` |
+| **`createMarket` #6 — human-approved** | **`0xfc861037611ed292a07a5a8982cf7dca8156576a4a3b581bad61c8a80fc221df`** | ✅ block 5,793,482, `result: success` |
+| **`createMarket` #7 — human-approved** | **`0x444517757604b0b600f75790b6734cfc175c164d42b112bd32d96f1bc60058f9`** | ✅ block 5,793,485, `result: success` |
+| **Sender of all four** | **`0xA9F68fDf84388fa548a685085E2bee0e5b311fF1`** (BridgeKey, human) | ✅ **not the deployer** — checkable on MSTScan |
+| Discord notifications | 4 sent, one per market, each carrying its tx hash | ✅ fired only after indexing |
 | `placeBet` tx (agent, within caps) | _n/a_ | ⬜ Phase 5 |
 | Over-cap bet tx (**expected revert**) | _n/a_ | ⬜ Phase 5 |
 | Resolution tx (with evidence URL) | _n/a_ | ⬜ Phase 6 |
 | Payout / claim tx | _n/a_ | ⬜ Phase 6 |
 
-**Three markets exist on-chain (ids 1, 2, 3).** 1 and 2 are the Phase 1 smoke-test runs; 3 is the
-Phase 2 idempotency crash test. All three say what they are in their own on-chain question text,
-and `/markets` repeats it in the footer. None is presented anywhere as a product market. MSTScan
-decodes their method names (`createMarket`, `placeBet`) because the source is verified.
+**Seven markets exist on-chain.** Ids 1–2 are the Phase 1 smoke-test runs and 3 is the Phase 2
+idempotency crash test; all three say what they are in their own on-chain question text, and none is
+presented anywhere as a product market. **Ids 4–7 are the real ones** — drafted by an AI agent from
+confirmed news, read as a checklist by a human, and created by a signature from a key no server
+holds. MSTScan decodes every method name because the source is verified.
+
+**The distinction a judge can check without trusting us:** markets 1–3 were sent by the deployer
+`0xc71dC478…4ad24`; markets 4–7 were sent by `0xA9F68fDf…311fF1`, which holds `MARKET_CREATOR_ROLE`
+and **nothing else** — not `DEFAULT_ADMIN_ROLE`, not `RESOLVER_ROLE`, not `CHALLENGER_ROLE`. The
+`from` address on the explorer is the human gate, made visible.
 
 **Also on chain, no longer in the repo:** `Ping` at `0x540d73793f5AA5E605A0243EA3DfCF106D6558D8`
 (verified). It was the Phase 0 toolchain probe used to prove the deploy→verify pipeline works before
@@ -177,10 +188,10 @@ decoded now rather than in front of a judge.
 |:--|:--|
 | A confirmed event produces a schema-valid proposal | ✅ **4 live**, from real confirmed events |
 | A malformed model output is rejected, logged, and does **not** reach the queue | ✅ `draft.test.ts` covers invented label, Zod failure, missing field, prose-instead-of-JSON; `/review` renders the validator live over a constructed bad draft |
-| Nothing on-chain and no notification before human approval | ✅ a full tick with 4 queued proposals reported `notify: eligible 0, created 0`; the selector matches only on indexer-written columns (ADR-042) |
-| Approving signs via BridgeKey → a real `createMarket` tx | ⚠️ **gap #13** — needs the user's wallet; everything up to the signature verified 8/8 on chain |
-| The on-chain `specHash` matches the hash of the approved spec | ✅ derivable now: `specHashUsed(0x9f2aeaca…)` read live, and `prepareApproval` re-derives the hash from `proposals.spec` and refuses to sign on a mismatch |
-| Re-submitting the same approved spec is rejected by the contract | ✅ the guard is `specHashUsed` and Phase 1's smoke test proves it live; `verify:approval` reads it per proposal |
+| Nothing on-chain and no notification before human approval | ✅ a full tick with 4 queued proposals reported `notify: eligible 0, created 0`; after approval the same code sent exactly 4, each carrying its tx hash (ADR-042) |
+| Approving signs via BridgeKey → a real `createMarket` tx | ✅ **four of them**, from `0xA9F68fDf…311fF1`, blocks 5,793,477–485, all `result: success` |
+| The on-chain `specHash` matches the hash of the approved spec | ✅ **all four**, re-derived from `proposals.spec` and compared to `getMarket().specHash` — byte-identical |
+| Re-submitting the same approved spec is rejected by the contract | ✅ **all four revert** `SpecHashAlreadyUsed(0x…)`, proved by `eth_call` against the deployed contract |
 | With `GEMINI_API_KEY` unset, a tick logs the failure, takes no action, does not crash | ✅ `draft.test.ts` asserts `UNAVAILABLE` with **zero budget spent and no row written** |
 | `pnpm -r build` / `lint` / `typecheck` / `test` | ✅ **268 tests** (57 contracts + 211 web), zero warnings |
 
@@ -442,7 +453,10 @@ secrets file (the same one hardhat reads). No-op on Vercel; never overrides an e
 | §4 | Discord webhook | Phase 4 notifications | ✅ done |
 | §5 | BridgeKey install + fund + role grant | Phase 4 approvals | ✅ **done 2026-09-29** |
 | §8 | Secrets into Vercel + GitHub | Phase 3 in production | ✅ done |
-| — | **Approve one proposal in `/review` with BridgeKey** | Phase 4 exit criterion, Phase 5 input | ⚠️ **open — gap #13** |
+| §9 | `HUMAN_AUTHORITY_ADDRESS` into Vercel | `/review` in production | ✅ **done 2026-09-29** |
+| — | Approve a proposal in `/review` with BridgeKey | Phase 4 exit criterion | ✅ **done — 4 markets** |
+
+**Every manual blocker is closed.** Nothing is waiting on the user.
 
 **§1 was never a billing wall.** The 402 body says `Your prepayment credits are depleted` — that
 is *project-scoped* prepay exhaustion. A key in a project with no billing account attached uses
@@ -621,21 +635,10 @@ damage. A `pair_adjudications` table would fix it properly; deferred as it needs
 
 **12. No favicon.** `/favicon.ico` 404s in the browser console. Cosmetic, one file, not done.
 
-**13. No human-approved `createMarket` tx yet — it needs the user's wallet.** This is the one Phase 4
-exit criterion not met, and it is unmeetable from here **by design**: the signing key is in
-BridgeKey, in a browser, and nothing in this repository can produce that signature. That is the
-property the whole phase exists to establish, so it is a gap and not a defect.
-
-Everything up to the signature is verified against the live chain — `pnpm --filter web
-verify:approval` returns 8/8, including an `eth_call` of the exact calldata from the authority
-address that returns "would create market #4".
-
-**To close it: open `/review`, connect BridgeKey (`0xA9F6…1fF1`), click "Approve & sign
-createMarket".** The page then verifies the hash against the node, settles the receipt, indexes the
-log and fires the Discord notification in one action. Record the tx hash in the artifacts table
-above. The deployer also holds `MARKET_CREATOR_ROLE`, so a market *could* be created from the
-server — but doing that would defeat the entire phase, so it is deliberately not offered anywhere in
-the code.
+**13. ~~No human-approved `createMarket` tx.~~** ✅ **Closed 2026-09-29.** Four proposals were read
+and approved in `/review` with BridgeKey, producing four real transactions from
+`0xA9F68fDf…311fF1` at blocks 5,793,477 / 480 / 482 / 485 — all `result: success` on MSTScan, all
+decoded as `createMarket`, nonces 0–3 from a wallet whose key this repository has never seen.
 
 **14. `/review` ships wagmi to the browser; `/` and `/markets` do not.** The providers are mounted
 inside the review page's own tree rather than in the root layout, so the two pages a judge lands on
@@ -654,10 +657,13 @@ the human's job.
 It is the phase that proves "AI proposes, deterministic code and the chain decide", and its headline
 artifact is a **deliberately over-cap bet that reverts on chain**.
 
-**First, though: gap #13.** Ask the user to approve a proposal in `/review` so Phase 4 has its real
-`createMarket` tx hash, and record it in the artifacts table. Four proposals are queued and
-`verify:approval` is 8/8 — it is one click, and Phase 5 wants a market that came through the gate to
-bet on. Everything else in Phase 4 is done.
+**There is nothing outstanding from Phase 4, and nothing waiting on the user.** Four markets
+(**ids 4, 5, 6, 7**) came through the human gate and are `OPEN` on chain until **2026-09-30 22:12
+UTC** — that is what Phase 5's agents bet on, and the clock is real, so do the betting work first.
+
+**The review queue is currently empty**, because all four proposals were approved. One confirmed
+event is waiting to be drafted and the next tick will draft it. If a queued proposal is wanted for a
+demo, run `pnpm --filter web tick` and one appears; nothing needs resetting.
 
 **Everything Phases 3–4 built is available and tested. Do not rebuild any of it.**
 
