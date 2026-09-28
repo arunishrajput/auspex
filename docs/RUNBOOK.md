@@ -20,6 +20,8 @@ These were completed automatically during Phase 0. Listed so you know what exist
 | Vercel Deployment Protection disabled (public demo URL) | ✅ |
 | **Live demo URL** | ✅ https://auspex-web-mu.vercel.app |
 | Deployer wallet funded (10 tMSTC) | ✅ |
+| BridgeKey wallet created, funded (50 tMSTC), role granted | ✅ see §5 |
+| BridgeKey recovery phrase backed up by the user, offline | ✅ never shared, never requested |
 
 ---
 
@@ -312,7 +314,8 @@ Confirm any time with `cd web && vercel env ls` and `gh secret list`.
 
 Run through this before judging, not during.
 
-- [ ] `pnpm preflight` all green (RPC, chain ID 91562037, DB, Gemini, contract reachable).
+- [ ] `pnpm preflight` **10/10** — RPC, chain ID 91562037, both wallets, the human wallet's
+      role boundary, DB, Gemini, and the contract.
 - [ ] Deployer (`0xc71dC478…`) and BridgeKey (`0xA9F68fDf…`) both funded.
 - [ ] BridgeKey still holds `MARKET_CREATOR_ROLE` and **nothing else** — that is the trust claim.
 - [ ] Contract shows **Verified** on `https://testnet.mstscan.com/address/<address>`.

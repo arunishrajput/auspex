@@ -151,6 +151,103 @@ async function checkDeployer() {
 }
 
 // ---------------------------------------------------------------------------
+// 3b. Human authority wallet — funded, and holding exactly the right role
+// ---------------------------------------------------------------------------
+
+/**
+ * The BridgeKey wallet the human signs `createMarket` from (RUNBOOK §5).
+ *
+ * Checked here rather than taken on trust because two things can silently break it between
+ * now and a demo: the balance can go to zero, and the role can be revoked. Both would surface
+ * as a confusing revert in the `/review` queue with a judge watching.
+ *
+ * It also asserts the wallet does **not** hold `DEFAULT_ADMIN_ROLE`. That is not paranoia —
+ * "the human can create markets and nothing else" is the project's central trust claim, and a
+ * claim worth making is worth a check that fails when it stops being true.
+ */
+async function checkHumanAuthority() {
+  const address = env.HUMAN_AUTHORITY_ADDRESS;
+  if (!address) {
+    record(
+      "Human authority",
+      false,
+      "HUMAN_AUTHORITY_ADDRESS not set in .env.local — see docs/RUNBOOK.md §5",
+      "Phase 4 approvals",
+    );
+    return;
+  }
+
+  const contract = env.NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS;
+  if (!contract) {
+    record("Human authority", false, "NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS not set", "Phase 4 approvals");
+    return;
+  }
+
+  // keccak256("MARKET_CREATOR_ROLE"), confirmed equal to what the deployed contract returns
+  // from its own MARKET_CREATOR_ROLE() getter. DEFAULT_ADMIN_ROLE is zero by OpenZeppelin
+  // convention. Both are literals so this check needs no ABI and no workspace dependency.
+  const MARKET_CREATOR_ROLE =
+    "0xd3065a24ad9e7725d223007135762d2902038999e3e5829146654498a58d9795";
+  const DEFAULT_ADMIN_ROLE = `0x${"0".repeat(64)}`;
+  // hasRole(bytes32,address) selector
+  const SELECTOR = "0x91d14854";
+
+  const hasRole = async (role) => {
+    const data = SELECTOR + role.slice(2) + address.slice(2).toLowerCase().padStart(64, "0");
+    const result = await rpc("eth_call", [{ to: contract, data }, "latest"]);
+    return BigInt(result) === 1n;
+  };
+
+  try {
+    const balanceHex = await rpc("eth_getBalance", [address, "latest"]);
+    const mstc = Number(BigInt(balanceHex)) / 1e18;
+
+    const [creator, admin] = await Promise.all([
+      hasRole(MARKET_CREATOR_ROLE),
+      hasRole(DEFAULT_ADMIN_ROLE),
+    ]);
+
+    if (mstc === 0) {
+      record(
+        "Human authority",
+        false,
+        `${address} has 0 tMSTC — fund it at https://faucet.masterstroke.academy`,
+        "Phase 4 approvals",
+      );
+      return;
+    }
+    if (!creator) {
+      record(
+        "Human authority",
+        false,
+        `${address} does not hold MARKET_CREATOR_ROLE — ` +
+          `run: ROLE=MARKET_CREATOR_ROLE TO=${address} pnpm --filter contracts grant:testnet`,
+        "Phase 4 approvals",
+      );
+      return;
+    }
+    if (admin) {
+      // Louder than a missing role: the trust claim is that this wallet is bounded.
+      record(
+        "Human authority",
+        false,
+        `${address} holds DEFAULT_ADMIN_ROLE. It should hold MARKET_CREATOR_ROLE and nothing else.`,
+        "the trust model in the README",
+      );
+      return;
+    }
+
+    record(
+      "Human authority",
+      true,
+      `${address} — ${mstc.toFixed(4)} tMSTC, MARKET_CREATOR_ROLE only`,
+    );
+  } catch (error) {
+    record("Human authority", false, String(error.message ?? error), "Phase 4 approvals");
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 4. Gemini — makes one real call
 // ---------------------------------------------------------------------------
 async function checkGemini() {
@@ -346,6 +443,7 @@ async function main() {
   await checkChain();
   await checkExplorer();
   await checkDeployer();
+  await checkHumanAuthority();
   await checkDatabase();
   await checkGemini();
   checkOtherSecrets();
