@@ -53,6 +53,9 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | Smoke run 2 `placeBet` | `0x558dfdafdcdac157176058076c9dafcd825a525346806d2e45e9340213c8a0bf` | ✅ block 5,786,402 |
 | **Crash-test `createMarket`** (market 3) | **`0xeabf2271ef9253d9d3d00aaa086082b0542872d4e98df8c98608b0fa7dbefe83`** | ✅ block 5,787,574, `result: success` |
 | Neon database | project `jolly-queen-98097073`, branch `main`, db `neondb` | ✅ 14 tables migrated |
+| **`POST /api/tick` in production** | 200 in **14.9s**, 0 stage errors, 3 LLM calls | ✅ verified 2026-09-29 |
+| Pipeline state (live) | 255 articles · 106 publishers · 215 events · 3 `CONFIRMED` | ✅ real feeds |
+| Gemini free-tier key | project `agentforge-gemini-free`, no billing account | ✅ `preflight` 9/9 |
 | `createMarket` tx (human-approved) | _n/a_ | ⬜ Phase 4 |
 | `placeBet` tx (agent, within caps) | _n/a_ | ⬜ Phase 5 |
 | Over-cap bet tx (**expected revert**) | _n/a_ | ⬜ Phase 5 |
@@ -428,11 +431,11 @@ session: **9/9 against a fresh database**.
 **6. Re-org handling is a confirmation depth (3 blocks) and nothing more.** Honest on a
 3-second-block testnet; not mainnet-grade. `docs/ARCHITECTURE.md` §11 says so.
 
-**7. ~~Indexing is ~9s per pass.~~** Still true, and now the smaller half of a tick. A full tick
-measures **48s locally**, dominated by laptop→Neon round trips (~0.5s each). On Vercel the
-function and the database are in the same region, so that component largely disappears —
-**but this has not yet been measured in production.** Verify it early in Phase 4; `maxDuration`
-on `/api/tick` is 60.
+**7. ~~Tick duration.~~** ✅ **Measured in production and comfortable.** A full tick takes **48s
+locally** but **14.9s on Vercel** (`POST /api/tick`, HTTP 200, zero stage errors). The difference
+is exactly what the batching work predicted: local time is dominated by laptop→Neon round trips
+(~0.5s each) and on Vercel the function and the database are in the same region. `maxDuration` is
+60, so there is roughly 4× headroom. Re-check if a stage is added.
 
 **8. The intent engine signs with the deployer key only.** Correct through Phase 3. Phase 4 moves
 market creation to a BridgeKey signature; Phase 5 adds per-member agent wallets.
