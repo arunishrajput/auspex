@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 /**
  * Environment access for code that runs OUTSIDE the Next.js runtime — `drizzle.config.ts`,
@@ -17,28 +18,29 @@ import { existsSync, readFileSync } from "node:fs";
 let loaded = false;
 
 /**
- * `file://` URL to a filesystem path, without `node:url`.
+ * Candidate locations for the repo-root `.env.local`, resolved from the **working directory**.
  *
- * Node's own `fileURLToPath` rejects the `URL` this module constructs once Turbopack has
- * bundled it: the bundle's `URL` is a different realm's class, so the `instanceof` check
- * inside Node fails and the build dies with "Received an instance of URL". Reading
- * `.pathname` works from any realm. `decodeURIComponent` is not optional — this repository's
- * own checkout path contains spaces.
+ * Deliberately not `new URL("../.env.local", import.meta.url)`. Turbopack treats that pattern
+ * as a static *asset reference* and tries to resolve the file at build time — so the build
+ * failed in CI with `Module not found: Can't resolve '../.env.local'`, because the file is
+ * git-ignored and does not exist there. It passed locally only because the file happened to
+ * be on disk. A production build must not depend on a git-ignored file existing.
  *
- * POSIX only, which is every environment this runs in (macOS locally, Linux on Vercel), and
- * on Vercel the file does not exist so the caller returns before using the result.
+ * `process.cwd()` is `web/` for every way this runs (`pnpm --filter web …`, vitest,
+ * drizzle-kit, `next dev`, `next build`, and Vercel with its root directory set to `web`), and
+ * the repo root for a command run from there. Both are covered, and neither is statically
+ * analysable, which is the point.
  */
-function fileUrlToPath(url: URL): string {
-  return decodeURIComponent(url.pathname);
+function candidatePaths(): string[] {
+  const cwd = process.cwd();
+  return [resolve(cwd, "..", ".env.local"), resolve(cwd, ".env.local")];
 }
 
 export function loadRootEnv(): void {
   if (loaded) return;
   loaded = true;
 
-  // web/lib/env.ts -> web/ -> repo root
-  for (const candidate of ["../.env.local", "../../.env.local"]) {
-    const path = fileUrlToPath(new URL(candidate, import.meta.url));
+  for (const path of candidatePaths()) {
     if (!existsSync(path)) continue;
 
     for (const line of readFileSync(path, "utf8").split("\n")) {
