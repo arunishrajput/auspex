@@ -187,8 +187,24 @@ export type SettleResult = { ok: true; summary: string } | { ok: false; error: s
  * **Deliberately not gated on the resolver wallet.** Every transaction it queues —
  * `closeMarket`, `finalizeResolution`, `claim` — is permissionless in the contract, so requiring
  * authority here would be theatre: anyone can make these calls from their own wallet, and a judge
- * doing exactly that is the point. The button is on the page so a demo does not have to wait
- * three minutes for a challenge window that closed thirty seconds ago.
+ * doing exactly that is the point. The button is on the page so a demo does not have to wait three
+ * minutes for a challenge window that closed thirty seconds ago.
+ *
+ * ## Why that is not the hole `POST /api/tick` closes with a secret
+ *
+ * `/api/tick` requires `TICK_SECRET` because it spends LLM quota and ingests feeds — an open
+ * endpoint there is a free denial-of-service against our own free tiers. This one has no such
+ * exposure, and the reason is structural rather than a judgement call:
+ *
+ *   - **It calls no model.** There is no quota to burn.
+ *   - **Every intent it creates is keyed on the business fact** (`market:<id>:close`,
+ *     `market:<id>:finalize:<n>`, `market:<id>:claim:<agent>`). The tenth call in a row inserts
+ *     nothing the first one did not, so the set of transactions it can ever produce is bounded by
+ *     the markets and agents that exist — not by how many times it is pressed.
+ *   - **What is left is chain reads**, which cost nothing on this chain, and receipt polling.
+ *
+ * So the worst a hostile caller achieves is making the keeper do, slightly sooner, work that is
+ * already scheduled and that they could have done themselves from their own wallet for the same gas.
  */
 export async function settleNow(): Promise<SettleResult> {
   try {
