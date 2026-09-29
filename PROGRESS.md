@@ -786,16 +786,18 @@ market, resolve one, grant a role, pause the contract or change an agent's caps.
 |:--|:--|:--|
 | `DEFAULT_ADMIN_ROLE` | ❌ | ✅ |
 | `MARKET_CREATOR_ROLE` | ✅ | ✅ |
-| `RESOLVER_ROLE` | ❌ | ✅ |
-| `CHALLENGER_ROLE` | ❌ | ✅ |
+| `RESOLVER_ROLE` | ✅ *(Phase 6)* | ✅ |
+| `CHALLENGER_ROLE` | ✅ *(Phase 6)* | ✅ |
 
-The human wallet can create markets **and nothing else**. It cannot resolve, pause, or grant
-roles. From Phase 4 onward, a market can only come into existence through a signature from a key
-no server holds.
+**Updated in Phase 6.** The human wallet holds every role that requires human **judgement** and none
+that confers **power**: it can create a market, propose an outcome and challenge one, and it cannot
+register an agent, change a cap, or pause the contract, because it does not hold
+`DEFAULT_ADMIN_ROLE`. From Phase 4 onward a market can only come into existence through a signature
+from a key no server holds; from Phase 6 onward the same is true of its outcome.
 
-`RESOLVER_ROLE` was deliberately **not** granted. Phase 6 is not blocked — the deployer holds it —
-and granting a capability two phases before anything uses it is how least privilege quietly
-stops meaning anything. When Phase 6 wants the human to resolve:
+`RESOLVER_ROLE` and `CHALLENGER_ROLE` were deliberately withheld until Phase 6 actually needed them —
+granting a capability two phases before anything uses it is how least privilege quietly stops meaning
+anything. ADR-052 records why Phase 6 needed them and what the change cost. To grant or revoke a role:
 `ROLE=RESOLVER_ROLE TO=0xA9F6… pnpm --filter contracts grant:testnet`.
 
 The recovery phrase is the user's alone. It was never requested, never shared, and is not needed

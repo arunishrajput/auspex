@@ -152,16 +152,23 @@ export default async function MarketsPage() {
 
         <footer className="mt-10 border-t border-ink-800 pt-6">
           <p className="text-xs leading-relaxed text-ink-400">
-            Markets 1–2 are Phase 1 smoke tests and market 3 is the Phase 2 idempotency crash
-            test — all three are labelled as such in their own question text, and none is a
-            product market. They are real transactions on chain {MST_TESTNET.id}, not seeded demo
-            data. <span className="text-ink-300">Everything from market 4 onward is the real
+            Markets 1–2 are Phase 1 smoke tests, market 3 is the Phase 2 idempotency crash test, and
+            market 8 is the Phase 6 resolution-lifecycle test — all four are labelled as such in their
+            own question text, and none is a product market. They are real transactions on chain{" "}
+            {MST_TESTNET.id}, not seeded demo data.{" "}
+            <span className="text-ink-300">Markets 4–7 are the real
             pipeline</span>: an AI agent drafted the question from two independently-confirmed news
             reports, a person read it as a checklist, and the market exists because they signed for
             it. You can tell the two apart without trusting us — check the{" "}
             <span className="font-mono">from</span> address of each creating transaction on MSTScan.
-            Markets 1–3 came from the deployer; 4 onward came from the human authority wallet, which
-            holds <span className="font-mono">MARKET_CREATOR_ROLE</span> and no other role.
+            Markets 1–3 and 8 came from the deployer; 4–7 came from the human authority wallet, which
+            holds every role that requires human judgement —{" "}
+            <span className="font-mono">MARKET_CREATOR</span>,{" "}
+            <span className="font-mono">RESOLVER</span>,{" "}
+            <span className="font-mono">CHALLENGER</span> — and{" "}
+            <span className="text-ink-300">not</span>{" "}
+            <span className="font-mono">DEFAULT_ADMIN_ROLE</span>, so it cannot register an agent,
+            change a cap, or pause the contract.
           </p>
         </footer>
       </div>

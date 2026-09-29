@@ -17,8 +17,12 @@ Everything shown is in service of that sentence. Do not demo features; demo the 
 - [ ] Window/second screen: the Discord channel.
 - [ ] One **confirmed event already sitting in `/review`** — do not spend demo time waiting for a
       news cycle. Say so if asked: "this one was ingested a few minutes ago."
-- [ ] One market already **closed and ready to resolve**, so step 7 does not wait out a window.
-- [ ] Tabs pre-opened for the over-cap revert tx and the payout tx.
+- [ ] One market already **closed with a drafted outcome sitting in `/resolve`**, so step 7 does not
+      wait out a close time and a challenge window. If none is available, step 7 is told from
+      **`/markets/8`**, where the whole lifecycle is already on chain — see the note in step 7.
+- [ ] Tabs pre-opened for: the over-cap revert tx, the payout tx, and **`/markets/8`**.
+- [ ] `pnpm --filter web verify:resolution` run once beforehand, so you know the gates are live and
+      can say "I checked this ten minutes ago" rather than hoping.
 
 ---
 
@@ -119,21 +123,48 @@ Trigger it. Open the reverted tx on MSTScan.
 >
 > That failed transaction is the most important one in this demo."
 
-## 7 · Resolution and payout — 45s
+## 7 · Resolution and payout — 60s
 
-> "The market closes. An authorised resolver submits the outcome **with an evidence URL**, stored
-> on-chain. Then a challenge window — I've set it to two minutes so it fits in a demo; in production
-> it would be hours. A challenger can send it back for re-proposal, and that challenge is recorded
-> on-chain with its reason.
+Open **`/markets/8`**. This is the fallback that needs no waiting, and it is stronger than a live
+run because the whole lifecycle is already on chain and readable.
+
+> "A market closes. A **second** AI agent reads the news published since it opened and proposes an
+> outcome — but it does not choose which articles to read. That's deterministic retrieval, because a
+> model that picks its own sources has already picked the answer. And it has to quote the sentence it
+> is relying on, **verbatim**, which my code then searches for in the article it was shown. A
+> paraphrase fails.
 >
-> After the window, **anyone** can finalize. That's deliberate — not even I can block a payout by
-> going quiet."
+> Then a human reads that one sentence, opens the link, and signs `proposeResolution` from their own
+> wallet. Not my server — there's no key in production that can resolve a market."
 
-Show the payout tx.
+Point at the **`signed by`** column and read it downward.
 
-> "Winners split the pool pro rata. Paid by the contract, not by my server. And note the agent's
-> winnings went to the member's **owner** address, not to the agent wallet — so a stolen agent key
-> can lose its capped stake but can't steal winnings."
+> "`createMarket` — browser wallet. `placeBet` — a capped agent, and there's the over-cap attempt the
+> chain refused. `proposeResolution` — browser wallet again. `finalizeResolution` and `claim` —
+> a wallet holding **no role at all**, because neither of those calls needs one. There is no row here
+> where a privileged server key moved money."
+
+> "In between: a two-minute challenge window. You can see it fire — `finalizeResolution` reverted with
+> `ChallengeWindowOpen` because I tried it early, and there's a real `challengeResolution` that sent
+> the outcome back and forced a re-proposal. Two minutes is demo-scale and immutable; in production it
+> would be hours. And it's *why* the human signs before the proposal rather than vetoing after —
+> nobody vetoes anything in 120 seconds."
+
+Show the payout row and the claim tx.
+
+> "Winners split the pool pro rata — 0.005 in on the winning side, 0.015 out of a 0.015 pool. Paid by
+> the contract, not by my server. I checked that number three ways that don't depend on each other:
+> by hand, against the contract's own `previewPayout`, and against the owner's balance before and
+> after the claim block. All three agree to the wei.
+>
+> And note **who** got paid. The agent signed the claim and received nothing but gas — the money went
+> to the member's **owner** address, because the contract pays the registered owner. A stolen agent
+> key can lose its capped stake; it cannot steal winnings."
+
+If asked what happens when a resolver never turns up: open the market whose resolver went silent.
+
+> "`invalidateStale` — also permissionless, also already on chain. Everyone gets their exact stake
+> back. A silent resolver can't lock funds up any more than a silent one can block a payout."
 
 ## 8 · Honesty — 20s  ⭐
 
