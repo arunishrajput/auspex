@@ -233,6 +233,15 @@ Two Gemini **503s** were absorbed mid-tick by the fallback chain — `gemini-3.1
 `gemini-3.5-flash-lite` answered, which is the reverse of the order measured in Phase 3. The chain
 earned its place. Do not reorder on one sample; `GEMINI_MODELS_FAST` is runtime-overridable anyway.
 
+### And one more, caught by reading the deployed page again
+
+With the fix live, `/markets/8` said **"2 of them staked tMSTC"**. One of those two was the `placeBet`
+that reverted with `BettingClosed()` — value carried into a call the contract refused, so nothing
+moved. `lifecycleClaim` now requires `CONFIRMED` as well as a non-zero value, with a test built from
+market 8's real shape. The error leaned self-critical, which is the safe direction, but the function's
+whole purpose is that the sentence matches the rows. Two commits, because the second was only visible
+after the first was deployed and read.
+
 ### Exit criteria
 
 - [x] **Every tx hash in the README resolves on `testnet.mstscan.com`.** 25 hashes, 0 failures, and
@@ -245,7 +254,9 @@ earned its place. Do not reorder on one sample; `GEMINI_MODELS_FAST` is runtime-
       files after a real build, *and* all 8 deployed routes were fetched and scanned at runtime — no
       `MOCK` badge, no `Refusing to render`, no error boundary. The runtime check is the stronger one,
       because most routes are `force-dynamic` and so barely prerender anything (gap #28).
-- [x] Full suite green: **436 tests** (379 web + 57 contract), lint clean, typecheck clean, build clean.
+- [x] Full suite green: **437 tests** (380 web + 57 contract), lint clean, typecheck clean, build clean.
+- [x] **CI green on both commits**, and the deploy verified live afterwards — all 8 routes 200, and the
+      corrected caption confirmed served rather than assumed.
 - [x] No horizontal scroll at 390 px on `/`, `/trust` or `/markets/8`.
 - [ ] **A cold visitor with no wallet can understand the whole story from the public URL.** All 8
       routes return 200 and read coherently, and judge mode works from the live URL — but this
