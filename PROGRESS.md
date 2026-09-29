@@ -104,6 +104,9 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | Refund `claim` on the invalidated market | `0x17a3d09a957e922aec15ae1d224339d24361aa38de0adfa19be057b81f0488bb` | ✅ block 5,796,407 — 0.01 tMSTC returned |
 | **Keeper `closeMarket` #2** (from a tick, not a script) | `0x9588280c82402a72204af12f6132871e68fd40c9d0b9541b41f0c42399ed35a7` | ✅ block 5,796,567 |
 | **Keeper `closeMarket` #3** (from a tick, not a script) | `0x65ed1cf6c728553ab5217c5cb4bb202c59ab28d7ee975b212e2f03667baceeb0` | ✅ block 5,796,572 |
+| **Keeper `invalidateStale` #2** (first automated one) | **`0x2e146af6d110877b7eb4c4e1c5b5beb5b8731d892f75c4aafb35062d016250d5`** | ✅ block 5,803,291, from `0x15757d54…450daa` (vega, **no role**) |
+| **Keeper `invalidateStale` #3** | **`0xdb47cc4d84f7e20e9e696125aeed820c7cc8f1702b71b11e3fc539f8623aac29`** | ✅ block 5,803,295, same wallet |
+| **Refund `claim` on #2 — 0.01 tMSTC returned** | **`0x89c04f85d6fd7274039b94acb7db0f6c644f990120bab3cef74d41bc0d56e899`** | ✅ block 5,803,327, from `0xc71dC478…4ad24` — **an operator action, not the keeper** |
 | **Judge-mode probe — from the CLI** | `0x72fde34abea889831dd21aab56f05b94b066e6e22e5a37f6ad4e9e2a695be112` | ✅ block 5,798,322 — **Reverted**, `AgentPerTxCapExceeded(20000000000000001, 20000000000000000)` |
 | **Judge-mode probe — clicked in a browser with no wallet** | `0xcfc34dff963bd7f1ea81df4ec7373794a34dd56dda99d18955ce6bfccbaa08c3` | ✅ block 5,798,488 — **Reverted**, same decoded error |
 | **Judge-mode probe — clicked on the LIVE Vercel URL** | **`0xbfe9bb2c3ffee4be2f660473b3de916380f5d10da8548173d44810118ced060a`** | ✅ block 5,798,796 — **Reverted**, same decoded error. This is the one a judge reproduces. |
@@ -153,6 +156,37 @@ file. They were discovered by reading the chain rather than the notes, which is 
 | `POST /api/tick` in production, Phase 8 | 200 in **24,277ms**, 0 errors, **7 of 10 LLM calls**, two Gemini 503s absorbed | ✅ measured 2026-09-29 |
 | Heaviest tick observed (the cron's, 05:19 UTC) | **9 of 10 LLM calls** — full clustering, full proposer, full agents pass | ✅ from `audit_log` |
 | `pnpm check:links` — the new honesty guard | 25 hashes · 27 abbreviations · **19 sender attributions** · 13 live URLs | ✅ all pass |
+
+### The stuck market, found and unstuck — ADR-066 / ADR-067
+
+**Market #2 was `CLOSED` with a bettor's 0.01 tMSTC locked in the contract for thirteen hours**, and
+three separate things had to be true at once for nobody to notice:
+
+1. **The keeper never called `invalidateStale`.** ADR-057 decided that deliberately, to stop a late
+   resolver costing every bettor their market. It worked — and it had no upper bound, so "until
+   somebody acts" meant "forever". ADR-066 revises it: the keeper now invalidates after
+   `STALE_GRACE_SECONDS` (one hour) past the contract's own `resolveDeadline`.
+2. **`/resolve` could not show the market at all.** Every row on that page came from
+   `resolution_drafts`, and a market with no draft has no such row. Worse, the "Awaiting a draft"
+   counter INNER JOINed `proposals`, which dropped markets #1–#3 entirely — so the page read `0`
+   and said "Nothing is waiting to be resolved" while `/markets` showed two closed, unresolved
+   markets. Two pages over one chain, disagreeing.
+3. **`/markets/2` did not list the bet.** The lifecycle table read only `onchain_intents`, and the
+   bet was sent by `contracts/scripts/smoke.ts` in Phase 1, before the intent engine existed. The
+   table was not wrong about any row it printed; it was silently incomplete under a heading that
+   promised completeness (ADR-067).
+
+**What the contract would not let us do, and why that is right.** The instinctive fix — "have the
+keeper claim for every bettor who is owed" — is impossible. `claim(marketId)` pays `msg.sender` and
+nobody else; there is no `claimFor(address)`, because pull-based payout is what stops one reverting
+receiver breaking the loop for everyone. The keeper can only ever settle positions whose key it
+holds, which is the registered agent wallets. Market #2's bettor was the **deployer**, so its refund
+was an operator action from a laptop and is recorded and rendered as one. The alternative was
+changing the contract to weaken a protection so a sentence could be true.
+
+**And the self-correction fired.** With the recovered `placeBet` visible, `lifecycleClaim` now
+**withholds** the strong trust claim on `/markets/2` and names the operator rows instead — exactly
+what ADR-065 built it to do, on evidence the page previously could not see.
 
 **Market #9** is `Will the European Central Bank announce a further interest rate increase in its next
 scheduled monetary policy meeting?`, closing 2026-09-30 23:43:17 UTC. It is the only market whose
@@ -541,9 +575,12 @@ signs them with **an agent wallet holding no role at all** (ADR-058). Production
 keeper that needed one would be a keeper that only worked on a laptop. Two keeper closes came out of an
 ordinary tick, not a script, sent by `kestrel`'s agent wallet — blocks 5,796,567 and 5,796,572.
 
-`invalidateStale` is deliberately **not** automated (ADR-057): it refunds everyone, and running it the
-instant `resolveDeadline` passes would mean our own resolver being ten minutes late costs every bettor
-their market.
+`invalidateStale` **is** automated, behind a grace period (ADR-066, which revises ADR-057). It refunds
+everyone, so running it the instant `resolveDeadline` passes would mean our own resolver being ten
+minutes late costing every bettor their market — but *never* running it meant market #2 sat `CLOSED`
+with a bettor's 0.01 tMSTC locked in the contract until a human noticed. The keeper now waits
+`STALE_GRACE_SECONDS` (one hour, overridable) past the contract's own deadline and then refunds. The
+call stays permissionless, so anyone may still make it sooner from their own wallet.
 
 ### The resolution agent, proved on real data without writing anything
 

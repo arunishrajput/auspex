@@ -8,7 +8,7 @@ import { markets as marketsTable } from "@/lib/db/schema";
 import { readMarket, readMarketCount, type OnChainMarket } from "@/lib/chain/auspex";
 import { getProvider } from "@/lib/chain/provider";
 import { draftsForMarket, type DraftRow } from "@/lib/resolution/dashboard";
-import { lifecycleIntentsFor, payoutsFor } from "@/lib/resolution/settle";
+import { lifecycleRowsFor, payoutsFor } from "@/lib/resolution/settle";
 import { classifySigners, lifecycleClaim } from "@/lib/trust/signers";
 
 /**
@@ -121,7 +121,7 @@ export default async function MarketDetailPage({
 
   let drafts: DraftRow[] = [];
   let payouts: Awaited<ReturnType<typeof payoutsFor>> = [];
-  let intents: Awaited<ReturnType<typeof lifecycleIntentsFor>> = [];
+  let intents: Awaited<ReturnType<typeof lifecycleRowsFor>> = [];
   let createdTxHash: string | null = null;
   let dbError: string | null = null;
 
@@ -141,7 +141,7 @@ export default async function MarketDetailPage({
       [drafts, payouts, intents] = await Promise.all([
         row === undefined ? Promise.resolve([]) : draftsForMarket(row.id),
         payoutsFor(onchainId),
-        lifecycleIntentsFor(onchainId, row?.proposalId, row?.id),
+        lifecycleRowsFor(onchainId, row?.proposalId, row?.id),
       ]);
     } catch (error) {
       dbError = error instanceof Error ? error.message : String(error);
@@ -244,7 +244,8 @@ export default async function MarketDetailPage({
                     {nowSeconds > chain.resolveDeadline &&
                       (chain.state === "OPEN" || chain.state === "CLOSED") && (
                         <span className="ml-2 text-warn-500">
-                          past — anyone may call invalidateStale and refund every bettor
+                          past — the keeper will call invalidateStale and refund every bettor, and
+                          anyone else may call it sooner from their own wallet
                         </span>
                       )}
                   </Row>
@@ -376,7 +377,10 @@ export default async function MarketDetailPage({
         <section className="mb-8">
           <SectionLabel>
             Lifecycle — every transaction, and which key signed it
-            <Provenance origin="DB" detail="onchain_intents — our record; each hash resolves on MSTScan" />
+            <Provenance
+              origin="DB"
+              detail="onchain_intents + chain_events — our record merged with the chain's own logs; each hash resolves on MSTScan"
+            />
           </SectionLabel>
           {dbError !== null ? (
             <p className="mt-3 rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3 font-mono text-xs break-words text-warn-500">
@@ -384,11 +388,9 @@ export default async function MarketDetailPage({
             </p>
           ) : intents.length === 0 ? (
             <p className="mt-3 rounded-lg border border-ink-700 bg-ink-900 px-4 py-4 text-xs leading-relaxed text-ink-400">
-              No intents are recorded for this market. Markets 1–3 were created directly by the
-              Phase 1 and 2 scripts, before anything went through the intent engine, so their
-              transactions exist on chain with no row here — the{" "}
-              <span className="font-mono">created in</span> link above is the authoritative record,
-              and MSTScan is the place to read it.
+              Nothing is recorded for this market — neither an intent of ours nor an indexed log
+              that names its own caller. The <span className="font-mono">created in</span> link
+              above is the authoritative record, and MSTScan is the place to read it.
             </p>
           ) : (
             <div className="mt-3 overflow-x-auto rounded-lg border border-ink-700 bg-ink-900">
@@ -407,6 +409,17 @@ export default async function MarketDetailPage({
                     <tr key={`${intent.txHash ?? "none"}-${index}`}>
                       <td className="px-3 py-2 text-ink-200">
                         {KIND_LABEL[intent.kind] ?? intent.kind}
+                        {intent.origin === "CHAIN" && (
+                          <>
+                            <br />
+                            <span
+                              className="text-ink-500"
+                              title="No intent row exists for this transaction — it was sent outside the intent engine. The row is reconstructed from the contract's own event log."
+                            >
+                              from the event log
+                            </span>
+                          </>
+                        )}
                       </td>
                       <td className="px-3 py-2">
                         <span className={SIGNER_STYLE[signerKindOf(signerFacts, intent.fromAddress)]}>
@@ -544,6 +557,18 @@ export default async function MarketDetailPage({
             <span className="font-mono text-ink-400">DEFAULT_ADMIN_ROLE</span> cannot be rendered as
             an ordinary key. Every hash resolves on MSTScan without trusting this page.
           </p>
+          {intents.some((intent) => intent.origin === "CHAIN") && (
+            <p className="mt-2 text-[11px] leading-relaxed text-ink-500">
+              A row marked{" "}
+              <span className="font-mono text-ink-400">from the event log</span> has no intent
+              record: the transaction was sent outside the intent engine — by the Phase 1 and 2
+              scripts, which predate it — so the contract&rsquo;s own log is the only record, and
+              the address shown is the one the contract itself stored. Those rows are reconstructed,
+              never written back into{" "}
+              <span className="font-mono text-ink-400">onchain_intents</span>, because that table
+              records what this system decided to do and it never decided to send them.
+            </p>
+          )}
         </footer>
       </div>
     </main>

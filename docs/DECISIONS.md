@@ -1210,7 +1210,7 @@ a handful of markets, so it is a few calls on a chain where reads are free.
 
 ---
 
-### ADR-057 — `invalidateStale` is permissionless and deliberately not automated
+### ADR-057 — `invalidateStale` is permissionless and deliberately not automated  ⟵ **superseded by ADR-066**
 
 **Decided:** the keeper runs `closeMarket`, `finalizeResolution` and `claim` on a timer. It does
 **not** run `invalidateStale`. That call is exercised by hand in `scripts/lifecycle.ts`.
@@ -1224,6 +1224,9 @@ their own wallet. Automating it would quietly take that back.
 **Cost:** a market with a genuinely absent resolver stays unsettled until somebody acts. The UI says
 so on the market detail page — "past — anyone may call `invalidateStale` and refund every bettor" —
 rather than leaving a reader to work it out.
+
+**Superseded by ADR-066.** That cost was paid, by market #2, and it was too high: "until somebody
+acts" turned out to mean "forever", with a bettor's stake locked in the contract.
 
 ---
 
@@ -1581,3 +1584,81 @@ honest about being measured in hours.
 called the right functions in the right order. Two constants written in different files, a year of
 comments apart, made it a no-op. `wouldIndex` is now one exported expression with a table test, so
 the horizon and the receipt depth are compared in a place where they can be seen disagreeing.
+
+---
+
+### ADR-066 — The keeper invalidates a stale market after a grace period, and cannot claim for anyone else
+
+**Decided:** three things, all found by one stuck market.
+
+1. **The keeper calls `invalidateStale`**, gated on `getMarket` saying `OPEN`/`CLOSED` and
+   `now > resolveDeadline + STALE_GRACE_SECONDS` (one hour, overridable via
+   `KEEPER_STALE_GRACE_SECONDS`). This **revises ADR-057**, which kept the call out of the keeper
+   entirely.
+2. **The claim stage picks its candidates without trusting the projection's state**, so a market
+   invalidated this pass is claimable on the next one rather than a whole tick later.
+3. **The keeper claims only for the agent wallets whose keys it holds**, and the UI says so, because
+   the contract does not allow anything else.
+
+**Why (1).** ADR-057's reasoning was that invalidation refunds everyone and destroys the market, so a
+resolver ten minutes late should not cost every bettor their position. That is right about *ten
+minutes* and wrong about *forever*. Market #2 closed on 2026-09-28, passed its resolve deadline
+thirty minutes later, and sat `CLOSED` with a confirmed 0.01 tMSTC stake inside it for **thirteen
+hours** — protected, by a policy meant to protect it, from the only mechanism that could return the
+money. The bettor ADR-057 was written for is exactly the person it stranded.
+
+A grace period keeps the half of ADR-057 that was true and drops the half that was not: the late
+resolver still wins the race, the absent one no longer locks the funds up. The call stays
+permissionless, so nobody has to wait for us — a judge can make it from their own wallet, sooner.
+
+**Why (2).** The claim stage selected `indexedMarkets(["FINALIZED","INVALIDATED"])` — the *database's*
+view. A market the keeper invalidated moments earlier is still `CLOSED` there until the indexer
+catches up, so the refund it had just made possible was invisible to it. The candidate list is now
+every settle-able projection state and the **chain** decides, which is the rule the rest of the file
+already followed. `previewPayout` remains the only thing that authorises a claim (ADR-050).
+
+**Why (3), and this is the one worth being precise about.** `claim(marketId)` pays `msg.sender`'s
+position and no one else's. There is no `claimFor(address)`, deliberately: a pull-based payout is what
+stops one reverting receiver breaking the loop for everybody. So *"the keeper claims for every bettor
+who is owed"* is not a thing any code can do — the only positions it can settle are the ones whose
+key it holds, which is the registered agent wallets.
+
+Market #2's bettor was the **deployer**, from the Phase 1 smoke script, and the deployer key is
+deliberately absent from production (ADR-047). Its refund was therefore an **operator** action from a
+laptop, recorded as one in `audit_log` and rendered as `operator key` on `/markets/2` — not keeper
+work dressed up as keeper work. Building a `claimFor` path would have meant changing the contract to
+weaken a protection, to make a sentence in a prompt true.
+
+**Cost:** one extra `eth_call` per candidate market per pass, on a chain where reads are free. A
+market can now be invalidated by a cron job an hour after its deadline, which is a real transfer of
+authority away from the resolver — mitigated by the grace period being a single named constant, and
+by the call having been permissionless all along.
+
+---
+
+### ADR-067 — The lifecycle table reads the chain's logs too, and never writes them back as intents
+
+**Decided:** `/markets/[id]` renders `onchain_intents` **merged with `chain_events`**, de-duplicated
+by transaction hash. A log with no intent row is shown, marked `from the event log`, with the actor
+the contract itself recorded. Only events that carry their caller in an argument are included.
+
+**Why.** `/markets/2` printed a lifecycle table under the heading *"every transaction, and which key
+signed it"* containing one row — the keeper's `closeMarket` — while the chain held a confirmed
+0.01 tMSTC `placeBet` on that market. The bet was sent by `contracts/scripts/smoke.ts` in Phase 1,
+before the intent engine existed, so no `onchain_intents` row will ever exist for it. Nothing in the
+table was false; it was silently incomplete, which under a heading promising completeness is the same
+failure hard rule #2 exists to prevent, and it is how the stuck market stayed invisible.
+
+**Why not backfill intent rows instead.** That was the obvious fix and it is the wrong one.
+`onchain_intents` records what this system *decided to do*. It never decided to place that bet. Writing
+a synthetic row would put a fabricated decision into the audit trail to make a UI look tidy — the
+precise move this project refuses everywhere else. The log is shown as what it is instead.
+
+**Why only events naming their caller.** `MarketClosed`, `MarketFinalized` and `MarketInvalidated`
+carry no address. A row for one would need an invented `signed by` value, and that column *is* the
+page's trust claim. A missing row is better than a guessed signer.
+
+**Effect, immediately:** `/markets/2` now shows all five of its transactions, and because the
+recovered `placeBet` is an operator row, `lifecycleClaim` correctly **withholds** the strong trust
+claim on that market — the same self-correction ADR-065 built it for, now firing on evidence that
+page could not previously see.

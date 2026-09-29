@@ -281,6 +281,7 @@ export async function runTick(options: TickOptions = {}): Promise<TickReport> {
         ? {
             closed: 0,
             finalized: 0,
+            invalidated: 0,
             claimed: 0,
             claimableWei: "0",
             reconciled: 0,
@@ -444,6 +445,7 @@ function summarise(report: TickReport): string {
     const settle = report.settle;
     parts.push(
       `settle: ${settle.closed} close(s), ${settle.finalized} finalisation(s), ` +
+        `${settle.invalidated} invalidation(s), ` +
         `${settle.claimed} claim(s) worth ${settle.claimableWei} wei queued`,
     );
     if (settle.reconciled > 0) {

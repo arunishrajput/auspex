@@ -21,7 +21,7 @@ import {
   prepareResolution,
   rejectDraft,
 } from "@/lib/resolution/propose";
-import { runSettlePass } from "@/lib/resolution/settle";
+import { runSettlePass, type SettleReport } from "@/lib/resolution/settle";
 import { runIntentWorker } from "@/lib/intents/engine";
 import { runIndexer } from "@/lib/indexer/run";
 
@@ -198,9 +198,10 @@ export type SettleResult = { ok: true; summary: string } | { ok: false; error: s
  *
  *   - **It calls no model.** There is no quota to burn.
  *   - **Every intent it creates is keyed on the business fact** (`market:<id>:close`,
- *     `market:<id>:finalize:<n>`, `market:<id>:claim:<agent>`). The tenth call in a row inserts
- *     nothing the first one did not, so the set of transactions it can ever produce is bounded by
- *     the markets and agents that exist — not by how many times it is pressed.
+ *     `market:<id>:finalize:<n>`, `market:<id>:invalidate-stale`, `market:<id>:claim:<agent>`).
+ *     The tenth call in a row inserts nothing the first one did not, so the set of transactions it
+ *     can ever produce is bounded by the markets and agents that exist — not by how many times it
+ *     is pressed.
  *   - **What is left is chain reads**, which cost nothing on this chain, and receipt polling.
  *
  * So the worst a hostile caller achieves is making the keeper do, slightly sooner, work that is
@@ -208,22 +209,63 @@ export type SettleResult = { ok: true; summary: string } | { ok: false; error: s
  */
 export async function settleNow(): Promise<SettleResult> {
   try {
-    const report = await runSettlePass();
-    const results = await runIntentWorker({ limit: 5 });
-    await runIndexer().catch(() => undefined);
+    // Two rounds, because the stages depend on each other through the chain. `invalidateStale`
+    // is what makes a market claimable, and a claim is only queued once `previewPayout` returns
+    // a non-zero number — which cannot happen until the invalidation has *mined*. One round would
+    // queue the refund and report "0 claims", leaving the money visibly unpaid until the next
+    // tick, on the button whose label promises otherwise.
+    //
+    // Safe to repeat for the reason in the header: every intent is keyed on the business fact, so
+    // the second round inserts nothing the first already did.
+    const rounds: SettleReport[] = [];
+    const worked: string[] = [];
+
+    for (let round = 0; round < 2; round += 1) {
+      const report = await runSettlePass();
+      rounds.push(report);
+      const results = await runIntentWorker({ limit: 5 });
+      worked.push(...results.map((result) => `${result.status} (${result.note})`));
+      await runIndexer().catch(() => undefined);
+      // Nothing queued and nothing broadcast means the second round has nothing to find either.
+      if (results.length === 0 && queuedNothing(report)) break;
+    }
+
     revalidate();
 
+    const total = rounds.reduce(
+      (acc, report) => ({
+        closed: acc.closed + report.closed,
+        finalized: acc.finalized + report.finalized,
+        invalidated: acc.invalidated + report.invalidated,
+        claimed: acc.claimed + report.claimed,
+        claimableWei: (BigInt(acc.claimableWei) + BigInt(report.claimableWei)).toString(),
+      }),
+      { closed: 0, finalized: 0, invalidated: 0, claimed: 0, claimableWei: "0" },
+    );
+
     const parts = [
-      `${report.closed} close(s)`,
-      `${report.finalized} finalisation(s)`,
-      `${report.claimed} claim(s) worth ${report.claimableWei} wei`,
-      ...report.notes,
-      ...results.map((result) => `${result.status} (${result.note})`),
+      `${total.closed} close(s)`,
+      `${total.finalized} finalisation(s)`,
+      `${total.invalidated} invalidation(s)`,
+      `${total.claimed} claim(s) worth ${total.claimableWei} wei`,
+      // Notes from the last round only: an earlier round's "nothing to do" is not news once a
+      // later one did something.
+      ...(rounds[rounds.length - 1]?.notes ?? []),
+      ...worked,
     ];
     return { ok: true, summary: parts.join(" · ") };
   } catch (error) {
     return { ok: false, error: message(error) };
   }
+}
+
+function queuedNothing(report: SettleReport): boolean {
+  return (
+    report.closed === 0 &&
+    report.finalized === 0 &&
+    report.invalidated === 0 &&
+    report.claimed === 0
+  );
 }
 
 function revalidate(): void {

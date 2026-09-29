@@ -32,13 +32,24 @@
  * `docs/DECISIONS.md` ADR-050 records this as a deliberate departure from the plan, which said
  * to key the worker on decisions.
  *
- * ## Why `invalidateStale` is not in here
+ * ## `invalidateStale`, and the grace period that replaced "never" (ADR-066)
  *
- * It is permissionless and it refunds everyone, and running it on a timer would mean our own
- * resolver being ten minutes late costs every bettor their market. The right owner of that
- * decision is whoever is harmed by the delay — which is exactly why the contract made it
- * permissionless. `scripts/lifecycle.ts` exercises it by hand, on a market whose resolver
- * genuinely never appeared.
+ * ADR-057 kept this call out of the keeper entirely, on the grounds that invalidation refunds
+ * everyone and destroys the market, so a resolver who is ten minutes late should not cost every
+ * bettor their position. That reasoning is right about *ten minutes* and wrong about *forever*:
+ * with nothing automated, a market nobody resolves stays `CLOSED` with the stakes locked in the
+ * contract permanently, which is a worse outcome for the same bettor it was meant to protect.
+ * Market #2 sat in exactly that state until a human noticed.
+ *
+ * So the call is automated, behind `STALE_GRACE_SECONDS` — a deliberate wait *after* the
+ * contract's own `resolveDeadline` before the keeper acts. The late resolver ADR-057 worried
+ * about still wins the race; the absent one no longer strands the funds. The decision is still
+ * permissionless, so a judge can always make the call themselves, sooner, from their own wallet.
+ *
+ * Eligibility is read from `getMarket`, never from the projection, and the contract re-checks it:
+ * `invalidateStale` reverts with `MarketNotClosed` on anything that is not `OPEN` or `CLOSED`
+ * (which is how "has no pending proposal" is enforced — `RESOLUTION_PROPOSED` is neither) and with
+ * `ResolveDeadlineNotPassed` inside the window. Two independent gates, as everywhere else here.
  */
 
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
@@ -46,11 +57,12 @@ import { db } from "../db/client";
 import {
   agentDecisions,
   auditLog,
+  chainEvents,
   markets,
   onchainIntents,
   resolutionDrafts,
 } from "../db/schema";
-import { readMarket, readPreviewPayout } from "../chain/auspex";
+import { readMarket, readPreviewPayout, type OnChainMarket } from "../chain/auspex";
 import { getProvider } from "../chain/provider";
 import { createIntent } from "../intents/engine";
 import { listBettingMembers, type MemberRow } from "../agents/members";
@@ -68,11 +80,82 @@ const MAX_PER_PASS = 4;
  */
 const KEEPER_MIN_BALANCE_WEI = 5n * 10n ** 14n;
 
+/**
+ * How long after the contract's `resolveDeadline` the keeper waits before invalidating.
+ *
+ * This number is the whole of ADR-066's compromise with ADR-057. `invalidateStale` refunds every
+ * bettor and ends the market, so acting the instant the deadline passes would let a resolver who
+ * is a few minutes late destroy a market nobody wanted destroyed. Waiting forever — which is what
+ * not automating it amounted to — strands the stakes instead.
+ *
+ * One hour, against a `resolveDeadline` that is already 24 hours after close on a real market. A
+ * resolver with a day to act and an hour of slack after it is not late, they are absent.
+ *
+ * Overridable at runtime via `KEEPER_STALE_GRACE_SECONDS` so demo day does not need a deploy.
+ */
+export const STALE_GRACE_SECONDS = 60 * 60;
+
+function staleGraceSeconds(): number {
+  const raw = process.env.KEEPER_STALE_GRACE_SECONDS;
+  if (raw === undefined) return STALE_GRACE_SECONDS;
+  const parsed = Number(raw);
+  // A missing or malformed override must not silently become 0 — that would turn a typo into
+  // "refund everyone immediately", which is the one outcome this constant exists to prevent.
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : STALE_GRACE_SECONDS;
+}
+
+/**
+ * Whether the chain's own view of a market makes it eligible for `invalidateStale`. **Pure.**
+ *
+ * Mirrors `AuspexMarket.invalidateStale` exactly — `state ∈ {OPEN, CLOSED}` and
+ * `block.timestamp > resolveDeadline` — plus our own grace period on top. `RESOLUTION_PROPOSED`
+ * failing the state test is what "has no pending proposal" means here: a proposed resolution
+ * moves the market out of `CLOSED`, so a pending proposal cannot be invalidated even by a caller
+ * who wanted to.
+ */
+export function staleEligibility(
+  market: Pick<OnChainMarket, "state" | "resolveDeadline">,
+  nowSeconds: number,
+  graceSeconds: number = STALE_GRACE_SECONDS,
+): { ok: true } | { ok: false; reason: string } {
+  if (market.state === "RESOLUTION_PROPOSED") {
+    return {
+      ok: false,
+      reason:
+        "a resolution is proposed and inside its challenge window — the contract reverts with " +
+        "MarketNotClosed, and finalizeResolution is the call that finishes it",
+    };
+  }
+  if (market.state !== "OPEN" && market.state !== "CLOSED") {
+    return { ok: false, reason: `the market is already ${market.state}` };
+  }
+  if (nowSeconds <= market.resolveDeadline) {
+    return {
+      ok: false,
+      reason:
+        `the resolver still has until ${new Date(market.resolveDeadline * 1000).toISOString()} — ` +
+        "the contract reverts with ResolveDeadlineNotPassed",
+    };
+  }
+  if (nowSeconds <= market.resolveDeadline + graceSeconds) {
+    return {
+      ok: false,
+      reason:
+        `the resolve-by time has passed but the keeper waits ${graceSeconds}s beyond it before ` +
+        `refunding, so a late resolver is not overruled by a cron job (ADR-066). Anyone may call ` +
+        `invalidateStale now if they would rather have the refund.`,
+    };
+  }
+  return { ok: true };
+}
+
 export type SettleReport = {
   /** Markets whose `closeMarket` transition was queued. */
   closed: number;
   /** Markets whose challenge window has elapsed and whose finalisation was queued. */
   finalized: number;
+  /** Markets past `resolveDeadline` (plus grace) with no proposal, whose refund was queued. */
+  invalidated: number;
   /** (market, agent) pairs owed something, whose claim was queued. */
   claimed: number;
   /**
@@ -93,6 +176,7 @@ function emptyReport(): SettleReport {
   return {
     closed: 0,
     finalized: 0,
+    invalidated: 0,
     claimed: 0,
     claimableWei: "0",
     reconciled: 0,
@@ -135,8 +219,14 @@ export async function pickKeeper(
   return { ok: true, ...best };
 }
 
-/** Markets the indexer believes are live, with their ids. The chain is then asked about each. */
-async function indexedMarkets(states: readonly string[]) {
+/**
+ * Markets the indexer believes are live, with their ids. The chain is then asked about each.
+ *
+ * `scanLimit` bounds the `eth_call`s one stage can make. The claim stage passes a larger one
+ * because it filters on `previewPayout` rather than on the projection, so it has to look at every
+ * market that *could* be settled, not just the handful the projection already labels that way.
+ */
+async function indexedMarkets(states: readonly string[], scanLimit = MAX_PER_PASS * 3) {
   return db
     .select({
       rowId: markets.id,
@@ -147,8 +237,11 @@ async function indexedMarkets(states: readonly string[]) {
     .from(markets)
     .where(and(isNotNull(markets.onchainId), inArray(markets.state, states as never)))
     .orderBy(markets.onchainId)
-    .limit(MAX_PER_PASS * 3);
+    .limit(scanLimit);
 }
+
+/** Markets the claim stage scans per pass. Reads are free on this chain; writes stay at `limit`. */
+const MAX_CLAIM_SCAN = 50;
 
 /**
  * Runs one settlement pass: close, finalize, claim, reconcile.
@@ -258,13 +351,85 @@ export async function runSettlePass(
     }
   }
 
-  // --- 3. claim ------------------------------------------------------------------------------
+  // --- 3. invalidateStale --------------------------------------------------------------------
+  //
+  // The refund path for a market no resolver ever came back to. Permissionless, like the two
+  // above, and gated on the chain's own `resolveDeadline` plus a grace period so a late resolver
+  // is not overruled by a cron job (ADR-066). `RESOLUTION_PROPOSED` is excluded by the state test
+  // inside `staleEligibility`, and the contract re-checks both conditions itself.
+  if (keeper.ok) {
+    let queued = 0;
+    const grace = staleGraceSeconds();
+    for (const market of await indexedMarkets(["OPEN", "CLOSED"])) {
+      if (queued >= limit) break;
+      if (market.onchainId === null) continue;
+
+      // The chain, not the projection: the projection can say CLOSED about a market somebody
+      // resolved thirty seconds ago, and invalidating that one would be the worst bug in here.
+      const onChain = await readMarket(market.onchainId, provider);
+      const eligible = staleEligibility(onChain, nowSeconds, grace);
+      if (!eligible.ok) continue;
+
+      await createIntent({
+        // One invalidation per market, ever. The contract reverts a second attempt with
+        // MarketNotClosed, because the first one moved it to INVALIDATED.
+        idempotencyKey: `market:${market.onchainId}:invalidate-stale`,
+        kind: "INVALIDATE_STALE",
+        from: keeper.member.agentAddress,
+        functionName: "invalidateStale",
+        args: [market.onchainId],
+      });
+      await db.insert(auditLog).values({
+        actor: `keeper:${keeper.member.agentAddress}`,
+        action: "market.invalidate_queued",
+        subjectType: "market",
+        subjectId: market.rowId,
+        reason:
+          `Market #${market.onchainId} passed its resolve-by time of ` +
+          `${new Date(onChain.resolveDeadline * 1000).toISOString()} with no resolution proposed, ` +
+          `and the ${grace}s grace period after it has elapsed too, so invalidateStale was queued. ` +
+          `Every bettor is refunded their exact stake; nobody wins. The call is permissionless and ` +
+          `is signed by an agent wallet holding no role — a judge could have made it themselves.`,
+        metadata: {
+          onchainId: market.onchainId,
+          resolveDeadline: onChain.resolveDeadline,
+          graceSeconds: grace,
+          poolYesWei: onChain.poolYesWei.toString(),
+          poolNoWei: onChain.poolNoWei.toString(),
+        },
+      });
+      report.invalidated += 1;
+      queued += 1;
+    }
+  }
+
+  // --- 4. claim ------------------------------------------------------------------------------
   //
   // One claim per (settled market, agent) pair the contract says it owes. Signed by the agent
   // itself and paid to the registered owner — a stolen agent key cannot redirect a payout.
+  //
+  // ## Why the candidate list is not filtered on the projection's state
+  //
+  // It used to be `indexedMarkets(["FINALIZED", "INVALIDATED"])`, which means a market this very
+  // pass invalidated is invisible to this stage until the indexer catches up — the refund waits
+  // a whole tick behind the transaction that made it claimable. The candidates now come from
+  // every settle-able projection state and **the chain decides**, which is the rule the rest of
+  // this file already follows.
+  //
+  // ## Why this claims only for agent wallets, and cannot do more
+  //
+  // `claim(marketId)` pays `msg.sender`'s position and nobody else's — there is no
+  // `claimFor(address)`, deliberately, because a pull-based payout is what stops one reverting
+  // receiver breaking the loop for everyone. So the only positions a keeper can ever settle are
+  // the ones whose key it holds: the registered agent wallets. A bettor who staked from their own
+  // wallet claims from their own wallet, and no amount of code here changes that. `/markets/[id]`
+  // shows what the contract owes every address, claimed or not, so nobody has to be told.
   {
     let queued = 0;
-    const settled = await indexedMarkets(["FINALIZED", "INVALIDATED"]);
+    const settled = await indexedMarkets(
+      ["OPEN", "CLOSED", "RESOLUTION_PROPOSED", "FINALIZED", "INVALIDATED"],
+      MAX_CLAIM_SCAN,
+    );
     for (const market of settled) {
       if (queued >= limit) break;
       if (market.onchainId === null) continue;
@@ -467,6 +632,153 @@ export async function lifecycleIntentsFor(
     .from(onchainIntents)
     .where(sql`(${filter})`)
     .orderBy(onchainIntents.createdAt);
+}
+
+/**
+ * One row of the market detail page's lifecycle table.
+ *
+ * `origin` is the honest part. `INTENT` means this system decided to send the transaction and has
+ * its own record of doing so. `CHAIN` means the log exists and no intent row does — the
+ * transaction happened, but not through the intent engine.
+ */
+export type LifecycleRow = {
+  kind: string;
+  status: string;
+  signer: string;
+  fromAddress: string;
+  txHash: string | null;
+  blockNumber: number | null;
+  revertReason: string | null;
+  valueWei: string;
+  createdAt: Date;
+  origin: "INTENT" | "CHAIN";
+};
+
+/**
+ * Which contract call an event log implies, and which of its arguments names the caller.
+ *
+ * Only events that carry their actor in an indexed argument are here. `MarketClosed`,
+ * `MarketFinalized` and `MarketInvalidated` name no address, and a row whose `signed by` column
+ * this file had *guessed* would be worse than a missing row — the signer column is the page's
+ * trust claim.
+ */
+const EVENT_TO_CALL: Record<string, { kind: string; actor: string; amount?: string }> = {
+  MarketCreated: { kind: "CREATE_MARKET", actor: "creator" },
+  BetPlaced: { kind: "PLACE_BET", actor: "bettor", amount: "amount" },
+  ResolutionProposed: { kind: "PROPOSE_RESOLUTION", actor: "resolver" },
+  ResolutionChallenged: { kind: "CHALLENGE_RESOLUTION", actor: "challenger" },
+  Claimed: { kind: "CLAIM", actor: "claimant" },
+};
+
+export type RawChainEvent = {
+  eventName: string | null;
+  args: Record<string, unknown> | null;
+  txHash: string;
+  blockNumber: number;
+  blockTime: Date | null;
+};
+
+/**
+ * Merges our intent rows with the chain's own logs, so the table shows everything that happened.
+ *
+ * **Pure**, and the reason it exists is a real defect rather than tidiness. `/markets/2` rendered
+ * a lifecycle table containing one row — the keeper's `closeMarket` — while the chain held a
+ * confirmed 0.01 tMSTC `placeBet` on that market from the Phase 1 smoke script. The bet predates
+ * the intent engine (Phase 2 built it), so no `onchain_intents` row will ever exist for it. The
+ * table was not wrong about any row it printed; it was silently incomplete, which on a page whose
+ * whole purpose is "every transaction, and which key signed it" is the same failure hard rule #2
+ * is about.
+ *
+ * The fix is emphatically **not** to write synthetic intent rows for those transactions. That
+ * table records what this system *decided to do*, and it never decided to place that bet;
+ * inventing the row would put a fabricated decision into the audit trail to make a UI look tidy.
+ * Instead the log is shown as what it is, marked `CHAIN`, with the address the contract itself
+ * recorded as the actor.
+ *
+ * De-duplication is by `txHash`: one transaction emits a log *and* has an intent row in the
+ * normal case, and only the intent row — which additionally knows about reverts — is kept.
+ */
+export function mergeLifecycle(
+  intents: readonly Omit<LifecycleRow, "origin">[],
+  events: readonly RawChainEvent[],
+): LifecycleRow[] {
+  const known = new Set(
+    intents.map((intent) => intent.txHash?.toLowerCase()).filter((hash): hash is string => !!hash),
+  );
+
+  const fromChain: LifecycleRow[] = [];
+  for (const event of events) {
+    if (event.eventName === null || event.args === null) continue;
+    if (known.has(event.txHash.toLowerCase())) continue;
+
+    const mapping = EVENT_TO_CALL[event.eventName];
+    if (mapping === undefined) continue;
+
+    const actor = event.args[mapping.actor];
+    if (typeof actor !== "string" || actor === "") continue;
+
+    const amount = mapping.amount === undefined ? undefined : event.args[mapping.amount];
+
+    fromChain.push({
+      kind: mapping.kind,
+      // A log only exists because the transaction succeeded. There is no reverted log.
+      status: "CONFIRMED",
+      // `SERVER` would claim our code signed it and `EXTERNAL` that a browser did. We do not know
+      // which, so the signer classifier is given the value that makes it ask the contract about
+      // the address instead of believing an enum — the same reasoning as lib/trust/signers.ts.
+      signer: "SERVER",
+      fromAddress: actor.toLowerCase(),
+      txHash: event.txHash,
+      blockNumber: event.blockNumber,
+      revertReason: null,
+      valueWei: typeof amount === "string" ? amount : "0",
+      createdAt: event.blockTime ?? new Date(0),
+      origin: "CHAIN",
+    });
+  }
+
+  const all: LifecycleRow[] = [
+    ...intents.map((intent) => ({ ...intent, origin: "INTENT" as const })),
+    ...fromChain,
+  ];
+
+  // Block order is the chain's order and is what a reader checking against MSTScan expects. An
+  // intent with no block yet has not mined, so it sorts last, by when it was queued.
+  return all.sort((a, b) => {
+    const left = a.blockNumber ?? Number.MAX_SAFE_INTEGER;
+    const right = b.blockNumber ?? Number.MAX_SAFE_INTEGER;
+    if (left !== right) return left - right;
+    return a.createdAt.getTime() - b.createdAt.getTime();
+  });
+}
+
+/**
+ * The lifecycle table's rows: our intents, plus any chain log they do not account for.
+ *
+ * Two reads, merged in memory by `mergeLifecycle`. The event query is keyed on the decoded
+ * `marketId` argument, which the indexer stores as a decimal string.
+ */
+export async function lifecycleRowsFor(
+  onchainId: number,
+  proposalId?: string | null,
+  marketRowId?: string | null,
+): Promise<LifecycleRow[]> {
+  const [intents, events] = await Promise.all([
+    lifecycleIntentsFor(onchainId, proposalId, marketRowId),
+    db
+      .select({
+        eventName: chainEvents.eventName,
+        args: chainEvents.args,
+        txHash: chainEvents.txHash,
+        blockNumber: chainEvents.blockNumber,
+        blockTime: chainEvents.blockTime,
+      })
+      .from(chainEvents)
+      .where(sql`${chainEvents.args}->>'marketId' = ${String(onchainId)}`)
+      .orderBy(chainEvents.blockNumber, chainEvents.logIndex),
+  ]);
+
+  return mergeLifecycle(intents, events);
 }
 
 export { KEEPER_MIN_BALANCE_WEI };

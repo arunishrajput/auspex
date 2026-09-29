@@ -9,7 +9,9 @@ import {
   decidedResolutions,
   pendingResolutions,
   resolutionCounters,
+  unresolvedMarkets,
   type DraftRow,
+  type UnresolvedMarket,
 } from "@/lib/resolution/dashboard";
 import { RESOLUTION_RULES } from "@/lib/resolution/validate";
 import { readChallengeWindow } from "@/lib/chain/auspex";
@@ -69,6 +71,7 @@ export default async function ResolvePage() {
   let pending: DraftRow[] = [];
   let decided: DraftRow[] = [];
   let challengeable: Awaited<ReturnType<typeof challengeableMarkets>> = [];
+  let unresolved: UnresolvedMarket[] = [];
   let counters = {
     pendingReview: 0,
     approved: 0,
@@ -80,11 +83,12 @@ export default async function ResolvePage() {
   let error: string | null = null;
 
   try {
-    [pending, decided, challengeable, counters] = await Promise.all([
+    [pending, decided, challengeable, counters, unresolved] = await Promise.all([
       pendingResolutions(8),
       decidedResolutions(10),
       challengeableMarkets(),
       resolutionCounters(),
+      unresolvedMarkets(),
     ]);
   } catch (caught) {
     error = caught instanceof Error ? caught.message : String(caught);
@@ -184,6 +188,67 @@ export default async function ResolvePage() {
         </section>
       )}
 
+      {/* Closed and unsettled, from the market table and the chain — not from the draft queue.
+          A market with no draft has no row in `resolution_drafts` and so appeared nowhere on this
+          page, which is how #2 stayed stuck in plain sight. */}
+      {unresolved.length > 0 && (
+        <section className="mb-10">
+          <SectionLabel>Closed, and not settled yet</SectionLabel>
+          <ul className="mt-3 space-y-3">
+            {unresolved.map((market) => (
+              <li
+                key={market.marketRowId}
+                className={`overflow-hidden rounded-lg border ${
+                  market.stage === "PAST_RESOLVE_BY"
+                    ? "border-warn-500/40 bg-warn-500/5"
+                    : "border-ink-700 bg-ink-900"
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
+                  <span className="font-mono text-xs text-ink-400">#{market.onchainId}</span>
+                  <span
+                    className={`rounded border px-1.5 py-0.5 font-mono text-[10px] tracking-wide uppercase ${
+                      market.stage === "PAST_RESOLVE_BY"
+                        ? "border-warn-500/40 bg-warn-500/10 text-warn-500"
+                        : "border-ink-600 bg-ink-800 text-ink-300"
+                    }`}
+                  >
+                    {market.stage === "PAST_RESOLVE_BY"
+                      ? "past resolve-by · will be invalidated"
+                      : market.stage === "UNREADABLE"
+                        ? "chain unreadable"
+                        : "awaiting a draft"}
+                  </span>
+                  {market.chain !== null && (
+                    <span className="font-mono text-[11px] text-ink-500">
+                      chain says {market.chain.state.replace(/_/g, " ").toLowerCase()}
+                    </span>
+                  )}
+                  {!market.hasProposal && (
+                    <span className="font-mono text-[11px] text-ink-500">no approved spec</span>
+                  )}
+                  <Link
+                    href={`/markets/${market.onchainId}`}
+                    className="ml-auto font-mono text-[11px] text-signal-500 underline-offset-2 hover:underline"
+                  >
+                    market detail →
+                  </Link>
+                </div>
+                <div className="px-4 py-3">
+                  <p className="text-sm text-ink-100">{market.question}</p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-ink-400">{market.note}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] leading-relaxed text-ink-500">
+            Read from <span className="font-mono">getMarket()</span> per market on every request,
+            not from the projection. A market listed here has no drafted outcome, so it has no row
+            in the queue below — which is the reason this section exists separately from it.
+          </p>
+        </section>
+      )}
+
       {/* The queue. */}
       <section className="mb-10">
         <SectionLabel>Drafted outcomes waiting for a human</SectionLabel>
@@ -193,9 +258,9 @@ export default async function ResolvePage() {
             <p className="text-ink-300">Nothing is waiting to be resolved.</p>
             <p className="mt-2 text-xs leading-relaxed text-ink-400">
               {counters.awaitingDraft > 0
-                ? `${counters.awaitingDraft} closed market(s) have no drafted outcome yet — the ` +
-                  `resolution agent runs once per tick and reports "not settled yet" until an ` +
-                  `article actually reports the answer.`
+                ? `${counters.awaitingDraft} closed market(s) have no drafted outcome yet — they ` +
+                  `are listed above with what happens to each. The resolution agent runs once per ` +
+                  `tick and reports "not settled yet" until an article actually reports the answer.`
                 : "No market has closed without being resolved. A market appears here once betting " +
                   "ends and the resolution agent finds an article that settles its question."}
             </p>

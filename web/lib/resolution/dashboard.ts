@@ -22,6 +22,7 @@ import {
   type ResolutionDraftStatus,
 } from "../db/schema";
 import { readMarket, type OnChainMarket } from "../chain/auspex";
+import { STALE_GRACE_SECONDS } from "./settle";
 import { getProvider } from "../chain/provider";
 import type { MarketSpec } from "../chain/spec";
 import { isProposable, roundFor } from "./validate";
@@ -210,6 +211,147 @@ export async function challengeableMarkets(): Promise<
   return out;
 }
 
+/**
+ * Closed markets that nothing has settled yet — including the stale ones nobody drafted.
+ *
+ * ## Why this exists
+ *
+ * `/resolve` used to render exactly one kind of row: a `resolution_drafts` row. A market that
+ * closed and never got a draft therefore appeared nowhere on the page, and the empty state said
+ * "Nothing is waiting to be resolved" while markets #2 and #3 were `CLOSED` and unresolved on
+ * chain with a bettor's stake inside one of them. `/markets` showed them; `/resolve` did not.
+ * Two pages over one chain disagreeing is the failure hard rule #2 is about.
+ *
+ * The draft queue could not cover them, and should not: a draft needs an approved spec to reason
+ * about and an article that settles the question, and a Phase 1 smoke-test market has neither.
+ * The honest fix is a second list, sourced from the market table and the chain rather than from
+ * drafts, saying plainly what will happen to each one.
+ *
+ * Every field that decides anything is read from `getMarket` on each request. A market whose
+ * chain read fails is still listed, with the error, because dropping it is how #2 got lost.
+ */
+export type UnresolvedMarket = {
+  marketRowId: string;
+  onchainId: number;
+  question: string;
+  hasProposal: boolean;
+  /** Null when the chain read failed. */
+  chain: OnChainMarket | null;
+  chainError: string | null;
+  /** What is true of this market right now, in the page's own words. */
+  stage: "AWAITING_DRAFT" | "PAST_RESOLVE_BY" | "UNREADABLE";
+  /** The sentence the page prints. Derived from the chain, never from the projection. */
+  note: string;
+};
+
+/**
+ * What is true of one closed, unsettled market right now. **Pure**, so every branch is tested.
+ *
+ * Split out of the query because this is the part that can be wrong in a way a reader would
+ * believe: it is the sentence the page prints about a market nobody has settled.
+ */
+export function describeUnresolved(
+  chain: Pick<OnChainMarket, "state" | "closeTime" | "resolveDeadline" | "poolYesWei" | "poolNoWei">,
+  nowSeconds: number,
+  hasProposal: boolean,
+  graceSeconds: number = STALE_GRACE_SECONDS,
+): { stage: "AWAITING_DRAFT" | "PAST_RESOLVE_BY"; note: string } | null {
+  // The chain has moved on since the projection was written. Not this page's business.
+  if (chain.state !== "OPEN" && chain.state !== "CLOSED") return null;
+
+  if (nowSeconds > chain.resolveDeadline) {
+    const refundable = chain.poolYesWei + chain.poolNoWei;
+    const due = chain.resolveDeadline + graceSeconds;
+    const waiting = nowSeconds <= due;
+    return {
+      stage: "PAST_RESOLVE_BY",
+      note:
+        `past resolve-by (${new Date(chain.resolveDeadline * 1000).toISOString()}) with no ` +
+        `resolution proposed, so it will be invalidated and every stake refunded. ` +
+        (waiting
+          ? `The keeper waits until ${new Date(due * 1000).toISOString()} before calling ` +
+            `invalidateStale, so a late resolver is not overruled by a cron job. `
+          : `The keeper calls invalidateStale on its next pass. `) +
+        (refundable === 0n
+          ? "Nothing was staked on it, so no refund is owed."
+          : `${refundable} wei is staked and returns to whoever staked it.`),
+    };
+  }
+
+  return {
+    stage: "AWAITING_DRAFT",
+    note:
+      `betting closed at ${new Date(chain.closeTime * 1000).toISOString()} and the resolver ` +
+      `has until ${new Date(chain.resolveDeadline * 1000).toISOString()}. ` +
+      (hasProposal
+        ? "The resolution agent drafts an outcome once an article published since close actually " +
+          "settles the question; until then it reports \u201cnot settled yet\u201d and writes nothing."
+        : "No approved spec sits behind this market, so the resolution agent will never draft an " +
+          "outcome for it — it is a test market, and it ends in a refund."),
+  };
+}
+
+export async function unresolvedMarkets(limit = 12): Promise<UnresolvedMarket[]> {
+  const rows = await db
+    .select({
+      rowId: markets.id,
+      onchainId: markets.onchainId,
+      question: markets.question,
+      proposalId: markets.proposalId,
+    })
+    .from(markets)
+    .where(
+      and(
+        isNotNull(markets.onchainId),
+        inArray(markets.state, ["OPEN", "CLOSED"] as never),
+        sql`${markets.closeTime} <= now()`,
+      ),
+    )
+    .orderBy(markets.onchainId)
+    .limit(limit);
+
+  const provider = getProvider();
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const grace = STALE_GRACE_SECONDS;
+
+  const out = await Promise.all(
+    rows.map(async (row): Promise<UnresolvedMarket | null> => {
+      if (row.onchainId === null) return null;
+
+      let chain: OnChainMarket | null = null;
+      let chainError: string | null = null;
+      try {
+        chain = await readMarket(row.onchainId, provider);
+      } catch (error) {
+        chainError = error instanceof Error ? error.message : String(error);
+      }
+
+      const base = {
+        marketRowId: row.rowId,
+        onchainId: row.onchainId,
+        question: row.question,
+        hasProposal: row.proposalId !== null,
+        chain,
+        chainError,
+      };
+
+      if (chain === null) {
+        return {
+          ...base,
+          stage: "UNREADABLE" as const,
+          note: `the contract could not be read: ${chainError ?? "unknown error"}`,
+        };
+      }
+
+      const described = describeUnresolved(chain, nowSeconds, row.proposalId !== null, grace);
+      if (described === null) return null;
+      return { ...base, ...described };
+    }),
+  );
+
+  return out.filter((row): row is UnresolvedMarket => row !== null);
+}
+
 export type ResolutionCounters = {
   pendingReview: number;
   approved: number;
@@ -229,10 +371,15 @@ export async function resolutionCounters(): Promise<ResolutionCounters> {
 
   const counts = new Map(byStatus.map((row) => [row.status, Number(row.count)]));
 
+  // No join to `proposals`. It used to be an INNER JOIN, which silently dropped every market
+  // with no approved proposal behind it — the Phase 1 and 2 test markets — so this counter read
+  // 0 while #2 and #3 sat closed and unresolved on chain, and the page said "Nothing is waiting"
+  // underneath it. The resolution *agent* is right to skip those markets (it reasons about an
+  // approved spec, which they have not got); a counter labelled "closed, no outcome drafted yet"
+  // is not, because they are exactly that. Hard rule #2: the page has to match the chain.
   const awaiting = await db.execute<{ count: string }>(sql`
     select count(*) as count
       from markets m
-      join proposals p on p.id = m.proposal_id
      where m.onchain_id is not null
        and m.state in ('OPEN', 'CLOSED')
        and m.close_time <= now()

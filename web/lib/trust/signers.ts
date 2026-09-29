@@ -227,7 +227,7 @@ export function lifecycleClaim(rows: readonly ClaimRow[]): LifecycleClaim {
   if (agentCalls.length > 0) {
     detail.push(
       `Signed by an agent key the deployment holds: ${format(agentCalls)} — capped on chain, holding no role. ` +
-        `finalizeResolution and claim need no role at all, which is why an unprivileged wallet could make them.`,
+        `None of those calls requires a role, which is why a wallet holding none could make them.`,
     );
   }
   if (browserCalls.length > 0) {
