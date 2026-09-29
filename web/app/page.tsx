@@ -31,8 +31,8 @@ const PHASES = [
   { n: 3, name: "News ingestion & 2-source confirmation", state: "done" },
   { n: 4, name: "Proposer agent & human approval gate", state: "done" },
   { n: 5, name: "Member agents & policy gate", state: "done" },
-  { n: 6, name: "Resolution, challenge window, payout", state: "current" },
-  { n: 7, name: "Dashboard & trust surface", state: "todo" },
+  { n: 6, name: "Resolution, challenge window, payout", state: "done" },
+  { n: 7, name: "Dashboard & trust surface", state: "current" },
   { n: 8, name: "Live run, README, submission", state: "todo" },
 ] as const;
 
