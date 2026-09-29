@@ -105,7 +105,8 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | **Keeper `closeMarket` #2** (from a tick, not a script) | `0x9588280c82402a72204af12f6132871e68fd40c9d0b9541b41f0c42399ed35a7` | ✅ block 5,796,567 |
 | **Keeper `closeMarket` #3** (from a tick, not a script) | `0x65ed1cf6c728553ab5217c5cb4bb202c59ab28d7ee975b212e2f03667baceeb0` | ✅ block 5,796,572 |
 | **Judge-mode probe — from the CLI** | `0x72fde34abea889831dd21aab56f05b94b066e6e22e5a37f6ad4e9e2a695be112` | ✅ block 5,798,322 — **Reverted**, `AgentPerTxCapExceeded(20000000000000001, 20000000000000000)` |
-| **Judge-mode probe — clicked in a browser with no wallet** | **`0xcfc34dff963bd7f1ea81df4ec7373794a34dd56dda99d18955ce6bfccbaa08c3`** | ✅ block 5,798,488 — **Reverted**, same decoded error |
+| **Judge-mode probe — clicked in a browser with no wallet** | `0xcfc34dff963bd7f1ea81df4ec7373794a34dd56dda99d18955ce6bfccbaa08c3` | ✅ block 5,798,488 — **Reverted**, same decoded error |
+| **Judge-mode probe — clicked on the LIVE Vercel URL** | **`0xbfe9bb2c3ffee4be2f660473b3de916380f5d10da8548173d44810118ced060a`** | ✅ block 5,798,796 — **Reverted**, same decoded error. This is the one a judge reproduces. |
 
 **Eight markets exist on-chain.** Ids 1–2 are the Phase 1 smoke-test runs and 3 is the Phase 2
 idempotency crash test; all three say what they are in their own on-chain question text, and none is
@@ -278,7 +279,7 @@ Read off the deployed page, not asserted:
 | Refused by the schema | 0 | never fired — see known gap #26 |
 | Refused by the policy gate | 7 | `CATEGORY_NOT_ALLOWED` 4 · `ABSTAINED` 3 · `STAKE_TOO_SMALL` 3 · `MEMBER_KILL_SWITCH` 1 |
 | Refused by a human | 0 | never fired — see known gap #26 |
-| **Refused by the chain** | **6** | `AgentPerTxCapExceeded` 2 · `AlreadyClaimed` 1 · `BettingClosed` 1 · `ChallengeWindowOpen` 1 · `NothingToClaim` 1 |
+| **Refused by the chain** | **6, then 7** | `AgentPerTxCapExceeded` 2 · `AlreadyClaimed` 1 · `BettingClosed` 1 · `ChallengeWindowOpen` 1 · `NothingToClaim` 1 — the counter went up live when judge mode was clicked on the deployed URL, which is the point of it |
 | Confirmed transactions | 14 | 6 `createMarket` · 4 `placeBet` · 2 `proposeResolution` · 2 `claim` |
 | Audit rows with a reason | **249 of 249** | hard rule #7, as a query |
 
@@ -293,8 +294,12 @@ The role matrix, live: `0xA9F6…1fF1` holds `MARKET_CREATOR` + `RESOLVER` + `CH
 - [x] CI fails if `MOCK` provenance appears in a production build — proved by breaking it on purpose:
       checker exit 1 with a file:line, and the built page returning HTTP 500.
 - [x] Judge mode produces a real tx from a clean browser with no wallet installed — clicked in a
-      Playwright Chromium where `window.ethereum` is `undefined`, producing
-      `0xcfc34dff…cbaa08c3` at block 5,798,488, confirmed **Reverted** through the MSTScan API.
+      Chromium where `window.ethereum` is `undefined`, twice: locally (`0xcfc34dff…cbaa08c3`, block
+      5,798,488) and then **on the deployed URL** (`0xbfe9bb2c…ced060a`, block 5,798,796). Both
+      confirmed through the MSTScan API as `placeBet`, value `20000000000000001`, `execution
+      reverted`, decoded `AgentPerTxCapExceeded(20000000000000001, 20000000000000000)`. The second
+      matters more: it proves production holds an agent key that can sign, which is the only kind of
+      key it holds.
 - [x] Every page has a sane empty and error state — the built app was run against an unreachable
       Postgres: **all eight routes returned 200** with a labelled panel carrying the real error, zero
       server exceptions. `/markets/999` and an empty role list were fixed in the process.
