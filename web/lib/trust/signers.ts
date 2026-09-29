@@ -184,8 +184,12 @@ export function lifecycleClaim(rows: readonly ClaimRow[]): LifecycleClaim {
   }
 
   const operatorRows = rows.filter((row) => row.signerKind === "OPERATOR");
+  // `status` matters as much as `valueWei`: a REVERTED placeBet carried value into a call the
+  // contract refused, so nothing was staked. Counting it would overstate what the operator did —
+  // in the self-critical direction, but wrong is wrong, and the whole point of this function is
+  // that the sentence matches the rows.
   const operatorMovedMoney = operatorRows.filter(
-    (row) => MOVES_MONEY.has(row.kind) && row.valueWei !== "0",
+    (row) => MOVES_MONEY.has(row.kind) && row.valueWei !== "0" && row.status === "CONFIRMED",
   );
   const browserCalls = [...new Set(rows.filter((r) => r.signerKind === "BROWSER").map((r) => r.kind))];
   const agentCalls = [...new Set(rows.filter((r) => r.signerKind === "AGENT").map((r) => r.kind))];

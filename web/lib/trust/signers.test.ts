@@ -66,6 +66,18 @@ describe("lifecycleClaim", () => {
     expect(detail).toContain("on a product market it would not be acceptable");
   });
 
+  it("does not count a REVERTED bet as staked — the contract refused it, so nothing moved", () => {
+    // Market 8's actual shape: the operator's second placeBet carried 1e-6 tMSTC into a call that
+    // reverted with BettingClosed(). Before this, the page said "2 of them staked tMSTC".
+    const withRefusedBet: ClaimRow[] = [
+      ...OPERATOR_DRIVEN,
+      { kind: "PLACE_BET", status: "REVERTED", valueWei: "1000000000000", signerKind: "OPERATOR" },
+    ];
+    const detail = lifecycleClaim(withRefusedBet).detail.join(" ");
+    expect(detail).toContain("One of them staked");
+    expect(detail).not.toContain("2 of them staked");
+  });
+
   it("does not claim the operator staked anything when its calls carried no value", () => {
     const zeroValue = OPERATOR_DRIVEN.map((row) =>
       row.signerKind === "OPERATOR" ? { ...row, valueWei: "0" } : row,
