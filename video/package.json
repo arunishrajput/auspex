@@ -1,0 +1,26 @@
+{
+  "name": "auspex-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The AuspeX 4-minute demo film. Built from verified chain data and real captured pixels.",
+  "scripts": {
+    "verify": "node scripts/verify-onscreen.mjs",
+    "vo": "node scripts/synth-vo.mjs",
+    "shoot": "node scripts/shoot.mjs",
+    "bed": "python3 audio/compose-bed.py",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts AuspexDemo out/AuspeX-demo-4min.mp4 --codec=h264"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/media-utils": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "playwright": "^1.50.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,462 @@
+{
+  "voice": "Matthew",
+  "engine": "generative",
+  "fps": 30,
+  "scenes": [
+    {
+      "id": "s1_thesis",
+      "beat": "Thesis",
+      "visual": "gate-mark",
+      "shots": [],
+      "start": 0,
+      "lines": [
+        {
+          "file": "audio/vo/s1_thesis-00.mp3",
+          "text": "Prediction markets have a problem AI looks perfect for.",
+          "start": 0,
+          "speech": 3,
+          "pad": 0.15,
+          "end": 3
+        },
+        {
+          "file": "audio/vo/s1_thesis-01.mp3",
+          "text": "And a reason you should never hand AI the keys.",
+          "start": 3.15,
+          "speech": 2.568,
+          "pad": 0.45,
+          "end": 5.718
+        },
+        {
+          "file": "audio/vo/s1_thesis-02.mp3",
+          "text": "AuspeX is built on that tension. A prediction market platform on MST Blockchain Testnet, resting on one sentence.",
+          "start": 6.168,
+          "speech": 6.744,
+          "pad": 0.5,
+          "end": 12.912
+        },
+        {
+          "file": "audio/vo/s1_thesis-03.mp3",
+          "text": "AI proposes. Humans and the chain decide.",
+          "start": 13.412,
+          "speech": 3.12,
+          "pad": 1,
+          "end": 16.532
+        }
+      ],
+      "end": 17.532,
+      "duration": 17.532,
+      "frames": 526
+    },
+    {
+      "id": "s2_problem",
+      "beat": "The problem",
+      "visual": "kinetic-problem",
+      "shots": [],
+      "start": 17.532,
+      "lines": [
+        {
+          "file": "audio/vo/s2_problem-00.mp3",
+          "text": "Two things break prediction markets.",
+          "start": 17.532,
+          "speech": 2.016,
+          "pad": 0.2,
+          "end": 19.548
+        },
+        {
+          "file": "audio/vo/s2_problem-01.mp3",
+          "text": "Writing a good one is hard. Will the economy improve is unresolvable, and disputes are guaranteed.",
+          "start": 19.748,
+          "speech": 5.808,
+          "pad": 0.25,
+          "end": 25.556
+        },
+        {
+          "file": "audio/vo/s2_problem-02.mp3",
+          "text": "And research does not scale, so most people bet on vibes.",
+          "start": 25.806,
+          "speech": 3.648,
+          "pad": 0.3,
+          "end": 29.454
+        },
+        {
+          "file": "audio/vo/s2_problem-03.mp3",
+          "text": "AI is good at both jobs. So the question is not whether AI can do this, but how you let it, without giving it authority.",
+          "start": 29.754,
+          "speech": 6.72,
+          "pad": 0.7,
+          "end": 36.474
+        }
+      ],
+      "end": 37.174,
+      "duration": 19.642,
+      "frames": 589
+    },
+    {
+      "id": "s3_boundary",
+      "beat": "The boundary",
+      "visual": "boundary-diagram",
+      "shots": [
+        "trust-roles"
+      ],
+      "start": 37.174,
+      "lines": [
+        {
+          "file": "audio/vo/s3_boundary-00.mp3",
+          "text": "AuspeX puts AI everywhere it is useful, and nowhere it is authoritative.",
+          "start": 37.174,
+          "speech": 4.2,
+          "pad": 0.35,
+          "end": 41.374
+        },
+        {
+          "file": "audio/vo/s3_boundary-01.mp3",
+          "text": "A model may only propose. Which headlines describe one event. A draft question. A stake as a fraction of a cap it never sees.",
+          "start": 41.724,
+          "speech": 7.728,
+          "pad": 0.3,
+          "end": 49.452
+        },
+        {
+          "file": "audio/vo/s3_boundary-02.mp3",
+          "text": "Deterministic code decides. Pure functions, no network, no model.",
+          "start": 49.752,
+          "speech": 4.704,
+          "pad": 0.4,
+          "end": 54.456
+        },
+        {
+          "file": "audio/vo/s3_boundary-03.mp3",
+          "text": "This role matrix is live. Every cell is an eth_call made when the page loaded. It asks the contract rather than telling you.",
+          "start": 54.856,
+          "speech": 7.464,
+          "pad": 0.7,
+          "end": 62.32
+        }
+      ],
+      "end": 63.02,
+      "duration": 25.846,
+      "frames": 775
+    },
+    {
+      "id": "s4_pipeline",
+      "beat": "The pipeline",
+      "visual": "screen-home",
+      "shots": [
+        "home-stats",
+        "home-stories"
+      ],
+      "start": 63.019999999999996,
+      "lines": [
+        {
+          "file": "audio/vo/s4_pipeline-00.mp3",
+          "text": "It starts with real news feeds.",
+          "start": 63.02,
+          "speech": 1.848,
+          "pad": 0.2,
+          "end": 64.868
+        },
+        {
+          "file": "audio/vo/s4_pipeline-01.mp3",
+          "text": "Clustering is deterministic first. Score above one half on weighted headline similarity and two articles merge with no model involved. Below one quarter, never.",
+          "start": 65.068,
+          "speech": 9.312,
+          "pad": 0.3,
+          "end": 74.38
+        },
+        {
+          "file": "audio/vo/s4_pipeline-02.mp3",
+          "text": "Only the ambiguous band between is shown to an LLM.",
+          "start": 74.68,
+          "speech": 3.288,
+          "pad": 0.3,
+          "end": 77.968
+        },
+        {
+          "file": "audio/vo/s4_pipeline-03.mp3",
+          "text": "And a story needs two distinct publishers before it can become a market.",
+          "start": 78.268,
+          "speech": 3.672,
+          "pad": 0.35,
+          "end": 81.94
+        },
+        {
+          "file": "audio/vo/s4_pipeline-04.mp3",
+          "text": "If the model is rate limited, the answer is do not merge. A failing dependency takes no action and stays up.",
+          "start": 82.29,
+          "speech": 6.072,
+          "pad": 0.7,
+          "end": 88.362
+        }
+      ],
+      "end": 89.062,
+      "duration": 26.042,
+      "frames": 781
+    },
+    {
+      "id": "s5_gate",
+      "beat": "The human gate",
+      "visual": "screen-review",
+      "shots": [
+        "review-checklist",
+        "review-untrusted",
+        "scan-createmarket"
+      ],
+      "start": 89.062,
+      "lines": [
+        {
+          "file": "audio/vo/s5_gate-00.mp3",
+          "text": "The AI drafts a specification. A human sees a checklist, not a paragraph.",
+          "start": 89.062,
+          "speech": 5.088,
+          "pad": 0.3,
+          "end": 94.15
+        },
+        {
+          "file": "audio/vo/s5_gate-01.mp3",
+          "text": "Ambiguity is easier to catch in a checklist, and catching it here matters, because no money exists yet.",
+          "start": 94.45,
+          "speech": 5.64,
+          "pad": 0.35,
+          "end": 100.09
+        },
+        {
+          "file": "audio/vo/s5_gate-02.mp3",
+          "text": "The source headlines are fenced off as untrusted. They reached the model in delimited tags, in a user message, never a system instruction.",
+          "start": 100.44,
+          "speech": 7.344,
+          "pad": 0.4,
+          "end": 107.784
+        },
+        {
+          "file": "audio/vo/s5_gate-03.mp3",
+          "text": "Then a person signs createMarket in a browser wallet. Only now does anything reach the chain.",
+          "start": 108.184,
+          "speech": 4.968,
+          "pad": 0.45,
+          "end": 113.152
+        },
+        {
+          "file": "audio/vo/s5_gate-04.mp3",
+          "text": "Sent by the human authority wallet, not the deployer. That key lives only in a browser extension. This repository has never seen it.",
+          "start": 113.602,
+          "speech": 7.44,
+          "pad": 0.8,
+          "end": 121.042
+        }
+      ],
+      "end": 121.842,
+      "duration": 32.78,
+      "frames": 983
+    },
+    {
+      "id": "s6_agents",
+      "beat": "Bounded twice",
+      "visual": "screen-agents",
+      "shots": [
+        "agents-caps",
+        "agents-refusals"
+      ],
+      "start": 121.842,
+      "lines": [
+        {
+          "file": "audio/vo/s6_agents-00.mp3",
+          "text": "Members bet through agents. Each proposes a side, a confidence and a stake, and decides none of them.",
+          "start": 121.842,
+          "speech": 6.336,
+          "pad": 0.3,
+          "end": 128.178
+        },
+        {
+          "file": "audio/vo/s6_agents-01.mp3",
+          "text": "A deterministic gate clamps it against six limits, recording every refusal. Then the contract caps it again.",
+          "start": 128.478,
+          "speech": 6.144,
+          "pad": 0.3,
+          "end": 134.622
+        },
+        {
+          "file": "audio/vo/s6_agents-02.mp3",
+          "text": "Off chain in blue, on chain in purple. Bounded twice. By code that does not trust the model, and by a chain that does not trust us.",
+          "start": 134.922,
+          "speech": 7.848,
+          "pad": 0.45,
+          "end": 142.77
+        },
+        {
+          "file": "audio/vo/s6_agents-03.mp3",
+          "text": "And payouts go to the member's owner address, never the agent. A stolen agent key can lose its capped stake. It cannot steal winnings.",
+          "start": 143.22,
+          "speech": 7.608,
+          "pad": 0.8,
+          "end": 150.828
+        }
+      ],
+      "end": 151.628,
+      "duration": 29.786,
+      "frames": 894
+    },
+    {
+      "id": "s7_refusal",
+      "beat": "The moment — the chain refuses",
+      "visual": "refusal",
+      "shots": [
+        "trust-judge",
+        "scan-revert"
+      ],
+      "start": 151.628,
+      "lines": [
+        {
+          "file": "audio/vo/s7_refusal-00.mp3",
+          "text": "Everything so far is my code. My code can be wrong, or compromised.",
+          "start": 151.628,
+          "speech": 4.44,
+          "pad": 0.4,
+          "end": 156.068
+        },
+        {
+          "file": "audio/vo/s7_refusal-01.mp3",
+          "text": "So here is the layer that does not depend on me at all.",
+          "start": 156.468,
+          "speech": 2.904,
+          "pad": 0.45,
+          "end": 159.372
+        },
+        {
+          "file": "audio/vo/s7_refusal-02.mp3",
+          "text": "This button is on the public site. It needs no wallet. Anyone watching this can press it.",
+          "start": 159.822,
+          "speech": 4.704,
+          "pad": 0.3,
+          "end": 164.526
+        },
+        {
+          "file": "audio/vo/s7_refusal-03.mp3",
+          "text": "It asks an agent to bet exactly one wei more than its on-chain cap.",
+          "start": 164.826,
+          "speech": 3.768,
+          "pad": 1.4,
+          "end": 168.594
+        },
+        {
+          "file": "audio/vo/s7_refusal-04.mp3",
+          "text": "Reverted.",
+          "start": 169.994,
+          "speech": 0.816,
+          "pad": 1.1,
+          "end": 170.81
+        },
+        {
+          "file": "audio/vo/s7_refusal-05.mp3",
+          "text": "The attempt was one wei above a cap of zero point zero two tMSTC, and the contract put both numbers in the error.",
+          "start": 171.91,
+          "speech": 6.72,
+          "pad": 0.45,
+          "end": 178.63
+        },
+        {
+          "file": "audio/vo/s7_refusal-06.mp3",
+          "text": "So with my server fully compromised and every off-chain check bypassed, that agent cannot exceed its cap. The chain refuses it.",
+          "start": 179.08,
+          "speech": 7.176,
+          "pad": 0.55,
+          "end": 186.256
+        },
+        {
+          "file": "audio/vo/s7_refusal-07.mp3",
+          "text": "A failed transaction is not a bug here. It is the product.",
+          "start": 186.806,
+          "speech": 3.384,
+          "pad": 1.1,
+          "end": 190.19
+        }
+      ],
+      "end": 191.29,
+      "duration": 39.662,
+      "frames": 1190
+    },
+    {
+      "id": "s8_honesty",
+      "beat": "Honesty",
+      "visual": "honesty",
+      "shots": [],
+      "start": 191.29,
+      "lines": [
+        {
+          "file": "audio/vo/s8_honesty-00.mp3",
+          "text": "Three things I want to be straight about.",
+          "start": 191.29,
+          "speech": 1.752,
+          "pad": 0.35,
+          "end": 193.042
+        },
+        {
+          "file": "audio/vo/s8_honesty-01.mp3",
+          "text": "Resolution is trusted. An authorised set, an evidence URL on chain, a challenge window, permissionless finalisation. That bounds a bad resolver. It is not a decentralised oracle.",
+          "start": 193.392,
+          "speech": 11.568,
+          "pad": 0.4,
+          "end": 204.96
+        },
+        {
+          "file": "audio/vo/s8_honesty-02.mp3",
+          "text": "The market creator and the resolver are currently the same wallet, and they should not be.",
+          "start": 205.36,
+          "speech": 4.248,
+          "pad": 0.35,
+          "end": 209.608
+        },
+        {
+          "file": "audio/vo/s8_honesty-03.mp3",
+          "text": "And the organisers' Fortuna VRF contract has no bytecode on this testnet. So randomised resolver selection was cut, rather than faked.",
+          "start": 209.958,
+          "speech": 7.656,
+          "pad": 0.8,
+          "end": 217.614
+        }
+      ],
+      "end": 218.414,
+      "duration": 27.124,
+      "frames": 814
+    },
+    {
+      "id": "s9_verify",
+      "beat": "Verify it yourself",
+      "visual": "terminal-endcard",
+      "shots": [
+        "terminal-checklinks"
+      ],
+      "start": 218.414,
+      "lines": [
+        {
+          "file": "audio/vo/s9_verify-00.mp3",
+          "text": "Do not take my word for any of it.",
+          "start": 218.414,
+          "speech": 1.752,
+          "pad": 0.25,
+          "end": 220.166
+        },
+        {
+          "file": "audio/vo/s9_verify-01.mp3",
+          "text": "Every hash here is re-fetched from the explorer by a script that fails if one disagrees.",
+          "start": 220.416,
+          "speech": 4.656,
+          "pad": 0.35,
+          "end": 225.072
+        },
+        {
+          "file": "audio/vo/s9_verify-02.mp3",
+          "text": "It is live right now. Go and press the button yourself.",
+          "start": 225.422,
+          "speech": 2.952,
+          "pad": 1.3,
+          "end": 228.374
+        }
+      ],
+      "end": 229.674,
+      "duration": 11.26,
+      "frames": 338
+    }
+  ],
+  "total": 229.674,
+  "totalFrames": 6890
+}

@@ -9,7 +9,7 @@
 
 **Last updated:** 2026-09-29
 **Current status:** ⚠️ Phase 8 substantially complete — README, DEMO_SCRIPT and an automated honesty guard shipped; **two items are blocked and need the user** (see below)
-**Next phase:** **Finish Phase 8** — one substantive refusal in `/review`, then resolve markets #4/#5 after they close on 2026-09-30 22:12 UTC, then the video and the submission form
+**Next phase:** **Finish Phase 8** — one substantive refusal in `/review`, then resolve markets #4/#5 after they close on 2026-09-30 22:12 UTC. **The demo film is built** (`video/out/AuspeX-demo-4min.mp4`); what remains is uploading it and the submission form
 
 ---
 
@@ -110,6 +110,10 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | **Judge-mode probe — from the CLI** | `0x72fde34abea889831dd21aab56f05b94b066e6e22e5a37f6ad4e9e2a695be112` | ✅ block 5,798,322 — **Reverted**, `AgentPerTxCapExceeded(20000000000000001, 20000000000000000)` |
 | **Judge-mode probe — clicked in a browser with no wallet** | `0xcfc34dff963bd7f1ea81df4ec7373794a34dd56dda99d18955ce6bfccbaa08c3` | ✅ block 5,798,488 — **Reverted**, same decoded error |
 | **Judge-mode probe — clicked on the LIVE Vercel URL** | **`0xbfe9bb2c3ffee4be2f660473b3de916380f5d10da8548173d44810118ced060a`** | ✅ block 5,798,796 — **Reverted**, same decoded error. This is the one a judge reproduces. |
+| **Demo film** | `video/out/AuspeX-demo-4min.mp4` — 4:00.0, 1920×1080, H.264 + AAC, −16 LUFS target / −16.1 measured | ✅ rendered 2026-09-29, not yet uploaded |
+| Film captions | `video/out/AuspeX-demo.srt` — 41 cues, timed from the measured voiceover | ✅ |
+| Film build | `video/` — Remotion 4, Amazon Polly (`Matthew`, generative), score synthesised from `timings.json` | ✅ source committed, artifacts gitignored |
+| **`video/scripts/verify-onscreen.mjs`** | re-checks all 5 on-screen hashes/addresses incl. **sender**; blocks the render on a mismatch | ✅ 5/5 pass |
 
 **Eight markets exist on-chain.** Ids 1–2 are the Phase 1 smoke-test runs and 3 is the Phase 2
 idempotency crash test; all three say what they are in their own on-chain question text, and none is
@@ -140,6 +144,38 @@ And the claim that got *stronger*: **no key the deployed application holds can c
 resolve one, challenge one, register an agent, change a cap or pause the contract.** Production holds
 agent keys only. `pnpm --filter web verify:resolution` asserts all four role facts with live
 `hasRole` calls, and `pnpm preflight` checks them too.
+
+### The demo film — Phase 8
+
+`video/` builds a 4-minute film from the same evidence the README asks a judge to check. It is not a
+replacement for `docs/DEMO_SCRIPT.md`: that is a ~5-minute live walkthrough for a person presenting at
+a table, and its nine beats actually sum to 6m20s. This is the unattended cut a panel watches.
+
+Three things about how it is built are worth defending:
+
+**Timing is measured, never estimated.** Each narration line is synthesised as its own Polly clip and
+measured with `ffprobe`. Those durations drive scene lengths, caption timings, the SRT, the score's
+intensity curve and its ducking envelope. Editing a line re-times the film automatically. The voice is
+`Matthew` (generative) — chosen partly because he reads ~16% faster than `Gregory`, which is what let a
+765-word script land at exactly 4:00.
+
+**The film verifies its own claims before it renders.** `verify-onscreen.mjs` re-fetches every
+transaction it shows and asserts status, sender and revert reason against what the script says, exiting
+non-zero on a mismatch. This is the same discipline as `scripts/check-links.mjs`, and it exists for the
+same reason: the defect recorded above was not a broken link, it was a flattering caption beside a real
+hash. Beat 5 claims a human signed `createMarket`, so the check asserts `from == 0xA9F6…311fF1`.
+
+**The explorer's ad slot is stripped at capture.** MSTScan sells a sponsored row, and what it served
+during capture was a gambling ad — in a prediction-market demo, on the frame that is the whole thesis.
+Off-origin subresources are blocked and the row removed before the screenshot.
+
+Compression of the original nine beats to nine tighter ones cost beat 7 (resolution and payout), which
+is folded into beat 6 as the payout-goes-to-the-owner point. That is the honest cut: markets #4/#5
+cannot be resolved through `/resolve` until 2026-09-30 22:12 UTC, and market 8 was operator-driven and
+needs caveating that a 4-minute film cannot afford. The film never claims a human resolved anything.
+
+**Still to do:** upload it and paste the link into the submission form. Publishing is not something an
+agent should do on the builder's behalf.
 
 ### New on chain since the Phase 7 commit — found, not created, by this session
 
