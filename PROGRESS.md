@@ -80,6 +80,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | `pnpm --filter web verify:agents` | 41 live checks: roles, registry, cap boundary, kill switch | ✅ all pass, writes nothing |
 | `pnpm preflight` | now **11/11**, including all three agents registered and funded | ✅ |
 | **`POST /api/tick` in production, post-Phase 5** | 200 in **15.06s**, 0 stage errors, agents stage included | ✅ verified 2026-09-29 |
+| **`POST /api/tick` in production, post-Phase 6** | 200 in **19.69s**, 0 stage errors, **all six stages ran**, 4/10 LLM calls | ✅ verified 2026-09-29 |
 | **`grantRole(RESOLVER_ROLE)` → BridgeKey** | **`0x886d021b0c4fe46674e685fd9eea17901f6ca1458d1ada6ed06c01bb1f7da4e2`** | ✅ block 5,796,170 |
 | **`grantRole(CHALLENGER_ROLE)` → BridgeKey** | **`0xf1ce96cf43e44e674f58d6c082f8bfe50274e16d29773de57984774c0ad14268`** | ✅ block 5,796,177 |
 | **`/resolve` — the human resolver gate** | **https://auspex-web-mu.vercel.app/resolve** | ✅ live |
@@ -1022,8 +1023,14 @@ receipt, re-run, could overfund an agent by one top-up. The consequence is one o
 holding slightly more testnet coin than intended. Stated rather than hidden.
 
 **20. Tick duration, and the deadline ladder that now bounds it.**
-`POST /api/tick` was measured at **15,058ms** in production with zero stage errors at the end of
-Phase 5. Phase 6 added two stages, so that figure is stale until re-measured (see the handoff below).
+`POST /api/tick` returned **HTTP 200 in 19,693ms with zero stage errors** after this phase, against
+15,058ms at the end of Phase 5 — so the two new stages cost about 4.6s on a pass that made no
+resolution or agent model calls (4 of 10 budgeted calls spent, all on clustering and the proposer).
+Comfortably inside the 60s budget, and the resolution stage correctly reported `no human-approved
+market is past its close time`.
+
+That measurement is honest and it is **not** a worst case: no tick has yet made a resolution model
+call *and* a full agents pass. See the handoff for how to force one.
 
 The ceiling is arithmetic rather than measurement. A tick's LLM allowance is now **ten** calls (4
 clustering + 2 proposer + 1 resolution + 3 agents) and `GEMINI_TIMEOUT_MS` is 22,000, against
@@ -1102,8 +1109,10 @@ resolution *stage* has nothing in scope (known gap #21). Two things should happe
    that has now bitten three times — a threshold or a prompt that is individually sensible and wrong
    in composition. Markets #4 and #5 carry real agent stakes (0.005 and 0.004 tMSTC on YES), so they
    are the ones worth resolving on camera.
-2. **A production tick with a full agents pass.** Force three agent model calls and read `durationMs`
-   against the new ten-call allowance. The dials, in order of bluntness:
+2. **A production tick with a full agents pass *and* a resolution draft.** The 19.69s measured after
+   this phase spent 4 of 10 budgeted calls, none of them on resolution or agents — so the worst case
+   is still unmeasured. Force three agent calls plus one resolution call and read `durationMs`
+   against the ten-call allowance. The dials, in order of bluntness:
    `LLM_AGENT_CALLS_PER_TICK`, `LLM_RESOLUTION_CALLS_PER_TICK`, the fractions in
    `STAGE_DEADLINE_FRACTION`, then `MAX_PAIRS_PER_PASS` / `MAX_DECISIONS_PER_PASS`.
 

@@ -113,7 +113,7 @@ export default async function MarketDetailPage({
       [drafts, payouts, intents] = await Promise.all([
         row === undefined ? Promise.resolve([]) : draftsForMarket(row.id),
         payoutsFor(onchainId),
-        lifecycleIntentsFor(onchainId, row?.proposalId),
+        lifecycleIntentsFor(onchainId, row?.proposalId, row?.id),
       ]);
     } catch (error) {
       dbError = error instanceof Error ? error.message : String(error);

@@ -43,7 +43,13 @@
 
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "../db/client";
-import { auditLog, markets, onchainIntents, resolutionDrafts } from "../db/schema";
+import {
+  agentDecisions,
+  auditLog,
+  markets,
+  onchainIntents,
+  resolutionDrafts,
+} from "../db/schema";
 import { readMarket, readPreviewPayout } from "../chain/auspex";
 import { getProvider } from "../chain/provider";
 import { createIntent } from "../intents/engine";
@@ -405,17 +411,46 @@ export async function payoutsFor(
 /**
  * Every intent in one market's lifecycle, oldest first. Rendered on the market detail page.
  *
- * Two key prefixes, because `createMarket` is the one call whose intent cannot be keyed on the
- * market id — the id does not exist until the transaction confirms. An approved market's creating
- * intent is keyed on the **proposal** instead (`proposal:<id>:create-market`), so the caller passes
- * that id in and the table shows the whole story rather than starting at the first bet.
+ * ## Three ways an intent belongs to a market, because the keys were chosen at three different times
+ *
+ * An idempotency key is derived from the business fact that authorised the write, and those facts are
+ * not all "a market id":
+ *
+ *   `market:<id>:…`             the calls that happen once a market exists — bets, close, propose,
+ *                               challenge, finalize, claim, invalidate
+ *   `proposal:<id>:create-market`  `createMarket` itself, which cannot be keyed on a market id
+ *                               because the id does not exist until the transaction confirms
+ *   `agent_decisions.intent_id` a Phase 5 bet, keyed on the **decision** that authorised it, which is
+ *                               the right key for that fact and the wrong one for this query
+ *
+ * All three are matched. The alternative — showing only what one prefix finds — made market #4 render
+ * a lifecycle table containing `createMarket` and nothing else, underneath a caption claiming the
+ * market had been "bet on by a capped agent". True in the world, absent from the table: exactly the
+ * kind of quiet mismatch hard rule #2 exists to prevent.
  */
-export async function lifecycleIntentsFor(onchainId: number, proposalId?: string | null) {
-  const marketKeys = sql`${onchainIntents.idempotencyKey} like ${`market:${onchainId}:%`}`;
-  const filter =
-    proposalId === undefined || proposalId === null
-      ? marketKeys
-      : sql`(${marketKeys} or ${onchainIntents.idempotencyKey} = ${`proposal:${proposalId}:create-market`})`;
+export async function lifecycleIntentsFor(
+  onchainId: number,
+  proposalId?: string | null,
+  marketRowId?: string | null,
+) {
+  const clauses = [sql`${onchainIntents.idempotencyKey} like ${`market:${onchainId}:%`}`];
+
+  if (proposalId !== undefined && proposalId !== null) {
+    clauses.push(
+      sql`${onchainIntents.idempotencyKey} = ${`proposal:${proposalId}:create-market`}`,
+    );
+  }
+  if (marketRowId !== undefined && marketRowId !== null) {
+    clauses.push(
+      sql`${onchainIntents.id} in (
+        select ${agentDecisions.intentId} from ${agentDecisions}
+         where ${agentDecisions.marketId} = ${marketRowId}
+           and ${agentDecisions.intentId} is not null
+      )`,
+    );
+  }
+
+  const filter = sql.join(clauses, sql` or `);
 
   return db
     .select({
@@ -430,7 +465,7 @@ export async function lifecycleIntentsFor(onchainId: number, proposalId?: string
       createdAt: onchainIntents.createdAt,
     })
     .from(onchainIntents)
-    .where(filter)
+    .where(sql`(${filter})`)
     .orderBy(onchainIntents.createdAt);
 }
 
