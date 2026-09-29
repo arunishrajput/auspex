@@ -53,6 +53,20 @@ const DEFAULT_PROPOSER_CALLS = 2;
  */
 const DEFAULT_AGENT_CALLS = 3;
 
+/**
+ * How far into a tick the agents stage may still start new work.
+ *
+ * `maxDuration` on `POST /api/tick` is 60s. Measured in production: a tick with no agent model
+ * calls takes ~15s, and a single Gemini call is allowed 22s. Three stages sharing a nine-call
+ * allowance can therefore, in the worst case, exceed the function's limit — and an over-running
+ * tick is killed before it returns a report or writes its audit row, which is the one failure
+ * this pipeline is built to avoid.
+ *
+ * 38s leaves roughly 20s for the intent worker, the indexer, the notifier and the audit write.
+ * The agents stage yields rather than starting work it cannot finish, and says so in its report.
+ */
+const AGENT_STAGE_DEADLINE_MS = 38_000;
+
 function budgetSize(key: string, fallback: number): number {
   const raw = Number(optionalEnv(key) ?? fallback);
   return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : fallback;
@@ -138,7 +152,15 @@ export async function runTick(options: TickOptions = {}): Promise<TickReport> {
   // 5 — member agents. Reads open, human-approved markets, asks each member's agent for a
   //     position, and puts every answer through the deterministic policy gate. Only the gate can
   //     authorise a stake, and it records its reasons for refusals and approvals alike.
-  const agents = await stage("agents", errors, () => runAgentPass(agentBudget, { now }));
+  const agents = await stage("agents", errors, () =>
+    runAgentPass(agentBudget, {
+      now,
+      // Absolute, from the start of THIS tick. Leaves the remainder of `maxDuration` for the
+      // intent worker, the indexer, the notifier and the tick's own audit row — all of which
+      // must run for the tick to have told the truth about itself.
+      deadlineMs: startedAt.getTime() + AGENT_STAGE_DEADLINE_MS,
+    }),
+  );
 
   // 6 — settle transactions. This is where a bet the gate approved moments ago is signed with the
   //     agent's own key and broadcast, and where a market a human signed since the last tick has

@@ -1053,3 +1053,34 @@ decision row stores `final_stake_wei = NULL`, so a refused bet cannot consume th
 agent it was testing.
 
 **Run it with:** `pnpm --filter web agents:over-cap`.
+
+---
+
+### ADR-051 — The agents stage has a deadline, absolute from the start of the tick
+
+**Decided:** `runAgentPass` takes `deadlineMs` and checks it before admitting a (market, member) pair
+and again immediately before calling a model. Past it the stage stops and reports `out of time for
+this tick`. `tick.ts` sets it to `tickStart + 38s`.
+
+**Why:** a call budget bounds how many models are asked, not how long they take. A tick's allowance is
+now nine calls across three stages and `GEMINI_TIMEOUT_MS` is 22,000, against `maxDuration = 60` on
+the serverless function. Those numbers do not multiply out safely.
+
+The failure mode is what forces the fix rather than a note in "known gaps". An over-running tick is
+killed mid-flight, so it returns no report **and never writes its own audit row** — the one tick that
+went wrong is the one that leaves no trace, which is precisely what hard rule #7 exists to prevent. A
+stage that yields produces a report saying what it did not get to, and the next tick continues.
+
+**Why absolute rather than a per-stage budget.** The agents stage runs fourth. If clustering was slow,
+the right behaviour is for the agents to do *less*, not to start a fresh 38-second allowance on top of
+a tick that has already spent 40. An absolute deadline expresses that without any stage needing to
+know about the others.
+
+**Where the check is not.** Never between writing a decision row and creating its intent. Committed
+work is finished; only *new* work is declined. `resumeApproved` exists for the crash case and would
+cover it anyway, but a deadline that could strand an approved bet would be trading one silent failure
+for another.
+
+**Measured:** production `POST /api/tick` returned 200 in **15,058 ms** with zero stage errors after
+this phase, against 14,900 ms before it — but on a pass that made no agent model calls, so the worst
+case remains unmeasured. The deadline is what makes the unmeasured case safe.

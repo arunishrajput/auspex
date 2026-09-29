@@ -368,6 +368,23 @@ export type AgentPassOptions = ProposeBetOptions & {
   /** Injected so a test can pin the screen's timing. Defaults to now. */
   now?: Date;
   limit?: number;
+  /**
+   * Epoch ms after which the pass stops taking new decisions and reports why.
+   *
+   * A call budget bounds how many models are asked; it does not bound how long they take. Each
+   * Gemini call is allowed 22s (`GEMINI_TIMEOUT_MS`) and a tick's whole LLM allowance is nine
+   * calls across three stages, against a 60s `maxDuration` on the serverless function. Those
+   * numbers do not multiply out safely, and the failure mode is the bad one: an over-running
+   * tick is killed mid-flight, so the caller gets no response, the report is never returned and
+   * the audit row for the tick is never written — "nothing happened" and "nothing ran" become
+   * indistinguishable, which is exactly what hard rule #7 exists to prevent.
+   *
+   * The deadline is **absolute from the start of the tick**, not a budget for this stage, so a
+   * pass that arrives late because clustering was slow correctly does less rather than pushing
+   * the tick over. Work already committed is never abandoned: the check sits before taking a new
+   * decision, never between writing a decision row and creating its intent.
+   */
+  deadlineMs?: number;
 };
 
 /**
@@ -385,6 +402,8 @@ export async function runAgentPass(
   const now = options.now ?? new Date();
   const nowSeconds = Math.floor(now.getTime() / 1000);
   const maxDecisions = options.limit ?? MAX_DECISIONS_PER_PASS;
+  const deadlineMs = options.deadlineMs ?? Number.POSITIVE_INFINITY;
+  const outOfTime = (): boolean => Date.now() > deadlineMs;
 
   // Always, and before anything can return early. See the header.
   report.reconciled = await reconcileDecisions();
@@ -465,6 +484,12 @@ export async function runAgentPass(
       report.haltedBecause = `examined the ${MAX_PAIRS_PER_PASS}-pair limit for one pass`;
       break;
     }
+    if (outOfTime()) {
+      report.haltedBecause =
+        `out of time for this tick after ${examined} pair(s) — the remaining pairs are ` +
+        `untouched and the next tick picks them up`;
+      break;
+    }
     examined += 1;
 
     if (!balances.has(member.agentAddress)) {
@@ -523,6 +548,15 @@ export async function runAgentPass(
     // --- Only now is a model asked anything. --------------------------------------------------
     if (budget.remaining === 0) {
       report.haltedBecause = `LLM budget spent after ${report.asked} agent call(s)`;
+      break;
+    }
+    // Checked again here, and not only at the top of the loop: the screen above makes two chain
+    // calls, so a pair can cross the deadline between being admitted and reaching this line. A
+    // model call is the one step that can take 22 seconds on its own.
+    if (outOfTime()) {
+      report.haltedBecause =
+        `out of time for this tick before asking ${member.handle} about #${market.onchainId} — ` +
+        `no model was called and nothing was written`;
       break;
     }
 

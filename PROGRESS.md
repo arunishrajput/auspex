@@ -79,6 +79,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | **`/agents` — the gate, visible** | **https://auspex-web-mu.vercel.app/agents** | ✅ 9 decisions, 6 refusals, 1 chain refusal |
 | `pnpm --filter web verify:agents` | 41 live checks: roles, registry, cap boundary, kill switch | ✅ all pass, writes nothing |
 | `pnpm preflight` | now **11/11**, including all three agents registered and funded | ✅ |
+| **`POST /api/tick` in production, post-Phase 5** | 200 in **15.06s**, 0 stage errors, agents stage included | ✅ verified 2026-09-29 |
 | Resolution tx (with evidence URL) | _n/a_ | ⬜ Phase 6 |
 | Payout / claim tx | _n/a_ | ⬜ Phase 6 |
 
@@ -826,12 +827,31 @@ the only place in the repo that broadcasts outside the intent engine — the eng
 receipt, re-run, could overfund an agent by one top-up. The consequence is one of our own wallets
 holding slightly more testnet coin than intended. Stated rather than hidden.
 
-**20. The agents stage adds roughly 20–30s to a local tick.** Two `eth_call`s per (market, member)
-pair plus one `getMarket` per market, on top of the model calls. The measured local tick went from
-48s to ~125–180s, but most of that is the laptop→Neon and laptop→RPC round trips that Vercel does not
-pay — production was 14.9s before this phase and `maxDuration` is 60. **Re-measure `POST /api/tick`
-in production before demo day**; if it is tight, `MAX_PAIRS_PER_PASS` and `MAX_DECISIONS_PER_PASS` in
-`lib/agents/run.ts` are the two dials.
+**20. Tick duration: measured at 15.06s in production, with a real worst case that is not measured.**
+`POST /api/tick` returned HTTP 200 in **15,058ms with zero stage errors** after this phase — versus
+14.9s before it — so the agents stage costs almost nothing on a pass that takes no model calls. That
+measurement is honest but it is **not** a worst case: that tick screened or deferred all four pending
+pairs and made no agent LLM calls (`asked: 0`).
+
+The ceiling is arithmetic rather than measurement. A tick's LLM allowance is now **nine** calls (4
+clustering + 2 proposer + 3 agents) and `GEMINI_TIMEOUT_MS` is 22,000, against `maxDuration = 60`.
+Those do not multiply out safely, and the failure mode is the worst available: an over-running tick is
+killed before it returns a report **or writes its audit row**, so the one tick that went wrong is the
+one that leaves no trace.
+
+**Mitigated, not merely noted.** The agents stage now takes an **absolute deadline from the start of
+the tick** (`AGENT_STAGE_DEADLINE_MS = 38_000`) and checks it before admitting a pair and again
+before calling a model. Past it, the stage stops, reports `out of time for this tick`, and the next
+tick picks the pairs up — a graceful partial pass instead of a killed function. It is absolute rather
+than a per-stage budget on purpose: a pass that arrives late because clustering was slow correctly
+does less, rather than pushing the tick over. The check never sits between writing a decision row and
+creating its intent, so committed work is never abandoned.
+
+Still worth doing before demo day: force one production tick that takes a **full** agents pass (three
+model calls and three decisions) and read its `durationMs`. The dials, in order of bluntness, are
+`LLM_AGENT_CALLS_PER_TICK`, `AGENT_STAGE_DEADLINE_MS`, then `MAX_PAIRS_PER_PASS` and
+`MAX_DECISIONS_PER_PASS` in `lib/agents/run.ts`. There are no pairs left at round 1 to trigger one
+with, so the occasion is the next approved market.
 
 ## What the next session needs to know
 
