@@ -9,6 +9,7 @@ import { readMarket, readMarketCount, type OnChainMarket } from "@/lib/chain/aus
 import { getProvider } from "@/lib/chain/provider";
 import { draftsForMarket, type DraftRow } from "@/lib/resolution/dashboard";
 import { lifecycleIntentsFor, payoutsFor } from "@/lib/resolution/settle";
+import { classifySigners, lifecycleClaim } from "@/lib/trust/signers";
 
 /**
  * One market, from creation through to payout.
@@ -27,10 +28,12 @@ import { lifecycleIntentsFor, payoutsFor } from "@/lib/resolution/settle";
  *
  * ## The lifecycle table is the argument of the whole project, in one place
  *
- * Read down the `signed by` column. `createMarket` came from a browser wallet. `placeBet` came from
- * a capped agent. `proposeResolution` came from a browser wallet again. `finalizeResolution` and
- * `claim` came from a wallet holding no role at all, because neither call needs one. There is no row
- * in which a privileged server key moved money.
+ * Read down the `signed by` column: which key sent each call, classified by asking the contract
+ * whether that address holds `DEFAULT_ADMIN_ROLE` rather than by trusting our own `signer` enum.
+ * On markets 4–7 and 9 it shows a browser wallet creating the market and a capped agent betting.
+ * On markets 1–3 and 8 it shows the operator key, because those are labelled test runs driven from
+ * a laptop — and the footer says which of the two this market is rather than asserting the flattering
+ * one over both. See `lib/trust/signers.ts` for why that distinction is not cosmetic.
  */
 
 export const dynamic = "force-dynamic";
@@ -42,6 +45,21 @@ const STATE_STYLE: Record<string, string> = {
   RESOLUTION_PROPOSED: "border-signal-500/40 bg-signal-500/10 text-signal-500",
   FINALIZED: "border-ink-600 bg-ink-800 text-ink-300",
   INVALIDATED: "border-bad-500/40 bg-bad-500/10 text-bad-500",
+};
+
+/**
+ * The operator key is the one that has to stand out, not the browser wallet.
+ *
+ * A reader scanning this column is looking for the row that should not be there. An admin-signed
+ * call on a market is exactly that row, so it is the one given the warning colour — even though it
+ * is legitimate on the two markets where it appears, both of which say they are tests in their own
+ * on-chain question text.
+ */
+const SIGNER_STYLE: Record<string, string> = {
+  BROWSER: "text-signal-500",
+  AGENT: "text-ink-300",
+  OPERATOR: "text-warn-500",
+  SERVER: "text-ink-300",
 };
 
 const KIND_LABEL: Record<string, string> = {
@@ -132,6 +150,22 @@ export default async function MarketDetailPage({
 
   const nowSeconds = chainNow;
   const totalWei = chain === null ? 0n : chain.poolYesWei + chain.poolNoWei;
+
+  // What kind of key signed each row, asked of the contract rather than inferred from our own
+  // `signer` enum — `SERVER` covers both a capped agent key and the admin key, and calling the
+  // second one "server key" would claim the deployment holds an admin key. It does not.
+  const signerFacts = await classifySigners(intents);
+  const claim = lifecycleClaim(
+    intents.map((intent) => ({
+      kind: intent.kind,
+      status: intent.status,
+      valueWei: intent.valueWei,
+      signerKind: signerFacts.get(intent.fromAddress.toLowerCase())?.kind ?? "SERVER",
+    })),
+  );
+  const signerLegend = [...new Set([...signerFacts.values()].map((fact) => fact.kind))]
+    .map((kind) => [...signerFacts.values()].find((fact) => fact.kind === kind)!)
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
     <main className="grid-backdrop min-h-dvh">
@@ -375,12 +409,8 @@ export default async function MarketDetailPage({
                         {KIND_LABEL[intent.kind] ?? intent.kind}
                       </td>
                       <td className="px-3 py-2">
-                        <span
-                          className={
-                            intent.signer === "EXTERNAL" ? "text-signal-500" : "text-ink-300"
-                          }
-                        >
-                          {intent.signer === "EXTERNAL" ? "browser wallet" : "server key"}
+                        <span className={SIGNER_STYLE[signerKindOf(signerFacts, intent.fromAddress)]}>
+                          {signerFacts.get(intent.fromAddress.toLowerCase())?.label ?? "server key"}
                         </span>
                         <br />
                         <a
@@ -482,12 +512,37 @@ export default async function MarketDetailPage({
         )}
 
         <footer className="mt-10 border-t border-ink-800 pt-6">
-          <p className="text-xs leading-relaxed text-ink-400">
-            Read the <span className="text-ink-300">signed by</span> column down the lifecycle table.
-            A market is created by a browser wallet, bet on by a capped agent, resolved by a browser
-            wallet, and finalised and claimed by a wallet that holds no role at all — because neither
-            of those last two calls needs one. There is no row in which a privileged server key moved
-            money, and that is checkable on MSTScan without trusting this page.
+          {/*
+            Derived from the rows above, never asserted over them. The previous version of this
+            footer claimed no privileged key had moved money on any market, which was false on the
+            two markets an operator drove by hand — printed directly beneath the table that said so.
+          */}
+          <p className="text-xs leading-relaxed text-ink-300">{claim.headline}</p>
+          {claim.detail.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {claim.detail.map((sentence) => (
+                <li key={sentence} className="text-xs leading-relaxed text-ink-400">
+                  {sentence}
+                </li>
+              ))}
+            </ul>
+          )}
+          {signerLegend.length > 0 && (
+            <dl className="mt-4 space-y-1.5">
+              {signerLegend.map((fact) => (
+                <div key={fact.kind} className="flex flex-wrap gap-x-2 text-[11px] leading-relaxed">
+                  <dt className={`font-mono ${SIGNER_STYLE[fact.kind]}`}>{fact.label}</dt>
+                  <dd className="text-ink-500">{fact.note}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <p className="mt-4 text-[11px] leading-relaxed text-ink-500">
+            The label in that column is a{" "}
+            <span className="font-mono text-ink-400">hasRole()</span> read made on this request, not
+            our own record of who signed — so an address holding{" "}
+            <span className="font-mono text-ink-400">DEFAULT_ADMIN_ROLE</span> cannot be rendered as
+            an ordinary key. Every hash resolves on MSTScan without trusting this page.
           </p>
         </footer>
       </div>
@@ -580,4 +635,17 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <dd className="min-w-0 break-words text-ink-200">{children}</dd>
     </div>
   );
+}
+
+/**
+ * The classified kind for one row's signer, defaulting to `SERVER`.
+ *
+ * `SERVER` is the conservative fallback: it is what the column said before the classification
+ * existed, so an address we could not read is never upgraded to a friendlier label than it earns.
+ */
+function signerKindOf(
+  facts: Map<string, { kind: string }>,
+  address: string,
+): string {
+  return facts.get(address.toLowerCase())?.kind ?? "SERVER";
 }

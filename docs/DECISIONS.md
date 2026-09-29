@@ -1468,3 +1468,55 @@ quietly rather than erroring, the check has to be against its output.
 
 **Evidence:** `.next/static/chunks/*.css` before the fix — `text-ink-200` and `text-ink-500` absent,
 every other `ink-*` utility present.
+
+---
+
+### ADR-065 — A caption that asserted facts about rows it never read, and the check that now stops it
+
+**Decided:** derive `/markets/[id]`'s signer labels and its closing claim from the rows on the page —
+classifying each signer by a live `hasRole` read — instead of printing a fixed sentence. And verify
+every sender named in `README.md` and `DEMO_SCRIPT.md` against the explorer in `pnpm check:links`.
+
+**What was wrong, and why it was the worst available kind of wrong.** `/markets/8` ended with:
+
+> *"A market is created by a browser wallet, bet on by a capped agent, resolved by a browser wallet …
+> There is no row in which a privileged server key moved money."*
+
+That is true of markets 4–7 and 9. It is **false of market 8**, which an operator drove from a laptop
+because proving a payout needs stakes on both sides and no such market existed (ADR-059). The sentence
+sat directly beneath a table whose first row was the admin key staking 0.01 tMSTC — and every row in
+that table read `server key`, including the admin key's, because the label came from
+`onchain_intents.signer`, an enum with exactly two values.
+
+Two separate defects, pointing the same way:
+
+1. **`SERVER` conflates two keys with nothing in common.** An agent key the deployment holds, capped
+   on chain and holding no role; and the operator key, which holds `DEFAULT_ADMIN_ROLE` and is
+   *deliberately absent* from Vercel (ADR-047). Rendering both as "server key" tells a reader the
+   deployed application holds an admin key. That is the single most damaging thing this app could
+   imply about itself, and it is not true.
+2. **A caption that does not read its rows will eventually contradict them.** This one did, on the
+   page `DEMO_SCRIPT.md` sends judges to.
+
+The same error was in the first draft of this phase's README, three times: `proposeResolution`,
+`challengeResolution` and the round-2 proposal were credited to "the human" when the operator key had
+sent all three. Every link worked. The column beside them was flattering and wrong.
+
+**The fix, in two parts.** `lib/trust/signers.ts` classifies a signer by asking the contract whether
+the address holds `DEFAULT_ADMIN_ROLE` — one `eth_call` per distinct address — so the label is a chain
+fact rather than our own record of who we think signed. `lifecycleClaim` is pure, takes the classified
+rows, and **withholds the strong claim as soon as one operator row appears**, naming the calls instead.
+Eleven tests cover it, and the one that matters asserts the withholding.
+
+Then the guard that generalises it: `check-links.mjs` reads every markdown table row that names both a
+transaction and an address, fetches the transaction, and fails if the two disagree. It was verified by
+reintroducing the exact error on purpose and watching it fail.
+
+**Cost:** one to three extra `eth_call`s on a market page, and a caption that is longer and less
+quotable. Both are the right trade. The strong sentence is now *earned per market* rather than
+asserted over all of them — which means that when it does appear, it is worth something.
+
+**The general lesson, and it is the third time this build has learned it:** prose about data must be
+computed from that data. ADR-045 and ADR-049 were the same shape in the pipeline; this is the same
+shape in the UI. A sentence a human wrote once, beside numbers a query produces, is a sentence that
+will be wrong later.

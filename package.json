@@ -17,7 +17,8 @@
     "deploy:testnet": "pnpm --filter contracts deploy:testnet",
     "verify:testnet": "pnpm --filter contracts verify:testnet",
     "wallets:new": "node scripts/new-wallet.mjs",
-    "preflight": "node scripts/preflight.mjs"
+    "preflight": "node scripts/preflight.mjs",
+    "check:links": "node scripts/check-links.mjs"
   },
   "devDependencies": {
     "ethers": "^6.17.0",
