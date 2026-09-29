@@ -251,13 +251,50 @@ for the demo since the track recommends it.
 
 ---
 
-## §6 — Extra wallets (agents)  ·  *Phase 5*
+## ✅ §6 — Agent wallets  ·  *Phase 5*  ·  **DONE 2026-09-29**
 
-The deployer wallet and both generated secrets already exist in `.env.local` (see "Already done").
-Funding it is §2.
+One command, run **locally**, creates the members, generates an agent wallet each, funds them from
+the deployer and registers their caps on chain:
 
-Phase 5 creates member **agent** wallets programmatically and encrypts their keys at rest, so you
-should not need this by hand. If you ever want one:
+```bash
+pnpm --filter web agents:register
+```
+
+Safe to re-run. Seeding is idempotent on `members.handle`, the registration intent is idempotent on
+the agent address *and* its caps, and funding tops up to a target rather than sending a fixed amount.
+
+**It is local on purpose, and this is a security decision rather than a convenience.**
+`registerAgent` is `onlyRole(DEFAULT_ADMIN_ROLE)`, so it needs `DEPLOYER_PRIVATE_KEY` — and that key
+is **deliberately not in Vercel**. Putting it there so a tick could register agents would mean
+production held a key that can create markets, resolve them, grant roles and pause the contract, to
+save running one command once. A production tick that claims a registration intent cannot sign it,
+releases it without burning an attempt, and says why (ADR-047).
+
+So: **the deployed application holds no key that can do anything but place a capped bet and claim.**
+
+The three agents created on 2026-09-29, with their caps as the contract holds them:
+
+| Member | agent wallet | on-chain per-tx | on-chain per-market | policy per-tx | notes |
+|---|---|---|---|---|---|
+| `atlas` | `0xa4ef956f01946b93efd592ce720d24beec19588f` | 0.02 | 0.04 | 0.01 | the one that trades |
+| `vega` | `0x15757d543f6050b6f5ff83782b7c122e21450daa` | 0.01 | 0.02 | 0.005 | ECONOMY only, 0.90 confidence floor |
+| `kestrel` | `0x76bf4262aa13632e91e27e0eba3b42b6b353ce4e` | 0.016 | 0.032 | 0.008 | **kill switch on** |
+
+All amounts in tMSTC. Winnings for all three are paid to the BridgeKey wallet
+`0xA9F68fDf…311fF1`, never to the agent — so a stolen agent key cannot steal winnings.
+
+Verify any time, without signing anything:
+
+```bash
+pnpm --filter web verify:agents   # roles, registry, the cap boundary, the kill switch
+```
+
+**The kill switch.** `AGENTS_KILL_SWITCH=true` in `.env.local` (and in Vercel) halts every agent at
+once. It is an environment variable, not a transaction — the contract is not involved and the
+on-chain caps are unchanged. `kestrel` also ships with its own per-member switch on, so the
+mechanism is visibly firing on every tick rather than being a flag nobody has ever seen work.
+
+If you ever want a wallet by hand:
 
 ```bash
 pnpm wallets:new --agent    # prints an address + key; paste the key into .env.local yourself
@@ -323,14 +360,19 @@ Confirm any time with `cd web && vercel env ls` and `gh secret list`.
 
 Run through this before judging, not during.
 
-- [ ] `pnpm preflight` **10/10** — RPC, chain ID 91562037, both wallets, the human wallet's
-      role boundary, DB, Gemini, and the contract.
+- [ ] `pnpm preflight` **11/11** — RPC, chain ID 91562037, both wallets, the human wallet's
+      role boundary, DB, Gemini, the contract, and all three agents registered and funded.
+- [ ] `pnpm --filter web verify:agents` — all checks pass, including "one wei over the cap is
+      refused" against the live contract. Writes nothing, signs nothing.
 - [ ] Deployer (`0xc71dC478…`) and BridgeKey (`0xA9F68fDf…`) both funded.
 - [ ] BridgeKey still holds `MARKET_CREATOR_ROLE` and **nothing else** — that is the trust claim.
 - [ ] Contract shows **Verified** on `https://testnet.mstscan.com/address/<address>`.
 - [ ] Public Vercel URL loads in a **private window** with no wallet installed.
 - [ ] Discord channel visible on a second screen.
 - [ ] At least one confirmed event sitting in `/review` ready to approve live.
+- [ ] `/agents` shows at least one approved bet with a tx link **and** several refusals with
+      reasons. All-zero counters would mean the gates have never been exercised.
+- [ ] `AGENTS_KILL_SWITCH=false`, or the agents will not bet during the demo.
 - [ ] Every tx hash in the README opens on `testnet.mstscan.com`.
 - [ ] The over-cap transaction shows **Reverted** (that is the point — it is evidence).
 - [ ] You can explain the contract, the policy gate, and the pipeline without notes.

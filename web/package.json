@@ -19,7 +19,10 @@
     "fixtures:capture": "tsx scripts/capture-fixtures.ts",
     "calibrate": "tsx scripts/calibrate.ts",
     "tick": "tsx scripts/tick.ts",
-    "verify:approval": "tsx scripts/verify-approval.ts"
+    "verify:approval": "tsx scripts/verify-approval.ts",
+    "agents:register": "tsx scripts/register-agents.ts",
+    "agents:over-cap": "tsx scripts/over-cap-bet.ts",
+    "verify:agents": "tsx scripts/verify-agents.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

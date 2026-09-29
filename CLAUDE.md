@@ -108,6 +108,11 @@ Faucet    : https://faucet.masterstroke.academy
   as cheap insurance and a caching point, not because it is strictly required.
 - **`@mstblockchain/mst-sdk` is a thin ethers-v6 wrapper** (v1.0.0, no types, broken install
   instructions in its README). **Use ethers v6 directly** on the critical path.
+- **`DEPLOYER_PRIVATE_KEY` is deliberately NOT in Vercel, and stays that way.** It holds
+  `DEFAULT_ADMIN_ROLE`, so it is the only key that can `registerAgent` — which is why agent
+  registration is a local command (`agents:register`) and not a tick stage. Production holds only
+  agent keys: capped by the contract, holding no role. A tick that claims an intent it cannot sign
+  defers it without burning an attempt (ADR-047). Do not "fix" this by adding the key to Vercel.
 - **Gemini works on the free tier with no billing.** An HTTP 402 here means *prepay credits
   depleted on that Google Cloud project*, not an account-wide billing requirement — read the
   error body, not just the status. A key created in a project with no billing account attached
@@ -147,6 +152,10 @@ pnpm preflight               # check env + RPC + DB + LLM reachability
 pnpm --filter web tick       # run one pipeline tick (ingest → cluster → confirm → index)
 pnpm --filter web calibrate  # re-read the similarity distribution from live feeds
 pnpm --filter web crash-test # the Phase 2 idempotency proof (creates a REAL market on chain)
+
+pnpm --filter web agents:register  # seed members, fund agent wallets, register caps ON CHAIN (local only)
+pnpm --filter web verify:agents    # roles + registry + the cap boundary + kill switch. Writes nothing.
+pnpm --filter web agents:over-cap  # THE over-cap bet: sends cap+1 wei and the chain refuses it
 ```
 
 ## Repo layout

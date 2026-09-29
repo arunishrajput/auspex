@@ -12,6 +12,7 @@ import {
   type PipelineCounts,
 } from "@/lib/news/dashboard";
 import { queueCounts, type QueueCounts } from "@/lib/proposer/queue";
+import { gateCounters, type GateCounters } from "@/lib/agents/dashboard";
 import { BORDERLINE_THRESHOLD, SAME_STORY_THRESHOLD } from "@/lib/news/similarity";
 import { REQUIRED_INDEPENDENT_SOURCES } from "@/lib/news/confirm";
 import { scanForInjection } from "@/lib/news/injection";
@@ -28,8 +29,8 @@ const PHASES = [
   { n: 2, name: "Data layer & idempotency engine", state: "done" },
   { n: 3, name: "News ingestion & 2-source confirmation", state: "done" },
   { n: 4, name: "Proposer agent & human approval gate", state: "done" },
-  { n: 5, name: "Member agents & policy gate", state: "current" },
-  { n: 6, name: "Resolution, challenge window, payout", state: "todo" },
+  { n: 5, name: "Member agents & policy gate", state: "done" },
+  { n: 6, name: "Resolution, challenge window, payout", state: "current" },
   { n: 7, name: "Dashboard & trust surface", state: "todo" },
   { n: 8, name: "Live run, README, submission", state: "todo" },
 ] as const;
@@ -40,6 +41,7 @@ type PipelineData = {
   flagged: Awaited<ReturnType<typeof flaggedItems>>;
   tick: Awaited<ReturnType<typeof lastTick>>;
   queue: QueueCounts;
+  gate: GateCounters;
 };
 
 /**
@@ -54,14 +56,15 @@ async function loadPipeline(): Promise<{ data: PipelineData | null; error: strin
     return { data: null, error: "DATABASE_URL is not configured on this deployment." };
   }
   try {
-    const [counts, events, flagged, tick, queue] = await Promise.all([
+    const [counts, events, flagged, tick, queue, gate] = await Promise.all([
       pipelineCounts(),
       recentEventsWithArticles(14),
       flaggedItems(6),
       lastTick(),
       queueCounts(),
+      gateCounters(),
     ]);
-    return { data: { counts, events, flagged, tick, queue }, error: null };
+    return { data: { counts, events, flagged, tick, queue, gate }, error: null };
   } catch (error) {
     return { data: null, error: error instanceof Error ? error.message : String(error) };
   }
@@ -131,6 +134,18 @@ export default async function Home() {
               className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
             >
               Markets →
+            </Link>
+            <Link
+              href="/agents"
+              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
+            >
+              Agents
+              {pipeline.data !== null && pipeline.data.gate.rejected > 0 && (
+                <span className="ml-1.5 text-warn-500">
+                  {pipeline.data.gate.rejected} refused
+                </span>
+              )}{" "}
+              →
             </Link>
           </nav>
         </header>

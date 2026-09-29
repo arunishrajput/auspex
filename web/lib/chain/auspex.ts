@@ -129,6 +129,21 @@ export async function readAgent(agent: string, runner?: Provider): Promise<OnCha
   };
 }
 
+/**
+ * Headroom left under an agent's per-market cap, in wei.
+ *
+ * Returns 0 for an agent the contract does not know, or one it has deactivated — the same value
+ * a genuinely exhausted cap gives. Callers must therefore check `registered` and `active` before
+ * reading a zero here as "spent"; `screenAgent` does, and has a test for it.
+ */
+export async function readAgentRemainingOnMarket(
+  onchainId: number,
+  agent: string,
+  runner?: Provider,
+): Promise<bigint> {
+  return (await getAuspexContract(runner).agentRemainingOnMarket(onchainId, agent)) as bigint;
+}
+
 /** What the contract would pay `account` right now. Zero until the market settles. */
 export async function readPreviewPayout(
   onchainId: number,

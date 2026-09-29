@@ -22,6 +22,7 @@ import { fetchAllFeeds, FEEDS } from "../news/feeds";
 import { ingestFeedResults, seedSources, type IngestReport } from "../news/ingest";
 import { runClusteringPass, type ClusterReport } from "../news/events";
 import { runProposerPass, type ProposeReport } from "../proposer/run";
+import { reconcileDecisions, runAgentPass, type AgentReport } from "../agents/run";
 import { runNotificationPass, type NotifyReport } from "../notify/discord";
 import { LlmBudget, type LlmCallLog } from "../llm/client";
 import { isConfigured } from "../llm/gemini";
@@ -38,10 +39,19 @@ import { runIntentWorker, type ProcessResult } from "../intents/engine";
  *
  * Four for clustering: eight pairs per call, so 32 adjudications per tick. Two for the
  * proposer: one draft plus one fallback model, and a tick only ever considers a couple of
- * events, because the queue is drained by a human and not by us.
+ * events, because the queue is drained by a human and not by us. Three for the agents.
  */
 const DEFAULT_CLUSTER_CALLS = 4;
 const DEFAULT_PROPOSER_CALLS = 2;
+/**
+ * Three for the member agents: one call per (market, agent) pair it gets to, with no fallback
+ * model, because a pair that gets no answer is retried next tick and costs nothing to skip.
+ *
+ * A **third** budget rather than a share of an existing one, for the reason the other two are
+ * separate: with a single pool, a tick whose feeds happened to produce many borderline pairs would
+ * spend everything on clustering and the agents would go quiet exactly on the busiest days.
+ */
+const DEFAULT_AGENT_CALLS = 3;
 
 function budgetSize(key: string, fallback: number): number {
   const raw = Number(optionalEnv(key) ?? fallback);
@@ -63,6 +73,7 @@ export type TickReport = {
   ingest: IngestReport | null;
   cluster: ClusterReport | null;
   propose: ProposeReport | null;
+  agents: AgentReport | null;
   index: IndexReport | null;
   /** Externally-signed intents settled this tick. Server-signed ones have none to settle yet. */
   intents: ProcessResult[] | null;
@@ -102,6 +113,7 @@ export async function runTick(options: TickOptions = {}): Promise<TickReport> {
   const proposerBudget = new LlmBudget(
     budgetSize("LLM_PROPOSER_CALLS_PER_TICK", DEFAULT_PROPOSER_CALLS),
   );
+  const agentBudget = new LlmBudget(budgetSize("LLM_AGENT_CALLS_PER_TICK", DEFAULT_AGENT_CALLS));
 
   // 1 — the publisher allowlist. Idempotent, and cheap enough to reassert every tick rather
   //     than adding a migration step that can be forgotten.
@@ -123,17 +135,34 @@ export async function runTick(options: TickOptions = {}): Promise<TickReport> {
     runProposerPass(proposerBudget, { now }),
   );
 
-  // 5 — settle any transaction a human signed since the last tick. The worker cannot sign an
-  //     EXTERNAL intent, so all it does here is poll a receipt and record the outcome.
-  const intents = await stage("intents", errors, () => runIntentWorker({ limit: 3 }));
+  // 5 — member agents. Reads open, human-approved markets, asks each member's agent for a
+  //     position, and puts every answer through the deterministic policy gate. Only the gate can
+  //     authorise a stake, and it records its reasons for refusals and approvals alike.
+  const agents = await stage("agents", errors, () => runAgentPass(agentBudget, { now }));
 
-  // 6 — chain indexing, which is what turns a confirmed `MarketCreated` log into a market row.
+  // 6 — settle transactions. This is where a bet the gate approved moments ago is signed with the
+  //     agent's own key and broadcast, and where a market a human signed since the last tick has
+  //     its receipt polled. The limit is 5 rather than 3 because the agents stage above can now
+  //     create several intents in one pass, and an intent left unclaimed for a tick is a bet that
+  //     appears on the page as pending for three minutes longer than it needed to.
+  const intents = await stage("intents", errors, () => runIntentWorker({ limit: 5 }));
+
+  // 6b — reconcile again, now that the worker above has settled this tick's bets.
+  //
+  //      `runAgentPass` already reconciles, but it runs *before* the worker, so on its own a bet
+  //      approved, signed and confirmed inside one tick would sit at `TX_PENDING` until the next
+  //      one — three minutes of a page saying "in flight" about a transaction already in a block.
+  //      One extra query closes that, and it is the same idempotent function either way.
+  const reconciled = await stage("reconcile", errors, () => reconcileDecisions());
+  if (agents !== null && reconciled !== null) agents.reconciled += reconciled;
+
+  // 7 — chain indexing, which is what turns a confirmed `MarketCreated` log into a market row.
   const index =
     options.skipIndex === true
       ? null
       : await stage("index", errors, () => runIndexer());
 
-  // 7 — notify, strictly last. It selects on indexed columns, so it cannot fire for a market
+  // 8 — notify, strictly last. It selects on indexed columns, so it cannot fire for a market
   //     that is not yet on chain even if every step above it went wrong.
   const notify =
     options.skipIndex === true
@@ -145,14 +174,19 @@ export async function runTick(options: TickOptions = {}): Promise<TickReport> {
     durationMs: Date.now() - startedAt.getTime(),
     llm: {
       configured: isConfigured(),
-      budget: clusterBudget.maxCalls + proposerBudget.maxCalls,
-      callsMade: clusterBudget.spent + proposerBudget.spent,
-      calls: [...clusterBudget.entries(), ...proposerBudget.entries()],
+      budget: clusterBudget.maxCalls + proposerBudget.maxCalls + agentBudget.maxCalls,
+      callsMade: clusterBudget.spent + proposerBudget.spent + agentBudget.spent,
+      calls: [
+        ...clusterBudget.entries(),
+        ...proposerBudget.entries(),
+        ...agentBudget.entries(),
+      ],
     },
     sourcesSeeded,
     ingest,
     cluster,
     propose,
+    agents,
     index,
     intents,
     notify,
@@ -222,6 +256,19 @@ function summarise(report: TickReport): string {
     if (report.propose.haltedBecause !== null) {
       parts.push(`proposer halted: ${report.propose.haltedBecause}`);
     }
+  }
+
+  if (report.agents !== null) {
+    const agents = report.agents;
+    parts.push(
+      `agents: ${agents.approved} bet(s) approved, ` +
+        `${agents.rejected + agents.screenRejected} rejected by the gate, ` +
+        `${agents.deferred} deferred, ${agents.asked} model call(s), ` +
+        `over ${agents.markets} open market(s) and ${agents.members} member(s)`,
+    );
+    if (agents.reconciled > 0) parts.push(`${agents.reconciled} decision(s) reconciled with the chain`);
+    if (agents.resumed > 0) parts.push(`${agents.resumed} approved decision(s) resumed`);
+    if (agents.haltedBecause !== null) parts.push(`agents halted: ${agents.haltedBecause}`);
   }
 
   if (report.intents !== null && report.intents.length > 0) {

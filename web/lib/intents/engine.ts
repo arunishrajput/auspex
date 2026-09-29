@@ -6,7 +6,7 @@ import { AUSPEX_MARKET_ADDRESS } from "../chain/deployment";
 import { getProvider } from "../chain/provider";
 import { auspexInterface } from "../chain/auspex";
 import { describeRevert } from "../chain/revert";
-import { getDeployerWallet } from "./signer";
+import { getDeployerWallet, resolveSigner } from "./signer";
 import { crashPointReached } from "./crash-hook";
 
 /**
@@ -605,6 +605,43 @@ export function plannedSteps(intent: Pick<OnchainIntent, "status" | "signer" | "
 }
 
 /**
+ * Hands a claimed intent back without counting the pass against it.
+ *
+ * "There is nothing to do yet" and "trying to do it failed" are different things, and only the
+ * second should consume an attempt. Every caller here is the first kind: a human has not signed
+ * yet, or the key for this row lives in another process. Decrementing `attempts` undoes the
+ * increment `claimIntent` applied, so a row can wait indefinitely without ever reaching
+ * `MAX_ATTEMPTS` and being abandoned for a reason that was never a problem.
+ */
+async function releaseUnattempted(
+  intent: OnchainIntent,
+  waitingFor: string,
+  backoffSeconds: number,
+  options: { detail?: string } = {},
+): Promise<ProcessResult> {
+  await db
+    .update(onchainIntents)
+    .set({
+      attempts: sql`greatest(${onchainIntents.attempts} - 1, 0)`,
+      nextAttemptAt: sql`now() + make_interval(secs => ${backoffSeconds})`,
+      lastError: options.detail === undefined ? null : options.detail.slice(0, 500),
+      claimedAt: null,
+      claimedBy: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(onchainIntents.id, intent.id));
+
+  return {
+    intentId: intent.id,
+    status: intent.status,
+    txHash: intent.txHash,
+    blockNumber: null,
+    revertReason: null,
+    note: `waiting for ${waitingFor}`,
+  };
+}
+
+/**
  * Drives one intent from wherever it is to wherever it can get in one pass.
  *
  * Every entry point is a resume point. The function does not know or care whether this is the
@@ -618,31 +655,29 @@ export async function processIntent(intent: OnchainIntent): Promise<ProcessResul
     const plan = plannedSteps(current);
 
     if (plan.waitingFor !== null) {
-      // Release the lease immediately so the row is claimable again the moment its state
-      // changes, and do not count this pass as an attempt against it.
-      await db
-        .update(onchainIntents)
-        .set({
-          attempts: sql`greatest(${onchainIntents.attempts} - 1, 0)`,
-          nextAttemptAt: sql`now()`,
-          claimedAt: null,
-          claimedBy: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(onchainIntents.id, current.id));
-
-      return {
-        intentId: current.id,
-        status: current.status,
-        txHash: current.txHash,
-        blockNumber: null,
-        revertReason: null,
-        note: `waiting for ${plan.waitingFor}`,
-      };
+      return await releaseUnattempted(current, plan.waitingFor, 0);
     }
 
     if (plan.sign) {
-      current = await signIntent(current, getDeployerWallet());
+      // Whose key signs is a property of the ROW, not of the process. Phase 2 always used the
+      // deployer; Phase 5 adds one agent wallet per member, and production holds only those.
+      const signer = await resolveSigner(current.fromAddress);
+
+      if (!signer.ok) {
+        // Not an error, and specifically not an attempt. The key exists — somewhere else. A
+        // `REGISTER_AGENT` intent claimed by a Vercel tick is exactly this case: its signer is
+        // the deployer, whose key is deliberately absent in production, and it will be driven
+        // to completion by `scripts/register-agents.ts` running locally.
+        //
+        // Burning an attempt here would let MAX_ATTEMPTS expire while nothing was wrong, and
+        // `ABANDONED` on a PENDING intent is how a market's agent silently never gets
+        // registered. The backoff is long because the condition changes on a human's timescale.
+        return await releaseUnattempted(current, `a signer for ${current.fromAddress}`, 120, {
+          detail: signer.reason,
+        });
+      }
+
+      current = await signIntent(current, signer.wallet);
       // Test-only fault injection. Simulates a hard kill between signing and broadcasting —
       // the window where a naive engine would later re-sign and double-send.
       crashPointReached("after_sign");

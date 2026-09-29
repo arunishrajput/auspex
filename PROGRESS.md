@@ -8,8 +8,8 @@
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
 **Last updated:** 2026-09-29
-**Current status:** ✅ Phase 4 complete — all exit criteria met, 4 human-approved markets on chain
-**Next phase:** **Phase 5 — Member agents + deterministic policy gate**
+**Current status:** ✅ Phase 5 complete — all exit criteria met, agents betting under caps, over-cap bet refused on chain
+**Next phase:** **Phase 6 — Resolution, challenge window, payout**
 
 ---
 
@@ -22,8 +22,8 @@
 | 2 | Data layer + chain client + idempotency engine | ✅ Complete |
 | 3 | News ingestion, dedup, 2-source confirmation | ✅ Complete |
 | 4 | Market proposer agent + human approval gate | ✅ Complete |
-| 5 | Member agents + deterministic policy gate | ⬜ **NEXT** |
-| 6 | Resolution, challenge window, payout | ⬜ Not started |
+| 5 | Member agents + deterministic policy gate | ✅ Complete |
+| 6 | Resolution, challenge window, payout | ⬜ **NEXT** |
 | 7 | Dashboard polish + trust page | ⬜ Not started |
 | 8 | Live end-to-end run + README + submission | ⬜ Not started |
 
@@ -67,8 +67,18 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | **`createMarket` #7 — human-approved** | **`0x444517757604b0b600f75790b6734cfc175c164d42b112bd32d96f1bc60058f9`** | ✅ block 5,793,485, `result: success` |
 | **Sender of all four** | **`0xA9F68fDf84388fa548a685085E2bee0e5b311fF1`** (BridgeKey, human) | ✅ **not the deployer** — checkable on MSTScan |
 | Discord notifications | 4 sent, one per market, each carrying its tx hash | ✅ fired only after indexing |
-| `placeBet` tx (agent, within caps) | _n/a_ | ⬜ Phase 5 |
-| Over-cap bet tx (**expected revert**) | _n/a_ | ⬜ Phase 5 |
+| **Agent wallet `atlas`** | **`0xa4ef956f01946b93efd592ce720d24beec19588f`** | ✅ registered, capped 0.02/tx |
+| **Agent wallet `vega`** | **`0x15757d543f6050b6f5ff83782b7c122e21450daa`** | ✅ registered, capped 0.01/tx |
+| **Agent wallet `kestrel`** | **`0x76bf4262aa13632e91e27e0eba3b42b6b353ce4e`** | ✅ registered, kill switch ON |
+| `registerAgent` → atlas | `0x74cb33a18ec7378a832868898e1fcbf1f41d057910f5cddea23f8bb16f124b7a` | ✅ `result: success` |
+| `registerAgent` → kestrel | `0xcc2097f46e608b0dfa13caefb270a9a9709bd5b3f0d0520a40568c009bbd11ef` | ✅ `result: success` |
+| `registerAgent` → vega | `0x92a7a00a7fcdee71ff5db15642342f17aa32b5cd778387ada463965db89dfd41` | ✅ `result: success` |
+| **`placeBet` #1 (agent, within caps)** | **`0x5f8a12c6259de3493b79314e3e6f0284a3650e378b4b34f627cff37ea10dd5f1`** | ✅ block 5,794,730, 0.005 tMSTC YES on market 4 |
+| **`placeBet` #2 (agent, within caps)** | **`0xc2a426997ae432372d645ac8b95bf947acaa20562c9c69672046ca3f204e0759`** | ✅ block 5,794,735, 0.004 tMSTC YES on market 5 |
+| **Over-cap bet tx (expected revert)** | **`0xf0152234efe078729401162dd8ef16e6d19da2c657dcfe4360f2cd3255720c2d`** | ✅ block 5,794,765, **`AgentPerTxCapExceeded(2e16+1, 2e16)`** |
+| **`/agents` — the gate, visible** | **https://auspex-web-mu.vercel.app/agents** | ✅ 9 decisions, 6 refusals, 1 chain refusal |
+| `pnpm --filter web verify:agents` | 41 live checks: roles, registry, cap boundary, kill switch | ✅ all pass, writes nothing |
+| `pnpm preflight` | now **11/11**, including all three agents registered and funded | ✅ |
 | Resolution tx (with evidence URL) | _n/a_ | ⬜ Phase 6 |
 | Payout / claim tx | _n/a_ | ⬜ Phase 6 |
 
@@ -89,6 +99,111 @@ and **nothing else** — not `DEFAULT_ADMIN_ROLE`, not `RESOLVER_ROLE`, not `CHA
 
 ---
 
+## Phase 5 — what shipped
+
+### The shape of it
+
+```
+OPEN market a human signed ──> screenAgent ──> member agent ──> Zod ──> policyGate ──> intent ──> placeBet
+  (proposal_id NOT NULL)      (no LLM yet)      (LLM, bounded)    │       (PURE)         │        │
+                                   │                             │          │           │   agent's own key
+                              DEFER│REJECT              SCHEMA_REJECTED   REJECT         │   (encrypted at rest)
+                              (no row)(row)                  (row)        (row)          │
+                                                                                         ▼
+                                       ══════════ AND THE CONTRACT CAPS IT AGAIN ══════════
+                                        per-tx cap · per-market cap · agent holds no role
+```
+
+**Nine decisions, six of them refusals, one refused by the chain itself.** The refusals are the
+evidence; a page of approvals would prove nothing.
+
+### The gate, and what it refuses
+
+`lib/policy/policyGate.ts` is **pure** — no network, no DB, **no clock read inside it**. Time,
+balances, the day's spend and the on-chain caps are all injected, which is why 50 tests pin every
+branch with no infrastructure at all.
+
+It clamps rather than trusts:
+
+```
+finalStake = min( requested, off-chain per-tx cap, remaining daily budget,
+                  on-chain per-tx cap, remaining on-chain per-market headroom,
+                  wallet balance − gas reserve )
+```
+
+Every limit that binds is named in `reasons` **even when the bet is allowed** — and "reduced the
+stake" and "the stake is exactly at this limit" are reported as different things, because the
+contract distinguishes them too (at the cap it accepts, one wei over it reverts).
+
+### The distinction that cost the most thought
+
+`agent_decisions` is unique on `(market_id, member_id, round)`, so **writing a row is terminal** for
+that pair. The gate therefore returns three verdicts, not two:
+
+| Reason | Verdict | Why |
+|:--|:--|:--|
+| market closed, category not allowed, abstained, confidence too low | **REJECT** — row written | can never change |
+| kill switch, agent unregistered, wallet unfunded, daily budget spent | **DEFER** — no row | recovers on its own |
+
+Get this backwards and an agent is frozen out of a market for ever because a wallet was briefly
+empty. Same trap as Phase 4's `proposals.event_id`, more expensive. ADR-045.
+
+**The subtle one, caught by a test:** `agentRemainingOnMarket` returns `0` for an agent the contract
+does not know — identical to a genuinely exhausted cap. Unguarded, an unregistered agent would read
+as "cap spent" and be permanently barred from a market it had never bet on.
+
+### What measurement changed — a third time, and the same shape as before
+
+| Found in live output | Fix |
+|:--|:--|
+| **Four abstentions out of four.** Rationales: "the sources discuss past interest rate decisions" | The prompt said to abstain when the material does not settle the question — and a market must ask about something not yet known, because the proposer is instructed to. Two prompts, each sensible alone, composed into a pipeline that **could never place a bet**. Reframed as forecasting (ADR-049) |
+| Every abstention row also carried `STAKE_TOO_SMALL` | An abstention has no stake. It now short-circuits every later check, so the row says `ABSTAINED` and nothing else |
+| `date_trunc('day', now() at time zone 'utc')` compared against a `timestamptz` | Postgres reads the naive side in the **session** time zone. This database is GMT so it happened to be right; on `Asia/Kolkata` an agent would get a second day's budget in the evening. Now anchored with a trailing `at time zone 'utc'` |
+
+ADR-031 and ADR-040 were the same pattern: the defect was in how two correct components met, and
+only real output showed it.
+
+### Live results
+
+```
+atlas    #4 WORLD     YES 0.75  →  0.005 tMSTC staked   0x5f8a12c6… block 5,794,730
+atlas    #5 POLITICS  YES 0.65  →  0.004 tMSTC staked   0xc2a42699… block 5,794,735
+vega     #4 WORLD     CATEGORY_NOT_ALLOWED (ECONOMY, BUSINESS only)
+vega     #7 POLITICS  CATEGORY_NOT_ALLOWED
+kestrel  #6 ECONOMY   CATEGORY_NOT_ALLOWED + MEMBER_KILL_SWITCH
+kestrel  #7, #4       DEFERRED — kill switch. No row, reconsidered next tick.
+atlas    #4 round 99  GATE BYPASSED → AgentPerTxCapExceeded(20000000000000001, 20000000000000000)
+```
+
+`pnpm --filter web verify:agents` — **41 live checks, writing nothing**, three agents × :
+
+```
+PASS  holds no DEFAULT_ADMIN_ROLE / MARKET_CREATOR_ROLE / RESOLVER_ROLE / CHALLENGER_ROLE
+PASS  registered · active · caps match policy · winnings paid to the owner we expect
+PASS  the off-chain cap is the tighter one        policy 0.01 < chain 0.02
+PASS  a bet of EXACTLY the cap is accepted        20000000000000000 wei
+PASS  a bet ONE WEI over the cap is refused       AgentPerTxCapExceeded(…001, …000)
+PASS  kill switch: 0 LLM calls, 0 approvals, 0 rows written, halt recorded with its reason
+```
+
+That last pair is the claim from both sides: the contract accepts exactly the cap and refuses one wei
+more, and `policyGate.test.ts` pins the off-chain gate to the same wei. Neither is asserted from the
+other — one is a unit test, the other is a live `eth_call`.
+
+### Exit criteria
+
+| Criterion | Result |
+|:--|:--|
+| `policyGate.ts` unit-tested on every branch, incl. exactly-at-cap and one-wei-over | ✅ **50 tests**, no chain/DB/model needed |
+| The gate is pure: no network, no DB, no clock inside it | ✅ asserted by a purity test; time is injected |
+| At least one agent bet lands on-chain within caps | ✅ **two**, blocks 5,794,730 and 5,794,735 |
+| At least one proposal **rejected by the gate**, reasons shown in the UI | ✅ **six**, rendered verbatim on `/agents` |
+| **The over-cap tx reverts on-chain**, visible on MSTScan | ✅ `0xf0152234…` — the explorer decodes both numbers itself |
+| Flipping the kill switch stops all agent betting without touching the contract | ✅ `verify:agents` asserts 0 calls, 0 rows, 0 transactions |
+| An agent wallet cannot call `createMarket` or `proposeResolution` | ✅ contract test + a live `hasRole` check per agent for all four roles |
+| `pnpm -r build` / `lint` / `typecheck` / `test` | ✅ **368 tests** (57 contracts + 311 web), zero warnings |
+
+---
 ## Phase 4 — what shipped
 
 ### The shape of it
@@ -455,6 +570,7 @@ secrets file (the same one hardhat reads). No-op on Vercel; never overrides an e
 | §8 | Secrets into Vercel + GitHub | Phase 3 in production | ✅ done |
 | §9 | `HUMAN_AUTHORITY_ADDRESS` into Vercel | `/review` in production | ✅ **done 2026-09-29** |
 | — | Approve a proposal in `/review` with BridgeKey | Phase 4 exit criterion | ✅ **done — 4 markets** |
+| §6 | Agent wallets: seed, fund, register caps on chain | Phase 5 betting | ✅ **done 2026-09-29** — one local command |
 
 **Every manual blocker is closed.** Nothing is waiting on the user.
 
@@ -467,9 +583,15 @@ the free tier and works. No card was added. `pnpm preflight` is 9/9.
 `GEMINI_TIMEOUT_MS`. Pushed to GitHub Actions: `TICK_SECRET`, `TICK_URL`. So the heartbeat and
 `POST /api/tick` now work on the deployed site.
 
-**`DEPLOYER_PRIVATE_KEY` was deliberately NOT pushed to Vercel.** Nothing in the deployed app
-signs a transaction yet — the indexer only reads. Phase 5 is when that changes, and it should be
-a conscious decision then rather than a key sitting in production for two phases first.
+**`DEPLOYER_PRIVATE_KEY` is still deliberately NOT in Vercel, and Phase 5 made that permanent.**
+The deployed app now *does* sign transactions — but only `placeBet`, with per-member agent keys that
+hold no role and are capped by the contract. `registerAgent` needs `DEFAULT_ADMIN_ROLE`, so agent
+registration is a local command (`pnpm --filter web agents:register`) and the admin key never reaches
+production. A production tick that claims a registration intent cannot sign it, defers it **without
+burning an attempt**, and records why (ADR-047).
+
+So the property to state to a judge: **the deployed application holds no key that can create a
+market, resolve one, grant a role, pause the contract or change an agent's caps.**
 
 **§5 is done — every manual blocker is now closed.** The BridgeKey wallet
 `0xA9F68fDf84388fa548a685085E2bee0e5b311fF1` exists, holds 50 tMSTC verified against our own RPC
@@ -582,6 +704,34 @@ New in Phase 4:
 - **ADR-042 — notifications select on indexer-written columns, so they cannot fire early.** A
   selector that cannot match is stronger than a check that can be reordered away.
 
+New in Phase 5:
+
+- **ADR-043 — the agent emits a *fraction* of its own cap, never an amount.** A model that can type
+  an amount can type `1e30`. A fraction is bounded by construction, and `Infinity` maps to zero
+  rather than to the cap — the fail-safe direction.
+- **ADR-044 — the gate is two functions, and the split is about cost.** `screenAgent` decides
+  everything knowable before a model is asked, so a halted member never consumes an LLM call.
+  `policyGate` re-runs it anyway, so a caller cannot skip it.
+- **ADR-045 — REJECT is terminal, DEFER writes nothing.** `UNIQUE(market_id, member_id, round)`
+  means a row forecloses that pair. Kill switches, unfunded wallets and spent budgets recover on
+  their own, so they write no row.
+- **ADR-046 — the on-chain caps are twice the off-chain ones, and derived rather than stored.**
+  Equal caps would put every legitimate bet on the boundary the contract reverts one wei above. The
+  narrower honest claim: a compromise could stake up to *twice* the intended amount before the chain
+  refused it, and the bound is a number no server can change.
+- **ADR-047 — the signing wallet is a property of the intent row, and "no key here" is not an
+  error.** Production holds only agent keys. A tick that cannot sign defers without burning an
+  attempt.
+- **ADR-048 — an agent key ciphertext is bound to its agent address** via AES-GCM additional
+  authenticated data, so a row swapped between members fails to decrypt instead of signing under the
+  wrong caps.
+- **ADR-049 — the agent is told it is *forecasting*.** Telling it to retrieve produced four
+  abstentions out of four, because a market must ask about something not yet known. Measured, not
+  reasoned.
+- **ADR-050 — the over-cap bet is one wei over, and it is a script rather than a test.** One wei
+  proves the boundary is exactly where the contract says. The artifact is a reverted transaction a
+  judge can open.
+
 ---
 
 ## Known gaps
@@ -651,21 +801,74 @@ exactly what the human checklist is for, and it is left visible rather than patc
 reviewer catching it is the demo. The deterministic rules catch what is *checkable*; judgement is
 the human's job.
 
+**16. Four decision rows record the abstention defect rather than being deleted.** The first live
+agent pass produced four `ABSTAINED` rejections caused by the prompt bug ADR-049 fixed, and they are
+still in `agent_decisions` and still rendered on `/agents`. They are kept because they are true —
+that is what the agents said, and `audit_log` records it either way — but a judge scrolling the list
+will see abstentions the current code would not produce. Worth a sentence if it comes up. The rows
+from later passes are the representative ones.
+
+**17. `vega`'s 0.90 confidence floor means it almost never bets.** That is deliberate — it is the
+member that demonstrates `CONFIDENCE_BELOW_THRESHOLD` and `CATEGORY_NOT_ALLOWED` — but it also means
+only one of three agents produces transactions. If a demo wants more on-chain betting activity, lower
+`vega`'s floor in `MEMBER_SEEDS` and re-run `agents:register` (the policy is re-asserted; the caps
+only change on chain if you re-register).
+
+**18. A market's per-market cap has never actually bitten.** One decision per market per round means
+an agent bets once and stops well under its cumulative cap, so `PER_MARKET_CAP_SPENT` and
+`CLAMPED_BY_ONCHAIN_PER_MARKET_CAP` are covered by unit tests but not by live data. Betting a second
+round on the same market (`round: 2`) would exercise it for real.
+
+**19. Agent wallets are funded from the deployer by a plain value transfer.** `agents:register` is
+the only place in the repo that broadcasts outside the intent engine — the engine encodes
+`AuspexMarket` calldata and a value transfer has none. It is idempotent in effect (it computes
+`target − balance` after reading the balance) but not crash-proof: a kill between broadcast and
+receipt, re-run, could overfund an agent by one top-up. The consequence is one of our own wallets
+holding slightly more testnet coin than intended. Stated rather than hidden.
+
+**20. The agents stage adds roughly 20–30s to a local tick.** Two `eth_call`s per (market, member)
+pair plus one `getMarket` per market, on top of the model calls. The measured local tick went from
+48s to ~125–180s, but most of that is the laptop→Neon and laptop→RPC round trips that Vercel does not
+pay — production was 14.9s before this phase and `maxDuration` is 60. **Re-measure `POST /api/tick`
+in production before demo day**; if it is tight, `MAX_PAIRS_PER_PASS` and `MAX_DECISIONS_PER_PASS` in
+`lib/agents/run.ts` are the two dials.
+
 ## What the next session needs to know
 
-**Start Phase 5: member agents + deterministic policy gate.** Read `docs/BUILD_PLAN.md` Phase 5.
-It is the phase that proves "AI proposes, deterministic code and the chain decide", and its headline
-artifact is a **deliberately over-cap bet that reverts on chain**.
+**Start Phase 6: resolution, challenge window, payout.** Read `docs/BUILD_PLAN.md` Phase 6. It
+closes the loop — create → bet → close → propose → challenge → finalize → claim — and it is the last
+phase that puts new transactions on chain.
 
-**There is nothing outstanding from Phase 4, and nothing waiting on the user.** Four markets
-(**ids 4, 5, 6, 7**) came through the human gate and are `OPEN` on chain until **2026-09-30 22:12
-UTC** — that is what Phase 5's agents bet on, and the clock is real, so do the betting work first.
+**There is nothing outstanding from Phase 5, and nothing waiting on the user.**
 
-**The review queue is currently empty**, because all four proposals were approved. One confirmed
-event is waiting to be drafted and the next tick will draft it. If a queued proposal is wanted for a
-demo, run `pnpm --filter web tick` and one appears; nothing needs resetting.
+### The clock is the thing to plan around
 
-**Everything Phases 3–4 built is available and tested. Do not rebuild any of it.**
+Markets 4–7 close at **2026-09-30 22:12 UTC** and their `resolveDeadline` is 24 h after that. Phase 6
+needs a market that is **past** `closeTime` to propose a resolution on, so:
+
+- **markets 1–3 are already past close** (2026-09-28) and are the natural sandbox for the lifecycle
+  — they are labelled as test markets in their own on-chain question text. Market 1 and 2 each hold
+  0.01 tMSTC of `poolYes` from the Phase 1 smoke tests, so a payout is actually computable on them.
+  Market 3 has empty pools, which exercises the `winningPool == 0` refund path.
+- **markets 4 and 5 carry real agent stakes** (0.005 and 0.004 tMSTC on YES) and are the ones worth
+  resolving in the demo, but not until they close. If the session runs before 22:12 UTC on the 30th,
+  do the lifecycle on 1–3 first and leave 4–7 for the live run.
+- `invalidateStale` needs a market past `resolveDeadline` — markets 1–3 are past theirs too.
+
+### `RESOLVER_ROLE` is on the deployer, not on BridgeKey
+
+Deliberate (least privilege — see "Blocking items"). Phase 6 is not blocked: the deployer holds it and
+the intent engine can sign with it locally. **But** if the demo wants a *human* to sign
+`proposeResolution` from BridgeKey the way they sign `createMarket`, grant it first:
+
+```bash
+ROLE=RESOLVER_ROLE TO=0xA9F68fDf84388fa548a685085E2bee0e5b311fF1 pnpm --filter contracts grant:testnet
+```
+
+That is a judgement call for Phase 6 to make, not a thing already decided. Note the same applies to
+`CHALLENGER_ROLE` if a human is to raise the challenge on camera.
+
+### Everything Phases 3–5 built is available and tested. Do not rebuild any of it.
 
 | You need | Use | Notes |
 |:--|:--|:--|
@@ -677,7 +880,11 @@ demo, run `pnpm --filter web tick` and one appears; nothing needs resetting.
 | Writing to chain | `createIntent()` + `runIntentWorker()` | nothing else may broadcast |
 | Signing with a key we hold | `createIntent({ signer: "SERVER" })` | the default; agent wallets are SERVER |
 | Deciding what a worker may do to an intent | `plannedSteps()` — pure, tested | do not re-derive this inline |
-| Decoding a revert for the UI | `describeRevert()` from `@/lib/chain/revert` | Phase 5's headline demo depends on it |
+| Decoding a revert for the UI | `describeRevert()` from `@/lib/chain/revert` | proved out by the over-cap bet |
+| Signing as an agent wallet | `createIntent({ from: agentAddress })` | `resolveSigner` finds the key; nothing else decrypts one |
+| A pure gate to copy the shape of | `lib/policy/policyGate.ts` | screen → judge → clamp, three verdicts, reasons on approve too |
+| Reading a market from the chain | `readMarket()` from `@/lib/chain/auspex` | never the projection, when the answer decides money |
+| Agent decisions for a page | `getAgentsForDisplay()` / `gateCounters()` | chain status comes from the intent, not the row's own column |
 
 **The Phase 5 agent is the same shape as `lib/proposer/`.** Read `draft.ts` and `validate.ts`
 together — they are the worked example of the pattern Phase 5 repeats with money instead of text:
@@ -702,7 +909,45 @@ pnpm --filter web verify:approval   # 8 live checks + eth_call of the real calld
 pnpm --filter web tick              # now also runs propose → intents → index → notify
 ```
 
+**Phase 6 should reuse these three patterns rather than reinvent them:**
+
+- **`verify:agents` and `verify:approval` are the template for proving a phase.** `eth_call` from the
+  acting address, against the deployed contract, at the current block — it catches a revoked role, a
+  paused contract and a wrong encoding without signing anything. Phase 6 wants
+  `verify:resolution`: does `proposeResolution` succeed from the resolver, does `finalizeResolution`
+  revert while the window is open, does `claim` return the amount `previewPayout` promises.
+- **Auto-claim is a worker over `agent_decisions`, not a new table.** A confirmed decision already
+  carries `market_id` and `member_id`; `previewPayout(marketId, agentAddress)` says what the contract
+  will pay, and `claim()` pays the **owner**. Key the intent on the decision id, as `placeBet` does.
+- **Reconcile at the end of the tick as well as the start.** `runAgentPass` reconciles first (so a
+  halted tick still learns the chain's answer) and `tick.ts` calls `reconcileDecisions()` again after
+  the intent worker, so a bet approved, signed and confirmed in one tick does not sit at
+  `TX_PENDING` for three minutes. Do the same for resolution state.
+
+**Commands added this phase:**
+
+```bash
+pnpm --filter web agents:register   # seed members, fund wallets, register caps ON CHAIN. Local only.
+pnpm --filter web verify:agents     # 41 live checks incl. the cap boundary + kill switch. Writes nothing.
+pnpm --filter web agents:over-cap   # the over-cap bet. Sends cap+1 wei; the chain refuses it.
+pnpm preflight                      # now 11/11 — includes all three agents registered and funded
+```
+
 **Things that will cost you an hour if you rediscover them:**
+
+- **`agent_decisions` is unique on `(market_id, member_id, round)`, and a row is terminal.** Before
+  writing one, ask whether its reason can ever change. Kill switch, unfunded wallet, spent budget →
+  no row. This is the single most expensive thing to get backwards in this phase's code.
+- **`agentRemainingOnMarket` returns 0 for an agent the contract does not know** — identical to a
+  genuinely exhausted cap. Any check on it must be guarded on `registered && active`.
+- **Postgres reads a naive timestamp in the *session* time zone.** `date_trunc('day', now() at time
+  zone 'utc')` compared against a `timestamptz` is only right because this database's session is GMT.
+  Anchor it: `… at time zone 'utc'`.
+- **The intent worker signs with a wallet chosen from `from_address`, not a global.** If you add an
+  intent kind, decide whose key signs it, and remember production has no admin key.
+- **A reverting `eth_estimateGas` is not an error to avoid.** The engine falls back to
+  `FALLBACK_GAS_LIMIT` precisely so a transaction we *want* refused reaches the chain where a judge
+  can read the revert.
 
 - **Read the real output before trusting the pipeline.** Both Phase 4 defects — a Google News
   redirect on a spec, and a 2024 deadline on a market closing tomorrow — were invisible to the

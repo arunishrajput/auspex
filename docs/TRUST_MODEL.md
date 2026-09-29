@@ -99,6 +99,22 @@ checklist than in prose, and catching it here is the whole point: it happens *be
 The agent proposes a number. The gate decides the number. Those are different jobs, done by
 different code, and only one of them is deterministic.
 
+**As built.** The gate is two pure functions. `screenAgent` decides everything knowable before a
+model is asked — kill switches, market state and timing, the category allowlist, on-chain
+registration, balances — so a halted or out-of-scope member never costs an LLM call. `policyGate`
+re-runs that screen (so a caller cannot skip it) and then judges the proposal and clamps the stake.
+50 unit tests cover every branch, including a request of **exactly** the on-chain cap passing
+unreduced and `cap + 1` being clamped back down — the same wei boundary the contract draws.
+
+Two refinements the implementation forced, both worth knowing:
+
+- **The agent never names an amount.** It emits `stakeFraction`, a share of a per-transaction cap
+  whose value it is never told, and deterministic code multiplies it out in basis points (ADR-043).
+- **A refusal is terminal only when its reason can never change.** `agent_decisions` is unique on
+  `(market_id, member_id, round)`, so a row forecloses that pair. A closed market or a
+  disallowed category writes one; a kill switch, an unfunded wallet or a spent daily budget writes
+  **none** and is logged instead, because those recover on their own (ADR-045).
+
 ### 5. The contract — the layer that does not depend on us
 
 Everything above is our code, and our code can be wrong or compromised. The contract is the layer
@@ -123,6 +139,16 @@ that holds regardless.
 Phase 5 proves it by deliberately bypassing the gate and letting the chain reject the transaction.
 The resulting **reverted transaction on MSTScan is evidence**, not a bug.
 
+**It is proven.** `pnpm --filter web agents:over-cap` sent `cap + 1` wei — one wei, so the boundary
+is exactly where the contract says rather than merely somewhere — from a real registered agent
+wallet with the gate not consulted:
+
+> `0xf0152234efe078729401162dd8ef16e6d19da2c657dcfe4360f2cd3255720c2d` · block 5,794,765 ·
+> **reverted** with `AgentPerTxCapExceeded(20000000000000001, 20000000000000000)`
+
+The explorer decodes both numbers itself, because the source is verified. Afterwards the market's
+pools and the agent's per-market spend are unchanged: the refusal cost nothing but gas.
+
 ---
 
 ## Trusted assumptions — stated plainly
@@ -143,7 +169,9 @@ and explain honestly over one we could only gesture at.
 
 ### Agent keys are server-held
 
-Agent autonomy requires a key the server can sign with. Keys are encrypted at rest with AES-256-GCM.
+Agent autonomy requires a key the server can sign with. Keys are encrypted at rest with AES-256-GCM,
+bound to the agent's own address as additional authenticated data so a ciphertext moved to another
+member's row fails to decrypt instead of quietly signing under the wrong caps (ADR-048).
 
 **The encryption is hygiene; the on-chain caps are the actual control.** A full server compromise
 loses at most each agent's capped stake and cannot redirect winnings, because `claim()` pays the

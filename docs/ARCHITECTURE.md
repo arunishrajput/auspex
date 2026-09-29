@@ -189,6 +189,22 @@ there is no way around that, so the design makes the key *not worth stealing*:
 
 So a fully compromised agent key can lose at most its capped stake, and cannot steal winnings.
 
+**As built (Phase 5).** The two limit layers hold deliberately *different* numbers, and both are
+shown side by side on `/agents`: the off-chain per-transaction cap in `agent_policies` is the
+operational limit an operator can change with an UPDATE, and the contract's registry holds **twice**
+it as the outer bound that costs an admin transaction to move. The on-chain values are never stored
+a second time — `onChainCapsFor` derives what they should be, the page reads what they are, and a
+disagreement is displayed as drift rather than silently repaired (ADR-046). The narrower honest claim
+that follows: a total server compromise could stake up to twice the intended per-transaction amount
+before the chain refused it, and the guarantee is that the bound is a number no server can change.
+
+**The key that signs a bet is the agent's own, and it is the only kind production holds.**
+`resolveSigner` picks the wallet from the intent's `from_address` — the deployer for admin
+transactions, a decrypted agent key for a bet — and returns "no key here" as an ordinary value rather
+than an error, because `DEPLOYER_PRIVATE_KEY` is deliberately absent from Vercel (ADR-047). Agent
+registration is therefore a local command, and the deployed app holds no key that can create a
+market, resolve one, grant a role, pause the contract or change a cap.
+
 **Stated plainly in the README:** this is a hackathon custody model. The encryption is hygiene; the
 **on-chain caps are what actually bound the risk.** A production system would use per-user
 non-custodial signing or a session-key/account-abstraction scheme.

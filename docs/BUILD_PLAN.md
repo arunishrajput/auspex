@@ -169,13 +169,19 @@ The phase that proves "AI proposes, deterministic code and the chain decide".
 off-chain cap *and* the on-chain cap side by side.
 
 **Exit criteria**
-- [ ] `policyGate.ts` has unit tests for every branch, including exactly-at-cap and one-wei-over-cap.
-- [ ] The gate is pure: no network, no DB, no clock reads inside it (time is injected).
-- [ ] At least one agent bet lands on-chain within caps — real tx hash.
-- [ ] At least one agent proposal is **rejected by the gate**, with reasons shown in the UI.
-- [ ] **The over-cap tx reverts on-chain**, and the revert is visible on MSTScan.
-- [ ] Flipping the kill switch stops all agent betting without touching the contract.
-- [ ] An agent wallet cannot call `createMarket` or `proposeResolution` (asserted in tests).
+- [x] `policyGate.ts` has unit tests for every branch, including exactly-at-cap and one-wei-over-cap.
+      **50 tests**, needing no chain, database or model.
+- [x] The gate is pure: no network, no DB, no clock reads inside it (time is injected).
+- [x] At least one agent bet lands on-chain within caps — real tx hash.
+      **Two**: `0x5f8a12c6…0dd5f1` (market 4) and `0xc2a42699…4e0759` (market 5).
+- [x] At least one agent proposal is **rejected by the gate**, with reasons shown in the UI.
+      **Six**, on `/agents`, rendered verbatim.
+- [x] **The over-cap tx reverts on-chain**, and the revert is visible on MSTScan.
+      `0xf0152234…720c2d` — the explorer decodes `AgentPerTxCapExceeded(2e16+1, 2e16)` itself.
+- [x] Flipping the kill switch stops all agent betting without touching the contract.
+      `pnpm --filter web verify:agents` asserts 0 calls, 0 rows, 0 transactions.
+- [x] An agent wallet cannot call `createMarket` or `proposeResolution` (asserted in tests).
+      `AuspexMarket.test.ts` plus a live `hasRole` check per agent for all four roles.
 
 ---
 

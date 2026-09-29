@@ -72,6 +72,24 @@ async function main(): Promise<void> {
     console.log();
   }
 
+  if (report.agents !== null) {
+    const agents = report.agents;
+    console.log("Member agents  (the policy gate decides the stake; the contract caps it again)");
+    console.log(`  open approved markets ${agents.markets}`);
+    console.log(`  members with a policy ${agents.members}`);
+    console.log(`  undecided pairs       ${agents.pending}`);
+    console.log(`  model calls           ${agents.asked}`);
+    console.log(`  APPROVED by the gate  ${agents.approved}   <- each one is a real transaction`);
+    console.log(`  rejected by the gate  ${agents.rejected + agents.screenRejected}   <- rows kept and shown; the evidence the gate is real`);
+    console.log(`  deferred              ${agents.deferred}   <- no row written, reconsidered next tick`);
+    console.log(`  no model answer       ${agents.unavailable}   <- no row written`);
+    if (agents.resumed > 0) console.log(`  resumed               ${agents.resumed}   <- approved rows whose intent was missing`);
+    if (agents.reconciled > 0) console.log(`  reconciled            ${agents.reconciled}   <- decisions brought up to date with the chain`);
+    for (const deferral of agents.deferrals) console.log(`    defer: ${deferral}`);
+    if (agents.haltedBecause !== null) console.log(`  halted                ${agents.haltedBecause}`);
+    console.log();
+  }
+
   if (report.intents !== null && report.intents.length > 0) {
     console.log("Intents");
     for (const result of report.intents) {

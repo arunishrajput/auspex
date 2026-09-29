@@ -437,6 +437,109 @@ async function checkContract() {
 }
 
 // ---------------------------------------------------------------------------
+// 8. Member agents — registered, capped and funded
+// ---------------------------------------------------------------------------
+/**
+ * Asserts that every seeded agent wallet is capped **on chain** and can pay for gas.
+ *
+ * The same reasoning as `checkHumanAuthority`: this is a trust claim, so it gets a check that
+ * fails when it stops being true. Three things break it quietly between now and a demo — an
+ * agent's balance drains to nothing, `deactivateAgent` is called, or a policy is edited so the
+ * registry no longer matches. Each would surface as a deferred pass with no bets and no obvious
+ * reason, which is the worst way to find out.
+ *
+ * It reads the agent addresses from the database rather than from a constant, because the wallets
+ * are generated at seed time and only Postgres knows them. A deployment that has not run
+ * `agents:register` yet reports that plainly instead of failing.
+ */
+async function checkAgents() {
+  const url = env.DATABASE_URL;
+  const contract = env.NEXT_PUBLIC_AUSPEX_MARKET_ADDRESS;
+
+  if (!url || url.includes("[SENSITIVE]") || !contract) {
+    record("Member agents", false, "needs DATABASE_URL and the contract address", "Phase 5 betting");
+    return;
+  }
+
+  let rows = [];
+  try {
+    const { Client } = await import("pg");
+    const parsed = new URL(url);
+    const mode = parsed.searchParams.get("sslmode");
+    parsed.searchParams.delete("sslmode");
+    const client = new Client({
+      connectionString: parsed.toString(),
+      ssl: mode !== "disable" ? { rejectUnauthorized: true } : undefined,
+      connectionTimeoutMillis: 45_000,
+    });
+    await client.connect();
+    ({ rows } = await client.query(
+      "select handle, agent_address from members where agent_address is not null order by handle",
+    ));
+    await client.end();
+  } catch (error) {
+    record("Member agents", false, String(error.message ?? error), "Phase 5 betting");
+    return;
+  }
+
+  if (rows.length === 0) {
+    record(
+      "Member agents",
+      false,
+      "no agent wallets exist — run `pnpm --filter web agents:register`",
+      "Phase 5 betting",
+    );
+    return;
+  }
+
+  // agents(address) returns (address owner, uint128 perTxCap, uint128 perMarketCap, bool active),
+  // ABI-encoded as four 32-byte words. Selector computed once and inlined so this file keeps
+  // needing no ABI and no workspace dependency.
+  const AGENTS_SELECTOR = "0xfd66091e";
+  const problems = [];
+  const summary = [];
+
+  for (const { handle, agent_address: agent } of rows) {
+    try {
+      const data = AGENTS_SELECTOR + agent.slice(2).toLowerCase().padStart(64, "0");
+      const result = await rpc("eth_call", [{ to: contract, data }, "latest"]);
+      const word = (n) => `0x${result.slice(2 + n * 64, 2 + (n + 1) * 64)}`;
+
+      const owner = `0x${word(0).slice(26)}`;
+      const perTxCap = BigInt(word(1));
+      const active = BigInt(word(3)) === 1n;
+      const registered = BigInt(owner) !== 0n;
+
+      const balance = BigInt(await rpc("eth_getBalance", [agent, "latest"]));
+      // 0.001 tMSTC is the gas reserve the policy gate holds back; below it an agent cannot
+      // reliably send anything, so it is the honest floor for "funded".
+      const funded = balance >= 10n ** 15n;
+
+      if (!registered) problems.push(`${handle} is not in the agent registry`);
+      else if (!active) problems.push(`${handle} is deactivated on chain`);
+      if (!funded) problems.push(`${handle} holds only ${balance} wei`);
+
+      summary.push(
+        `${handle} ${registered && active ? "capped" : "UNCAPPED"} at ` +
+          `${Number(perTxCap) / 1e18} tMSTC/tx, ${(Number(balance) / 1e18).toFixed(4)} tMSTC`,
+      );
+    } catch (error) {
+      problems.push(`${handle}: ${String(error.message ?? error)}`);
+    }
+  }
+
+  const killSwitch = (env.AGENTS_KILL_SWITCH ?? "").toLowerCase() === "true";
+  const note = killSwitch ? "  [AGENTS_KILL_SWITCH is ON — no agent will bet]" : "";
+
+  record(
+    "Member agents",
+    problems.length === 0,
+    problems.length === 0 ? `${summary.join(" · ")}${note}` : problems.join("; "),
+    "Phase 5 betting",
+  );
+}
+
+// ---------------------------------------------------------------------------
 async function main() {
   console.log("\nAuspeX preflight — checking every external dependency\n");
 
@@ -448,6 +551,7 @@ async function main() {
   await checkGemini();
   checkOtherSecrets();
   await checkContract();
+  await checkAgents();
 
   const pad = Math.max(...results.map((r) => r.name.length));
   for (const { name, ok, detail, blocks } of results) {

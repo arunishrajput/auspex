@@ -862,3 +862,194 @@ that is seconds, and the approval path runs the indexer inline so the demo does 
 
 **Evidence:** four proposals sat `PENDING_REVIEW` through a live tick with
 `notify: eligible 0, created 0` — nothing to announce, because nothing was on chain.
+
+---
+
+## Phase 5 — Member agents and the policy gate
+
+---
+
+### ADR-043 — The agent emits a fraction of its own cap, never an amount
+
+**Decided:** `BetProposalSchema` has `stakeFraction: z.number().min(0).max(1)` and no field in which
+a model can name an amount of tMSTC or wei. Deterministic code multiplies the fraction by the
+member's per-transaction cap.
+
+**Why:** this is ADR-035 (the proposer picks a resolution source by label, never types a URL) applied
+where the consequence is money instead of a link. A model that can type an amount can type `1e30`,
+or the right number with one digit too many, and the only thing between that and a transaction is a
+`Math.min` that a later refactor might move. A fraction is bounded *by construction*: the worst
+possible output, `1.0`, is the agent's own policy cap — a number a human already approved — and the
+gate then clamps even that against five more limits.
+
+The multiplication is done in basis points (`Math.round(fraction * 10_000)`) before any bigint
+arithmetic, so `0.1 + 0.2` and `0.3` produce the same wei on every machine. The division floors,
+which errs downward — the safe direction for a stake.
+
+`Infinity` maps to **zero**, not to the cap. A nonsense fraction is a broken proposal, and the
+fail-safe reading of a broken proposal is no bet; clamping it to the cap would turn garbage into the
+largest bet allowed. `policyGate.test.ts` pins this.
+
+---
+
+### ADR-044 — The gate is two functions, and the split is about cost, not structure
+
+**Decided:** `screenAgent` decides everything knowable *before* a model is asked — kill switches,
+market state and timing, the category allowlist, on-chain registration, balances, headroom.
+`policyGate` calls it internally and then judges the proposal and clamps the stake.
+
+**Why:** a member whose kill switch is on, or whose policy does not allow the market's category,
+should not cost an LLM call to refuse. On a free tier with a three-call budget per tick, screening
+first is the difference between a pass that gets to the agents that can actually bet and one that
+spends its allowance discovering that `kestrel` is halted.
+
+It is *not* a second gate. `policyGate` re-runs the screen, so a caller that skipped it still gets
+the full check, and a test asserts exactly that. The alternative — duplicating five conditions in
+`run.ts` — is how two copies of a limit drift apart.
+
+---
+
+### ADR-045 — REJECT is terminal, DEFER writes nothing, and the distinction is the column
+
+**Decided:** the gate returns a verdict of `PROCEED`, `REJECT` or `DEFER`. A `REJECT` writes an
+`agent_decisions` row; a `DEFER` writes none and is logged instead.
+
+**Why:** `agent_decisions` is unique on `(market_id, member_id, round)`, so **writing a row is
+terminal** for that pair. This is the same trap ADR-030 and `draft.ts` describe for
+`proposals.event_id`, and it costs more here: there, collapsing "no answer" into "bad answer" lost a
+market that should have existed; here it freezes an agent out of a market permanently.
+
+The rule is whether the reason can ever change for this market and this member:
+
+| Reason | Verdict | Why |
+|---|---|---|
+| market not OPEN, betting closed | REJECT | a market never reopens |
+| category not on the allowlist | REJECT | a market's category is fixed at approval |
+| abstained, confidence below threshold | REJECT | the same answer at temperature 0 |
+| kill switch, global or per member | **DEFER** | a flag someone can flip back |
+| agent not registered, or deactivated | **DEFER** | one admin transaction away |
+| owner mismatch | **DEFER** | fixed by re-registering; loud, because payouts go elsewhere |
+| daily budget spent | **DEFER** | resets at 00:00 UTC |
+| wallet unfunded | **DEFER** | someone can fund it |
+
+A deferral is still recorded with its reason, aggregated once per pass rather than once per pair —
+otherwise a halted member writes four identical audit rows every tick for ever.
+
+**The subtle one:** `agentRemainingOnMarket` returns `0` for an agent the contract does not know, so
+a naive "no headroom left" check would read an *unregistered* agent as one whose cap is exhausted and
+write a terminal row for a market it has never bet on. The check is guarded on `registered && active`
+and there is a test for each.
+
+---
+
+### ADR-046 — The on-chain caps are twice the off-chain ones, and derived rather than stored
+
+**Decided:** `onChainCapsFor` returns `perTxCap = 2 × policy.perTxCap` and
+`perMarketCap = 2 × perTxCap`. There is no column holding the on-chain caps; the chain holds them
+and `/agents` reads them live and flags any disagreement.
+
+**Why two, not one.** Equal caps would put every legitimate bet exactly on the boundary the contract
+reverts one wei above, so a rounding difference between two codebases becomes a failed bet in front
+of a judge. Making the chain's cap looser also makes the honest claim narrower, and it is worth
+saying out loud rather than gliding past: a total server compromise that bypassed the gate could
+stake up to **twice** the intended per-transaction amount before the chain refused it. What the
+contract guarantees is that the damage is bounded by a number **no server can change** — not that it
+equals the number we would have chosen. Both numbers are drawn side by side on `/agents` so a reader
+can see they differ and ask why.
+
+**Why derived.** A second copy in Postgres is a third number to keep in sync and the first to go
+stale. Deriving it means the only possible disagreement is "a policy changed and nobody
+re-registered", which is a real operational state, so `/agents` shows it as drift rather than
+repairing it silently — silently re-registering would let an off-chain edit loosen an on-chain cap,
+which is precisely what the on-chain layer exists to prevent.
+
+---
+
+### ADR-047 — The signing wallet is a property of the intent row, and "no key here" is not an error
+
+**Decided:** `resolveSigner(fromAddress)` returns the deployer wallet, a decrypted agent wallet, or
+`{ ok: false }`. `processIntent` treats `{ ok: false }` as a deferral that **does not consume an
+attempt**, via `releaseUnattempted`.
+
+**Why:** Phase 2's engine signed everything with the deployer. Phase 5 adds one wallet per member,
+and — deliberately — **`DEPLOYER_PRIVATE_KEY` is still not in Vercel.** So a production tick can
+legitimately claim a `REGISTER_AGENT` intent it cannot sign, because that key is on the operator's
+laptop. Counting that as a failed attempt would let `MAX_ATTEMPTS` expire while nothing was wrong,
+and `ABANDONED` on a `PENDING` intent is how an agent silently never gets registered.
+
+The result is worth stating plainly: **the deployed application holds no key that can create a
+market, resolve one, grant a role, pause the contract or change an agent's caps.** Every key it
+holds is capped by the contract and holds no role at all. Registration is one local command.
+
+A decryption failure is also `{ ok: false }` rather than a throw. If the encryption secret rotated or
+a row was tampered with, the right move is to leave the intent alone and say so — never to proceed
+with a key we could not authenticate, and never to abandon a bet a corrected secret would make
+signable again.
+
+---
+
+### ADR-048 — An agent key ciphertext is bound to its agent address
+
+**Decided:** `encryptAgentKey(privateKey, agentAddress)` uses the lowercased address as AES-GCM
+additional authenticated data, so a ciphertext only decrypts for the row it belongs to.
+
+**Why:** `members.agent_address` is what `registerAgent` bound to an owner on chain. A ciphertext
+moved between rows — by an UPDATE, a botched restore, a deliberate swap — would otherwise produce a
+wallet signing under a stranger's caps and paying winnings to a stranger's address. GCM gives that
+check for one extra argument.
+
+**What this is not.** It is not the control, and `docs/TRUST_MODEL.md` says so: a server compromised
+enough to read the ciphertext can read `AGENT_KEY_ENC_SECRET` from its own environment. What
+encryption at rest buys is that a *database* leak — a backup, a branch, a screenshot of a query — is
+not a set of usable keys. The on-chain caps are what bound the risk.
+
+---
+
+### ADR-049 — The agent is told it is forecasting, because telling it to retrieve produced only abstentions
+
+**Decided:** the agent's system instruction states that the market asks about something that has not
+happened, that the articles will not contain the answer, and that it should take the side it judges
+more likely than not. `ABSTAIN` is reserved for material that is about something else entirely.
+
+**Why — measured, not reasoned.** The first live pass produced **four abstentions out of four**, with
+rationales like "the sources discuss past interest rate decisions". The agents were right about the
+evidence and wrong about the task, and the prompt was why: it told them to abstain when "the material
+does not support either side", while the *proposer* is explicitly instructed to ask about the next
+step, the consequence, or the confirmation that has not happened yet (ADR-035's sibling rule).
+
+So two prompts, each sensible read alone, composed into a pipeline that could never place a bet.
+Forecasting under uncertainty is the activity; "the answer is not in the newspaper" is a category
+error. This is the third time in this build that reading real output found something no test would
+have (ADR-031, ADR-040), and the pattern is the same: the defect was in how two correct components
+met.
+
+`ABSTAIN` remains a first-class answer and the gate still rejects it with a reason. An abstention now
+**short-circuits every later check**, so the row says `ABSTAINED` and nothing else — `confidence` and
+`stakeFraction` describe a position that was declined, and reporting them as separate failures added
+two sentences and no information.
+
+---
+
+### ADR-050 — The over-cap bet is one wei over, and it is a script rather than a test
+
+**Decided:** `scripts/over-cap-bet.ts` sends `onChainPerTxCap + 1` wei from a real registered agent
+wallet, with the policy gate deliberately not consulted, and records the decision before sending.
+
+**Why one wei.** A wildly oversized bet reverting proves almost nothing — any threshold anywhere
+would stop it. One wei over proves the boundary is exactly where the contract says it is. It is also
+the same boundary `policyGate.test.ts` pins from the other side, where a request of exactly the cap
+passes unreduced and `cap + 1` clamps back down. Two independent layers agreeing on one wei is the
+claim; neither is asserted from the other.
+
+**Why a script and not a unit test.** The exit criterion is a **reverted transaction on MSTScan**.
+The revert reason is decoded by the explorer itself — `AgentPerTxCapExceeded(attempted, cap)` with
+both numbers — because the source is verified, and that is a thing a judge can open rather than a
+thing we assert. It also exercises the engine's `FALLBACK_GAS_LIMIT` path, which exists precisely
+because `eth_estimateGas` cannot price a transaction that reverts.
+
+The script proves the second half too, by reading the chain afterwards: the market's pools are
+unchanged and the agent's per-market spend is unchanged, so the refusal cost nothing but gas. The
+decision row stores `final_stake_wei = NULL`, so a refused bet cannot consume the daily budget of the
+agent it was testing.
+
+**Run it with:** `pnpm --filter web agents:over-cap`.
