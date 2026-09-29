@@ -277,7 +277,7 @@ That is the correct answer, and it writes no row (ADR-055).
 | Double-claim reverts | ✅ on chain `AlreadyClaimed()` **and** a contract test |
 | `winningPool == 0` refunds everyone (tested) | ✅ contract test; the INVALID refund path also exercised live on #1 |
 | Every step has a real tx hash recorded in `PROGRESS.md` | ✅ 15 hashes in "Real artifacts" |
-| `pnpm -r build` / `lint` / `typecheck` / `test` | ✅ **404 tests** (57 contracts + 347 web), zero warnings |
+| `pnpm -r build` / `lint` / `typecheck` / `test` | ✅ **414 tests** — 57 contracts + 357 web across 22 files, zero warnings |
 | Visible: market detail through to payout, plus `/audit` | ✅ `/resolve`, `/audit`, `/markets/[id]` |
 
 ---
@@ -947,9 +947,12 @@ not use.
 Neon and this repo is public, so the credential is deliberately not a CI secret. CI runs the pure
 tests; the DB suite skips with a loud warning. Run locally before any schema change — this session:
 **10/10 against a fresh database**, including the new `UNIQUE(market_id, round)` on
-`resolution_drafts` and both Phase 6 migrations applying cleanly. It needs generous timeouts:
-`--testTimeout=180000 --hookTimeout=240000`, because creating and dropping a Neon database is slow
-enough to time out the default teardown hook.
+`resolution_drafts` and both Phase 6 migrations applying cleanly.
+
+**It is flaky on a cold Neon branch**, and the flake is in teardown, not in the assertions: dropping
+the scratch database can exceed the default 120s hook timeout, which fails the *file* while every
+test in it has already passed. If `pnpm -r test` reports one failed file with 0 failed tests, that is
+this. Re-run it alone with `--testTimeout=180000 --hookTimeout=240000`.
 
 **6. Re-org handling is a confirmation depth (3 blocks) and nothing more.** Honest on a
 3-second-block testnet; not mainnet-grade. `docs/ARCHITECTURE.md` §11 says so.
