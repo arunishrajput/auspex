@@ -3,6 +3,17 @@
 What we trust, what we do not, and where the boundaries are enforced. This document is also the
 script for the `/trust` page and the part of the demo that earns the most credibility.
 
+> **Since Phase 7, `/trust` is the authoritative version of everything below, not a rendering of it.**
+> Every claim on that page is a live `eth_call` or a `GROUP BY` made on the request — the role matrix
+> is `hasRole()` asked of the contract, the kill-switch panel is an `eth_call` of `pause()` from the
+> human authority's address (it reverts), and the refusal counters are queries over
+> `proposals`, `resolution_drafts`, `agent_decisions` and `onchain_intents`.
+>
+> **If this document and that page ever disagree, the page is right and this file is stale.** Prose can
+> describe a guarantee that was removed; a call cannot. When quoting AuspeX's trust claims anywhere —
+> the README, a demo, a submission form — take the wording from `/trust`, which cannot outlive the
+> thing it describes. ADR-061 through ADR-063 record why the page is built the way it is.
+
 ---
 
 ## The core principle

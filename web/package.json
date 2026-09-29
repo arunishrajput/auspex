@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
+    "check:provenance": "node scripts/check-provenance.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
@@ -25,7 +26,8 @@
     "verify:agents": "tsx scripts/verify-agents.ts",
     "lifecycle": "tsx scripts/lifecycle.ts",
     "verify:resolution": "tsx scripts/verify-resolution.ts",
-    "resolution:dry-run": "tsx scripts/resolution-dry-run.ts"
+    "resolution:dry-run": "tsx scripts/resolution-dry-run.ts",
+    "judge:probe": "tsx scripts/judge-probe.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

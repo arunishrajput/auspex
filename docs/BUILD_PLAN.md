@@ -220,11 +220,15 @@ off-chain cap *and* the on-chain cap side by side.
 **Ships (visible):** the whole dashboard, coherent and demo-ready.
 
 **Exit criteria**
-- [ ] `/trust` counters are real queries, not constants.
-- [ ] CI fails if `MOCK` provenance appears in a production build.
-- [ ] Judge mode produces a real tx from a clean browser with no wallet installed.
-- [ ] Every page has a sane empty and error state.
-- [ ] Readable on a phone (judges will look on their phones).
+- [x] `/trust` counters are real queries, not constants.
+- [x] CI fails if `MOCK` provenance appears in a production build.
+- [x] Judge mode produces a real tx from a clean browser with no wallet installed.
+- [x] Every page has a sane empty and error state.
+- [x] Readable on a phone (judges will look on their phones).
+
+**Deviation, recorded rather than dropped:** "kill switch control" is a live `paused()` read plus an
+`eth_call` of `pause()` from the human authority (which reverts), not a button. A working button would
+require the deployed app to hold `DEFAULT_ADMIN_ROLE`, contradicting the page it sits on. ADR-063.
 
 ---
 

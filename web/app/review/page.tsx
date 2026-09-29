@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { Provenance } from "@/components/Provenance";
+import { SiteNav } from "@/components/SiteNav";
 import { explorerUrl, shortHash } from "@/lib/chain";
 import { hasDatabase } from "@/lib/db/client";
 import { humanAuthorityAddress } from "@/lib/approval/authority";
@@ -492,20 +493,7 @@ function Shell({
     <main className="grid-backdrop min-h-dvh">
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
         <header className="mb-10">
-          <nav className="mb-6 flex flex-wrap gap-2">
-            <Link
-              href="/"
-              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
-            >
-              ← Dashboard
-            </Link>
-            <Link
-              href="/markets"
-              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
-            >
-              Markets →
-            </Link>
-          </nav>
+          <SiteNav current="/review" />
 
           <h1 className="text-3xl font-semibold tracking-tight text-ink-100 sm:text-4xl">
             Human review
@@ -517,6 +505,9 @@ function Shell({
             browser wallet and on no server AuspeX runs.
           </p>
           <p className="mt-3 font-mono text-sm text-signal-400">AI proposes. The human decides.</p>
+          <p className="mt-3">
+            <Provenance origin="DB" detail="proposals · events · raw_items — nothing here is on chain yet" />
+          </p>
         </header>
 
         <ReviewProviders>

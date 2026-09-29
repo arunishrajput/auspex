@@ -18,13 +18,21 @@ import { BORDERLINE_THRESHOLD, SAME_STORY_THRESHOLD } from "@/lib/news/similarit
 import { REQUIRED_INDEPENDENT_SOURCES } from "@/lib/news/confirm";
 import { scanForInjection } from "@/lib/news/injection";
 import { buildUserMessage } from "@/lib/llm/prompt";
+import { Provenance } from "@/components/Provenance";
+import { SiteNav } from "@/components/SiteNav";
 import { RunTickButton } from "./RunTickButton";
 
 // Always read live chain state — never serve a cached block height.
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const PHASES = [
+/**
+ * Typed explicitly rather than `as const` inferred: once every phase is `done` or `current`, an
+ * inferred literal union no longer contains `"todo"` and the branch that renders an unstarted
+ * phase becomes a compile error — which is a type system correctly objecting to a list that
+ * happens to be complete today.
+ */
+const PHASES: readonly { n: number; name: string; state: "done" | "current" | "todo" }[] = [
   { n: 0, name: "Foundations & rails", state: "done" },
   { n: 1, name: "Smart contract — deploy & verify", state: "done" },
   { n: 2, name: "Data layer & idempotency engine", state: "done" },
@@ -32,8 +40,8 @@ const PHASES = [
   { n: 4, name: "Proposer agent & human approval gate", state: "done" },
   { n: 5, name: "Member agents & policy gate", state: "done" },
   { n: 6, name: "Resolution, challenge window, payout", state: "done" },
-  { n: 7, name: "Dashboard & trust surface", state: "current" },
-  { n: 8, name: "Live run, README, submission", state: "todo" },
+  { n: 7, name: "Dashboard & trust surface", state: "done" },
+  { n: 8, name: "Live run, README, submission", state: "current" },
 ] as const;
 
 type PipelineData = {
@@ -101,7 +109,7 @@ export default async function Home() {
     <main className="grid-backdrop min-h-dvh">
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
         {/* Header */}
-        <header className="mb-12">
+        <header className="mb-2">
           <div className="mb-3 flex items-center gap-3">
             <span className="rounded border border-ink-700 bg-ink-850 px-2 py-0.5 font-mono text-[11px] tracking-widest text-ink-400 uppercase">
               MST Buildathon · AI &amp; Web3
@@ -119,62 +127,32 @@ export default async function Home() {
             AI proposes. Humans and the chain decide.
           </p>
 
-          <nav className="mt-6 flex flex-wrap gap-2">
-            <Link
-              href="/review"
-              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
-            >
-              Human review
-              {pipeline.data !== null && pipeline.data.queue.pendingReview > 0 && (
-                <span className="ml-1.5 text-warn-500">
-                  {pipeline.data.queue.pendingReview}
-                </span>
-              )}{" "}
-              →
-            </Link>
-            <Link
-              href="/markets"
-              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
-            >
-              Markets →
-            </Link>
-            <Link
-              href="/agents"
-              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
-            >
-              Agents
-              {pipeline.data !== null && pipeline.data.gate.rejected > 0 && (
-                <span className="ml-1.5 text-warn-500">
-                  {pipeline.data.gate.rejected} refused
-                </span>
-              )}{" "}
-              →
-            </Link>
-            <Link
-              href="/resolve"
-              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
-            >
-              Resolve
-              {pipeline.data !== null && pipeline.data.resolution.pendingReview > 0 && (
-                <span className="ml-1.5 text-warn-500">
-                  {pipeline.data.resolution.pendingReview}
-                </span>
-              )}{" "}
-              →
-            </Link>
-            <Link
-              href="/audit"
-              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
-            >
-              Audit log →
-            </Link>
-          </nav>
+          <SiteNav
+            current="/"
+            alerts={{
+              "/review":
+                pipeline.data !== null && pipeline.data.queue.pendingReview > 0
+                  ? String(pipeline.data.queue.pendingReview)
+                  : undefined,
+              "/agents":
+                pipeline.data !== null && pipeline.data.gate.rejected > 0
+                  ? `${pipeline.data.gate.rejected} refused`
+                  : undefined,
+              "/resolve":
+                pipeline.data !== null && pipeline.data.resolution.pendingReview > 0
+                  ? String(pipeline.data.resolution.pendingReview)
+                  : undefined,
+            }}
+          />
         </header>
 
         {/* ---- Phase 3: the news pipeline. Real headlines, real publishers, real stages. ---- */}
         <section className="mb-10">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <SectionLabel>News pipeline — live</SectionLabel>
+            <SectionLabel>
+              News pipeline — live
+              <Provenance origin="DB" detail="raw_items · events · event_items" />
+            </SectionLabel>
             {pipeline.data?.tick != null && (
               <span className="font-mono text-[11px] text-ink-400">
                 last tick {timeAgo(pipeline.data.tick.createdAt)}
@@ -243,7 +221,10 @@ export default async function Home() {
         {/* ---- Phase 4: the human gate. The counts are the claim, and they are live. ---- */}
         {pipeline.data !== null && (
           <section className="mb-10">
-            <SectionLabel>Human authority gate</SectionLabel>
+            <SectionLabel>
+              Human authority gate
+              <Provenance origin="DB" detail="proposals, grouped by status" />
+            </SectionLabel>
             <div className="rounded-lg border border-ink-700 bg-ink-900">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
                 <span
@@ -297,7 +278,10 @@ export default async function Home() {
         {/* Events with their source articles — the thing a judge can actually check. */}
         {pipeline.data !== null && pipeline.data.events.length > 0 && (
           <section className="mb-10">
-            <SectionLabel>Stories, and the articles behind them</SectionLabel>
+            <SectionLabel>
+              Stories, and the articles behind them
+              <Provenance origin="DB" detail="every URL below is a real published article" />
+            </SectionLabel>
             <ul className="flex flex-col gap-2">
               {pipeline.data.events.map((event) => (
                 <li
@@ -390,7 +374,10 @@ export default async function Home() {
         {/* Prompt-injection attempts. The rejected cases are the evidence, so they are shown. */}
         {pipeline.data !== null && pipeline.data.flagged.length > 0 && (
           <section className="mb-10">
-            <SectionLabel>Prompt-injection signatures caught in the feed</SectionLabel>
+            <SectionLabel>
+              Prompt-injection signatures caught in the feed
+              <Provenance origin="DB" detail="raw_items.injection_flags" />
+            </SectionLabel>
             <ul className="overflow-hidden rounded-lg border border-warn-500/30 bg-warn-500/5">
               {pipeline.data.flagged.map((item, i) => (
                 <li
@@ -439,7 +426,10 @@ export default async function Home() {
              demonstrates real behaviour over a stated input rather than displaying a pre-baked
              result — which is the distinction hard rule #2 turns on. */}
         <section className="mb-10">
-          <SectionLabel>Injection defence — worked example</SectionLabel>
+          <SectionLabel>
+            Injection defence — worked example
+            <Provenance origin="CONSTRUCTED" detail="the headline is ours; everything derived from it is not" />
+          </SectionLabel>
           <div className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
             <div className="flex flex-wrap items-center gap-2 border-b border-ink-800 px-4 py-2.5">
               <span className="rounded border border-warn-500/40 bg-warn-500/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wide text-warn-500 uppercase">
@@ -497,7 +487,10 @@ export default async function Home() {
 
         {/* Live chain status — the honest part: this is a real RPC read, every load. */}
         <section className="mb-10">
-          <SectionLabel>Live network status</SectionLabel>
+          <SectionLabel>
+            Live network status
+            <Provenance origin="CHAIN" detail={MST_TESTNET.rpcUrl} />
+          </SectionLabel>
 
           {health.reachable ? (
             <div className="rounded-lg border border-ink-700 bg-ink-900">
@@ -567,7 +560,10 @@ export default async function Home() {
 
         {/* The Phase 1 artifact. Every number below is an eth_call, made on this page load. */}
         <section className="mb-10">
-          <SectionLabel>Deployed contract</SectionLabel>
+          <SectionLabel>
+            Deployed contract
+            <Provenance origin="CHAIN" detail="eth_getCode · marketCount() · paused()" />
+          </SectionLabel>
 
           {contract.deployed ? (
             <div className="rounded-lg border border-ink-700 bg-ink-900">
@@ -639,7 +635,10 @@ export default async function Home() {
 
         {/* Network reference */}
         <section className="mb-10">
-          <SectionLabel>Network</SectionLabel>
+          <SectionLabel>
+            Network
+            <Provenance origin="COMPUTED" detail="lib/chain.ts — the constants every link is built from" />
+          </SectionLabel>
           <dl className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900 font-mono text-sm">
             <Row label="RPC" value={MST_TESTNET.rpcUrl} />
             <Row label="Chain ID" value={`${MST_TESTNET.id} (${MST_TESTNET.hexId})`} />
@@ -664,6 +663,12 @@ export default async function Home() {
         {/* Build progress — honest about what exists */}
         <section className="mb-10">
           <SectionLabel>Build progress</SectionLabel>
+          <p className="mb-3 text-xs leading-relaxed text-ink-400">
+            The only hand-maintained list on this page — it is a statement by the builder, not a
+            reading of anything, and it carries no provenance badge for that reason.{" "}
+            <span className="text-ink-200">PROGRESS.md</span> in the repository is the version with
+            transaction hashes attached.
+          </p>
           <ol className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
             {PHASES.map((phase, i) => (
               <li
@@ -733,7 +738,7 @@ function timeAgo(date: Date): string {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-3 font-mono text-[11px] tracking-widest text-ink-400 uppercase">
+    <h2 className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 font-mono text-[11px] tracking-widest text-ink-400 uppercase">
       {children}
     </h2>
   );

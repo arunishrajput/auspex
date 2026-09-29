@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { Provenance } from "@/components/Provenance";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { explorerUrl, formatMstc, shortHash } from "@/lib/chain";
 import { db, hasDatabase } from "@/lib/db/client";
 import { markets as marketsTable } from "@/lib/db/schema";
-import { readMarket, type OnChainMarket } from "@/lib/chain/auspex";
+import { readMarket, readMarketCount, type OnChainMarket } from "@/lib/chain/auspex";
 import { getProvider } from "@/lib/chain/provider";
 import { draftsForMarket, type DraftRow } from "@/lib/resolution/dashboard";
 import { lifecycleIntentsFor, payoutsFor } from "@/lib/resolution/settle";
@@ -91,6 +92,15 @@ export default async function MarketDetailPage({
     chainError = error instanceof Error ? error.message : String(error);
   }
 
+  // `UnknownMarket` is the contract answering clearly, not the contract being unreachable, and
+  // the two must not render the same way. Before this, /markets/999 showed a red "could not read
+  // the contract" panel and then reported the *same* chain revert a second time as a database
+  // failure — which makes a correct answer to a mistyped URL look like a broken deployment.
+  const unknownMarket = chainError !== null && /UnknownMarket/.test(chainError);
+  if (unknownMarket) {
+    return <NoSuchMarket onchainId={onchainId} />;
+  }
+
   let drafts: DraftRow[] = [];
   let payouts: Awaited<ReturnType<typeof payoutsFor>> = [];
   let intents: Awaited<ReturnType<typeof lifecycleIntentsFor>> = [];
@@ -152,6 +162,12 @@ export default async function MarketDetailPage({
               </span>
             )}
           </div>
+          {/* The question, pools, state and outcome above are the contract's. The lifecycle table
+              further down is ours, and says so separately — a market page that labelled both the
+              same way would be claiming the chain had confirmed our intent rows. */}
+          <p className="mt-3">
+            <Provenance origin="CHAIN" detail={`getMarket(${onchainId}) · previewPayout(), per request`} />
+          </p>
         </header>
 
         {chainError !== null && (
@@ -324,7 +340,10 @@ export default async function MarketDetailPage({
 
         {/* The lifecycle. One row per transaction, with the key that sent it. */}
         <section className="mb-8">
-          <SectionLabel>Lifecycle — every transaction, and which key signed it</SectionLabel>
+          <SectionLabel>
+            Lifecycle — every transaction, and which key signed it
+            <Provenance origin="DB" detail="onchain_intents — our record; each hash resolves on MSTScan" />
+          </SectionLabel>
           {dbError !== null ? (
             <p className="mt-3 rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3 font-mono text-xs break-words text-warn-500">
               intent history unavailable — {dbError}
@@ -476,9 +495,72 @@ export default async function MarketDetailPage({
   );
 }
 
+/**
+ * The honest answer to a market id that does not exist.
+ *
+ * Reads `marketCount()` so it can say how many there are rather than only that this is not one of
+ * them — the most likely reason a judge lands here is a guessed or stale URL, and the useful reply
+ * is the range that does exist. A failed count degrades to the panel without it; a page whose
+ * error state has its own error state is not worth having.
+ */
+async function NoSuchMarket({ onchainId }: { onchainId: number }) {
+  let count: number | null = null;
+  try {
+    count = await readMarketCount();
+  } catch {
+    count = null;
+  }
+
+  return (
+    <main className="grid-backdrop min-h-dvh">
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
+        <Link
+          href="/markets"
+          className="font-mono text-xs text-ink-400 underline-offset-2 hover:text-ink-200 hover:underline"
+        >
+          ← Markets
+        </Link>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink-100">
+          No market #{onchainId}
+        </h1>
+        <p className="mt-3">
+          <Provenance origin="CHAIN" detail={`getMarket(${onchainId}) reverted UnknownMarket()`} />
+        </p>
+        <p className="mt-4 max-w-2xl text-ink-300">
+          The contract was reachable and answered clearly: there is no market with that id.{" "}
+          {count === null ? (
+            <>Its market count could not be read just now, so the valid range is not shown.</>
+          ) : count === 0 ? (
+            <>
+              <span className="font-mono text-ink-200">marketCount()</span> is 0 — no market has
+              been created on this contract yet.
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-ink-200">marketCount()</span> is{" "}
+              <span className="font-mono text-ink-200">{count}</span>, so the ids that exist are 1
+              to {count}.
+            </>
+          )}
+        </p>
+        <p className="mt-4">
+          <Link
+            href="/markets"
+            className="inline-flex rounded border border-signal-500/40 bg-signal-500/10 px-3 py-1.5 font-mono text-xs text-signal-500 transition-colors hover:border-signal-500/70 hover:bg-signal-500/20"
+          >
+            See every market that does exist →
+          </Link>
+        </p>
+      </div>
+    </main>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-mono text-[11px] tracking-widest text-ink-400 uppercase">{children}</h2>
+    <h2 className="flex flex-wrap items-baseline gap-x-2 gap-y-1 font-mono text-[11px] tracking-widest text-ink-400 uppercase">
+      {children}
+    </h2>
   );
 }
 

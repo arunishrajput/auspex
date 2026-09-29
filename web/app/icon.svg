@@ -1,0 +1,20 @@
+<!--
+  The AuspeX mark. Closes known gap #12 — the only error in the browser console was
+  /favicon.ico 404ing on every page load.
+
+  An `app/icon.svg` rather than a `favicon.ico`: Next's file convention serves it and emits the
+  right <link> tags, so there is one file and no hand-written head markup to drift from it.
+
+  The mark is a gate with something passing through it — three bars narrowing to one, on the
+  signal blue used for chain reads. It is drawn rather than lettered because a favicon is 16px
+  wide on the tab a judge actually looks at, where a glyph of an "A" is a grey smudge.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#0b0e14" />
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#212837" />
+  <!-- three proposals in, one decision out -->
+  <path d="M7 9h8M7 16h12M7 23h8" stroke="#3ba1ff" stroke-width="2.5" stroke-linecap="round" />
+  <!-- the gate -->
+  <path d="M23 6v20" stroke="#a97bff" stroke-width="2.5" stroke-linecap="round" />
+  <circle cx="23" cy="16" r="3.5" fill="#26c281" />
+</svg>

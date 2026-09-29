@@ -8,8 +8,8 @@
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
 **Last updated:** 2026-09-29
-**Current status:** ✅ Phase 6 complete — the full lifecycle is on chain, a real parimutuel payout landed with an agent's owner
-**Next phase:** **Phase 7 — Dashboard polish + trust surface**
+**Current status:** ✅ Phase 7 complete — `/trust` proves the authority claim by `eth_call`, and a judge with no wallet can make the chain refuse a transaction
+**Next phase:** **Phase 8 — Live end-to-end run, README, submission**
 
 ---
 
@@ -24,8 +24,8 @@
 | 4 | Market proposer agent + human approval gate | ✅ Complete |
 | 5 | Member agents + deterministic policy gate | ✅ Complete |
 | 6 | Resolution, challenge window, payout | ✅ Complete |
-| 7 | Dashboard polish + trust page | ⬜ **NEXT** |
-| 8 | Live end-to-end run + README + submission | ⬜ Not started |
+| 7 | Dashboard polish + trust page | ✅ Complete |
+| 8 | Live end-to-end run + README + submission | ⬜ **NEXT** |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete with known gaps
 
@@ -104,6 +104,8 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | Refund `claim` on the invalidated market | `0x17a3d09a957e922aec15ae1d224339d24361aa38de0adfa19be057b81f0488bb` | ✅ block 5,796,407 — 0.01 tMSTC returned |
 | **Keeper `closeMarket` #2** (from a tick, not a script) | `0x9588280c82402a72204af12f6132871e68fd40c9d0b9541b41f0c42399ed35a7` | ✅ block 5,796,567 |
 | **Keeper `closeMarket` #3** (from a tick, not a script) | `0x65ed1cf6c728553ab5217c5cb4bb202c59ab28d7ee975b212e2f03667baceeb0` | ✅ block 5,796,572 |
+| **Judge-mode probe — from the CLI** | `0x72fde34abea889831dd21aab56f05b94b066e6e22e5a37f6ad4e9e2a695be112` | ✅ block 5,798,322 — **Reverted**, `AgentPerTxCapExceeded(20000000000000001, 20000000000000000)` |
+| **Judge-mode probe — clicked in a browser with no wallet** | **`0xcfc34dff963bd7f1ea81df4ec7373794a34dd56dda99d18955ce6bfccbaa08c3`** | ✅ block 5,798,488 — **Reverted**, same decoded error |
 
 **Eight markets exist on-chain.** Ids 1–2 are the Phase 1 smoke-test runs and 3 is the Phase 2
 idempotency crash test; all three say what they are in their own on-chain question text, and none is
@@ -138,6 +140,167 @@ agent keys only. `pnpm --filter web verify:resolution` asserts all four role fac
 **Also on chain, no longer in the repo:** `Ping` at `0x540d73793f5AA5E605A0243EA3DfCF106D6558D8`
 (verified). It was the Phase 0 toolchain probe used to prove the deploy→verify pipeline works before
 `AuspexMarket` existed. Deleted from the repo per `docs/BUILD_PLAN.md`; it is claimed nowhere.
+
+---
+
+## Phase 7 — what shipped
+
+### The shape of it
+
+Phase 7 added no new kind of on-chain transaction, and that was the point: every contract function
+was already exercised by a real, resolvable transaction. This phase makes the claim behind them
+**checkable by a stranger**, which is a different job.
+
+`/trust` is the new page, and it has one rule: nothing on it is a sentence where a call would do.
+
+| The claim | How the page makes it | Not |
+|:--|:--|:--|
+| No key this app holds carries authority | `hasRole()` × 4 roles × every known address, on every request | a table in the README |
+| Not even the human authority can pause | an `eth_call` of `pause()` from `0xA9F6…1fF1`, which reverts | "the admin key is offline" |
+| The gates refuse things | `GROUP BY` over four tables, bucketed by the gate's own reason codes and the contract's own error names | a screenshot |
+| The chain is the real bound | a button that makes a stranger's browser produce a reverted `placeBet` | a claim about a cap |
+
+### Judge mode, and why it is a *refused* transaction
+
+The exit criterion was "a judge produces a real tx from a clean browser with no wallet". The obvious
+reading — hand them a pre-funded wallet and let them do something — is wrong, and thinking about why
+produced the better feature.
+
+Any button that produced a **successful** transaction would mean this application holds a key that
+does something consequential on a stranger's say-so. That is the opposite of everything the rest of
+the site argues. The only transaction it is *safe* to hand a stranger is one the contract is going to
+refuse — and the one worth handing them is the over-cap bet, because it is the single most
+load-bearing claim in the project.
+
+So the button reads an agent's on-chain per-transaction cap, adds **one wei**, and sends the bet with
+the policy gate deliberately not consulted. The contract refuses it and names both numbers. A judge
+gets *their own* hash, resolvable on MSTScan, without installing anything.
+
+**The safety is the `eth_call`, not the cooldown.** `runCapProbe` simulates first and refuses to
+broadcast unless the chain confirms it will revert with `AgentPerTxCapExceeded`. A *successful*
+simulation is the failure case — it would mean the cap is not what the contract said a moment before,
+and sending it would stake real funds on a visitor's click. A revert for any other reason is also
+refused, because the transaction would then not show what the button claims. ADR-062.
+
+It writes no `agent_decisions` row. No model was asked and no gate ran, so a row would put a
+stranger's button press into a member's trading record. Its record is an `audit_log` row, an
+`onchain_intents` row, and a hash.
+
+### The kill switch has no button, deliberately
+
+`docs/BUILD_PLAN.md` listed "kill switch control" as a Phase 7 task. Implementing it literally would
+require the deployed application to hold `DEFAULT_ADMIN_ROLE` — the role that can *also* register an
+agent, change a cap and grant every other role. A pause button is therefore a proof that the running
+system could do all of those, which contradicts the page it would sit on.
+
+What replaces it is stronger: an `eth_call` of `pause()` **from the human authority's address**,
+rendered live. It reverts with `AccessControlUnauthorizedAccount(0xA9F6…1fF1, 0x00…00)` — the wallet
+that creates every market and signs every resolution on this deployment cannot halt the contract.
+A working button could never show that. ADR-063. **This is a deliberate deviation from the plan and
+is recorded as one rather than quietly dropped.**
+
+### `<Provenance>`, and the check the obvious design could not pass
+
+The plan said "CI fails if `MOCK` provenance appears in a production build". The natural
+implementation — grep the bundle — **cannot work**: `Provenance.tsx` necessarily contains the string,
+because it is the branch being forbidden, so every bundle contains it whether or not any page uses it.
+A bundle grep would fail always, or need an exception wide enough to be useless.
+
+`scripts/check-provenance.mjs` makes four checks instead, each closing a hole the others leave:
+
+1. **Nothing may name it.** The token must not appear anywhere under `app/`, `components/`, `lib/` or
+   `scripts/` outside three allowlisted paths. Blunt on purpose — it catches `origin="MOCK"`, an
+   origin arriving through a variable, a const named `MOCK_ROWS`, and a comment promising to remove
+   one later. The Phase 6 placeholder matched two JSX spellings and would have missed all four.
+2. **The runtime guard must still exist**, asserted by reading the component's source — so the check
+   cannot be defeated by deleting the throw it relies on.
+3. **No rendered badge in the build output.** Prerendered HTML contains only what a page actually
+   produced, so it *can* distinguish a call site from the component's own branch. Honest about its
+   reach: nearly every page here is `force-dynamic`, so on most builds this proves little.
+4. **Every route must declare a provenance**, or be on a written exemption list — so "I forgot to say
+   where this came from" does not look identical to "there is nothing to say".
+
+Plus the component throws rather than render `MOCK` when `NODE_ENV === "production"`. ADR-061.
+
+**Both layers were tested by deliberately breaking them**, not by reading the code: a `MOCK` badge
+added to `/audit` made the checker fail with `app/audit/page.tsx:254` and made the built page return
+**HTTP 500** with `Refusing to render MOCK provenance in a production build`. Reverted immediately.
+
+Check 4 failed on its first run against seven real pages, which is how the badges came to be written
+at all. Six origins exist and each is a different trust claim: `CHAIN` (an RPC read this request),
+`INDEXED` (Postgres from a confirmed log), `DB` (Postgres from our own pipeline), `COMPUTED` (a pure
+function run at request time), `CONSTRUCTED` (a labelled synthetic input — the injection worked
+example), and the forbidden one.
+
+### What measurement changed — a fifth time, and again it was the output that told the truth
+
+Every phase of this project has found a defect that was invisible in the source and obvious in the
+output. Phase 7 found three, all in the same way.
+
+**1. Two colour tokens were used sixty times and never existed.** `text-ink-200` and `text-ink-500`
+appear across seven pages. Neither was declared in `@theme`. Tailwind v4 generates a utility only for
+a declared token, and an undeclared one produces **no CSS and no warning** — so every one of those
+elements rendered at its inherited colour, and text meant to be de-emphasised was not. Found by
+grepping the *built stylesheet*: `text-ink-400` → 1 match, `text-ink-500` → 0. ADR-064.
+
+**2. The role matrix was unreadable on a phone.** As a horizontally scrollable table at 390px, every
+role column started off-screen — a judge saw the addresses and none of the crosses, which are the
+entire payload of the panel. Found by taking an actual screenshot at an actual phone width. Below
+`sm` it is now labelled chips that wrap; at `sm` and up the aligned table returns. Both render from
+one array, so they cannot disagree.
+
+**3. `/agents` reported `0` beside "could not read the database".** With Postgres unreachable, four
+counters read zero — a measurement claim the page was in no position to make, and it claimed the
+flattering direction: "nothing was ever refused" reads as "nothing ever went wrong". They now read
+`—`. Found by running the *built* app against a deliberately unreachable Postgres, which is the
+realistic failure (Neon scales to zero), not by reading the component.
+
+### Also fixed
+
+- **Known gap #12 closed.** `app/icon.svg` — the only error in the browser console on every page load
+  was `/favicon.ico` 404ing. A Next file-convention icon rather than a hand-written `<link>`, so
+  there is one file and no head markup to drift from it.
+- **`/markets/999` told the wrong story.** A non-existent id rendered a red "could not read the
+  contract" panel and then reported the *same* chain revert a second time as a database failure. The
+  contract was answering perfectly clearly. It now renders a purpose-built panel that reads
+  `marketCount()` and says which ids do exist.
+- **One nav, on every page.** Seven routes were reachable only through the landing page. `SiteNav` is
+  a server component — `current` is passed in rather than read from `usePathname()`, which would make
+  every page that renders a nav a client component and ship React to `/` and `/markets` for the sake
+  of one highlighted link.
+
+### Live results
+
+Read off the deployed page, not asserted:
+
+| Counter | Value | What it means |
+|:--|:--|:--|
+| Refused by the schema | 0 | never fired — see known gap #26 |
+| Refused by the policy gate | 7 | `CATEGORY_NOT_ALLOWED` 4 · `ABSTAINED` 3 · `STAKE_TOO_SMALL` 3 · `MEMBER_KILL_SWITCH` 1 |
+| Refused by a human | 0 | never fired — see known gap #26 |
+| **Refused by the chain** | **6** | `AgentPerTxCapExceeded` 2 · `AlreadyClaimed` 1 · `BettingClosed` 1 · `ChallengeWindowOpen` 1 · `NothingToClaim` 1 |
+| Confirmed transactions | 14 | 6 `createMarket` · 4 `placeBet` · 2 `proposeResolution` · 2 `claim` |
+| Audit rows with a reason | **249 of 249** | hard rule #7, as a query |
+
+The role matrix, live: `0xA9F6…1fF1` holds `MARKET_CREATOR` + `RESOLVER` + `CHALLENGER` and **not**
+`DEFAULT_ADMIN`. All three agent wallets — the only keys the deployed app can sign with — hold
+**zero** roles.
+
+### Exit criteria
+
+- [x] `/trust` counters are real queries, not constants — seven `GROUP BY`s issued in one
+      `Promise.all`, plus a `jsonb_array_elements_text` unnest for the gate's reason histogram.
+- [x] CI fails if `MOCK` provenance appears in a production build — proved by breaking it on purpose:
+      checker exit 1 with a file:line, and the built page returning HTTP 500.
+- [x] Judge mode produces a real tx from a clean browser with no wallet installed — clicked in a
+      Playwright Chromium where `window.ethereum` is `undefined`, producing
+      `0xcfc34dff…cbaa08c3` at block 5,798,488, confirmed **Reverted** through the MSTScan API.
+- [x] Every page has a sane empty and error state — the built app was run against an unreachable
+      Postgres: **all eight routes returned 200** with a labelled panel carrying the real error, zero
+      server exceptions. `/markets/999` and an empty role list were fixed in the process.
+- [x] Readable on a phone — every route measured at 390px with **zero unintended overflow**; the only
+      elements past the viewport are inside deliberately scrollable containers, and the page itself
+      never scrolls horizontally.
 
 ---
 
@@ -984,7 +1147,9 @@ pairs it already resolved, so budget is spent re-deriving known answers. Cross-p
 prioritised (a same-publisher merge cannot create a second independent source), which limits the
 damage. A `pair_adjudications` table would fix it properly; deferred as it needs a migration.
 
-**12. No favicon.** `/favicon.ico` 404s in the browser console. Cosmetic, one file, not done.
+**12. ~~No favicon.~~** ✅ **Closed in Phase 7.** `web/app/icon.svg`, a Next file-convention icon.
+`/favicon.ico` still 404s if something requests that exact path, but browsers use the emitted
+`<link rel="icon">`, and the browser console is now clean on every page.
 
 **13. ~~No human-approved `createMarket` tx.~~** ✅ **Closed 2026-09-29.** Four proposals were read
 and approved in `/review` with BridgeKey, producing four real transactions from
@@ -1092,18 +1257,80 @@ such market existed. The audit log says exactly that, no `agent_decisions` row w
 stake was inside the agent's on-chain caps — which the chain enforced regardless of what the script
 believed. ADR-059.
 
+**26. Two of the four refusal layers have never fired on live data.** `/trust` counts refusals by the
+schema (0), the policy gate (7), a human (0) and the chain (6). The two zeros are real measurements
+and the page says so in as many words, rather than letting a reader assume they were tested:
+
+- **No model output has failed schema validation here.** Every draft the proposer and the resolution
+  agent have produced has been structurally valid. The refusal path is covered by
+  `lib/proposer/validate.test.ts` and `lib/resolution/validate.test.ts` — 51 unit tests between them
+  — but never by a row in this database.
+- **No person has refused a draft here.** The human gate has been demonstrated by *approving* four
+  specifications, never by declining one. The `REJECTED` path is implemented, server-verified and
+  signature-checked, and it has not been exercised.
+
+The second is worth closing in Phase 8 and is cheap: refuse one queued proposal in `/review` during
+the live run. Five await a human, and gap #15 already notes that one of them has resolution criteria
+inconsistent with its own source — exactly the case a reviewer should decline. A `REJECTED` row would
+light up a counter a judge will otherwise read as untested.
+
+**27. The judge-mode button spends gas from a member's agent wallet.** Each probe is a reverted
+`placeBet`, so it stakes nothing and moves no pool — but it does pay for a transaction, roughly
+0.0001 tMSTC at this chain's zero base fee and 1 gwei priority. The bounds are a 45-second
+module-scope cooldown and `runCapProbe` refusing to run from a wallet that cannot cover
+cap + 1 wei + gas. The cooldown is per serverless instance, so the real limit is "a few probes per
+cooldown" — acceptable only because the worst case is measured in gas, and because the *actual*
+safety is the `eth_call` guard that refuses to broadcast anything the chain does not confirm it will
+reject (ADR-062). If agent balances look low before a demo, check `/agents` and top up with
+`agents:register`.
+
+**28. Check 3 of the provenance guard proves little on most builds.** It scans prerendered HTML in
+`.next/server/app` for a rendered `MOCK` badge, and nearly every route here is `force-dynamic`, so
+there is almost nothing prerendered to scan. The script prints a note saying exactly that rather than
+reporting a pass it did not earn. Coverage for dynamic pages is the runtime throw, verified by
+breaking it on purpose (HTTP 500). Stated because "the CI check passed" should not be read as more
+than it is.
+
+**29. `/trust` is the most RPC-heavy page in the app.** `hasRole` × 4 roles × 4 addresses, plus
+`paused()` and the `pause()` probe — 18 `eth_call`s per load, batched with `Promise.all` per address.
+It rendered comfortably in testing, but it is also the page a judge is most likely to refresh. If it
+ever feels slow the clean fix is a multicall, which this contract does not have, so the realistic one
+is dropping the agent rows to a single representative wallet. Not done, and not needed at four
+addresses.
+
 ## What the next session needs to know
 
-**Start Phase 7: dashboard polish + trust surface.** Read `docs/BUILD_PLAN.md` Phase 7. It is the
-`/trust` page with live counters, the `<Provenance>` component plus the CI check that fails a
-production build containing `MOCK`, "judge mode" (a pre-funded guest agent a judge can trigger to
-produce a real on-chain transaction without owning a wallet), and a responsive/empty/error-state pass.
+**Start Phase 8: live end-to-end run, README, submission.** Read `docs/BUILD_PLAN.md` Phase 8. It is
+the full loop run live on testnet with every hash captured, the README (MST integration, addresses,
+hashes, setup, architecture, and an explicit **Limitations** section), `docs/DEMO_SCRIPT.md` finalised,
+a final Vercel deploy checked from a private window, and the submission form.
 
-**Phase 6 is the last phase that had to put new transaction *kinds* on chain.** Every contract
-function is now exercised by a real, resolvable transaction. Phase 7 and 8 are about making that
-legible.
+**There is nothing outstanding from Phase 7, and nothing waiting on the user.**
 
-**There is nothing outstanding from Phase 6, and nothing waiting on the user.**
+### Phase 8 has a shopping list, and most of it is already sitting on the board
+
+Four things should happen during the live run, in roughly this order, because each lights up
+something a judge will otherwise read as untested:
+
+1. **Refuse a proposal in `/review`.** Known gap #26 — the human gate has approved four specs and
+   declined none, so `/trust` reads "refused by a human: 0". Gap #15 names the candidate: a queued
+   market whose resolution criteria say "check Zoo Atlanta's official website" while its resolution
+   source is the Guardian. That is exactly what a reviewer should decline, and it takes one signature.
+2. **Resolve markets #4 and #5 on camera.** They are the ones carrying real agent stakes (0.005 and
+   0.004 tMSTC on YES). Both closed 2026-09-30 22:12 UTC with `resolveDeadline` 24 h later — see the
+   clock note below, which is still live.
+3. **Force a worst-case tick.** Still unmeasured: no tick has ever made a resolution model call *and*
+   a full agents pass. Dials in order of bluntness: `LLM_AGENT_CALLS_PER_TICK`,
+   `LLM_RESOLUTION_CALLS_PER_TICK`, the fractions in `STAGE_DEADLINE_FRACTION`, then
+   `MAX_PAIRS_PER_PASS` / `MAX_DECISIONS_PER_PASS`.
+4. **`invalidateStale(#2)`** — a spare live demonstration of permissionless invalidation, sitting
+   ready. #2 and #3 are CLOSED past `resolveDeadline` with no proposal row, so the pipeline will never
+   touch them; #2 holds 0.01 tMSTC of `poolYes` that the call would refund. `verify:resolution`
+   confirms it would succeed.
+
+**Do not rebuild the trust surface.** `/trust` is finished and every claim on it is a live call. If
+the README needs a line about where authority lives, take it from that page rather than writing a new
+one — the page is the version that cannot go stale.
 
 ### The clock, and the one thing only time can unblock
 
@@ -1155,6 +1382,11 @@ ADR-052 has the argument for why the change was necessary and what it cost.
 | The audit log for a page | `auditPage()` / `auditActionCounts()` from `@/lib/audit` | groups are in `AUDIT_GROUPS`; default view is unfiltered |
 | A human-signed contract call | `createIntent({ signer: "EXTERNAL", from })` then `attachExternalBroadcast` | the hash is verified against the node, calldata included |
 | Adding an LLM stage to the tick | give it its **own** `LlmBudget` and a `deadlineMs` from `deadline(...)` | four budgets exist; a fifth needs a fraction in the ladder |
+| Labelling where a number came from | `<Provenance origin="…">` from `@/components/Provenance` | six origins, each a different trust claim — read the file header |
+| The refusal counters | `trustCounters()` from `@/lib/trust/counters` | one `Promise.all`; the gate histogram unnests `reasons` in Postgres |
+| Whether an address holds a role | `hasRole()` / `roleReport()` from `@/lib/trust/roles` | live `eth_call`; there is deliberately no stored copy |
+| A real transaction for a demo, on demand | `runCapProbe()` from `@/lib/judge/probe` | always reverts; refuses to broadcast unless the chain confirms it will |
+| Navigation on a new page | `<SiteNav current="/your-route" />` | server component; add the route to `ROUTES` |
 
 **`lib/resolution/` is the worked example of the pattern, one step further than `lib/proposer/`.**
 Read `retrieve.ts` → `draft.ts` → `validate.ts` → `propose.ts` in that order. The new idea over Phase 4
@@ -1183,6 +1415,31 @@ constrained in what it may look at.
   then kills.
 
 **Commands added this phase:**
+
+```bash
+pnpm --filter web check:provenance    # the mock-data guard. Run it AFTER a build — check 3 reads .next
+pnpm --filter web judge:probe         # judge mode from the terminal. Produces a REAL reverted tx.
+```
+
+**Things that will cost you an hour if you rediscover them — Phase 7's:**
+
+- **A Tailwind v4 token that is not in `@theme` produces no CSS and no warning.** Two were used sixty
+  times and did nothing. Check the *built* stylesheet, not the source: `grep -c "text-ink-500"
+  .next/static/chunks/*.css`.
+- **A page that renders `<Provenance origin="MOCK">` in production throws.** That is deliberate and it
+  is the backstop behind the CI check — if a page 500s with "Refusing to render", that is the rule
+  working, not a bug. Run `check:provenance` to find the call site.
+- **Do not try to grep bundles for the forbidden origin.** `Provenance.tsx` contains the string by
+  necessity, so it is in every bundle. Only *rendered output* can tell a call site from the component's
+  own branch. ADR-061.
+- **Test an error state by causing the error, not by reading the branch.** Pointing `DATABASE_URL` at
+  a dead port and running the built app found a real honesty defect on `/agents` in thirty seconds.
+- **Look at the page at 390px.** The role matrix was a scrollable table whose every payload column
+  started off-screen. Judges use phones; the source cannot tell you this.
+- **`page.tsx` may not export arbitrary values.** A stray `export type` from a route file fails the
+  build with an invalid-export error.
+
+**Commands added in Phase 6:**
 
 ```bash
 pnpm --filter web lifecycle           # the full lifecycle on chain, ~5 min. Creates a labelled test market.

@@ -8,6 +8,8 @@ import {
   type DecisionView,
 } from "@/lib/agents/dashboard";
 import { POLICY_RULES } from "@/lib/policy/policyGate";
+import { Provenance } from "@/components/Provenance";
+import { SiteNav } from "@/components/SiteNav";
 
 // Every on-chain figure here is an eth_call made on this request. Never cache it.
 export const dynamic = "force-dynamic";
@@ -63,22 +65,45 @@ export default async function AgentsPage() {
             bounded twice, by code that does not trust the model and by a chain that does not trust
             us.
           </p>
+          {/* Two badges, because this page genuinely mixes two sources and conflating them is
+              exactly the mistake the component exists to prevent: the caps and balances are the
+              chain's, the decisions and reasons are ours. */}
+          <p className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+            <Provenance origin="CHAIN" detail="agents() caps · balances · agentRemainingOnMarket()" />
+            <Provenance origin="DB" detail="agent_decisions · agent_policies" />
+          </p>
         </header>
 
-        {/* The counters that matter. All zero would mean the gates have never been exercised. */}
+        <SiteNav current="/agents" />
+
+        {/* The counters that matter. All zero would mean the gates have never been exercised.
+         *
+         * When the database is unreachable these read `—`, not `0`. A zero beside "could not read
+         * the database" is a measurement claim the page is in no position to make, and it claims
+         * the flattering direction: "nothing was ever refused" reads as "nothing ever went wrong".
+         * Found by running the built app against an unreachable Postgres. */
+        }
         <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Counter label="staked on chain" value={`${formatMstc(staked)} tMSTC`} tone="ok" />
+          <Counter
+            label="staked on chain"
+            value={payload.dbError !== null ? "—" : `${formatMstc(staked)} tMSTC`}
+            tone={payload.dbError !== null ? "dim" : "ok"}
+          />
           <Counter
             label="rejected by the gate"
-            value={String(rejectedByGate)}
-            tone={rejectedByGate > 0 ? "warn" : "dim"}
+            value={payload.dbError !== null ? "—" : String(rejectedByGate)}
+            tone={payload.dbError !== null ? "dim" : rejectedByGate > 0 ? "warn" : "dim"}
           />
           <Counter
             label="refused by the chain"
-            value={String(refusedOnChain)}
-            tone={refusedOnChain > 0 ? "bad" : "dim"}
+            value={payload.dbError !== null ? "—" : String(refusedOnChain)}
+            tone={payload.dbError !== null ? "dim" : refusedOnChain > 0 ? "bad" : "dim"}
           />
-          <Counter label="agents" value={String(payload.panels.length)} tone="dim" />
+          <Counter
+            label="agents"
+            value={payload.dbError !== null ? "—" : String(payload.panels.length)}
+            tone="dim"
+          />
         </section>
 
         {payload.globalKillSwitch && (

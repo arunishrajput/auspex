@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Provenance } from "@/components/Provenance";
+import { SiteNav } from "@/components/SiteNav";
 import { explorerUrl, shortHash } from "@/lib/chain";
 import { hasDatabase } from "@/lib/db/client";
 import { humanAuthorityAddress, humanResolverAddress } from "@/lib/approval/authority";
@@ -448,7 +450,15 @@ function Shell({
             {challengeWindow !== null ? ` of ${challengeWindow} seconds` : ""} before a single wei
             can be claimed.
           </p>
+          {/* Every draft row on this page carries live chain state alongside it — `blockedBecause`
+              is derived from `readMarket`, not from the projection — so both sources are named. */}
+          <p className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+            <Provenance origin="DB" detail="resolution_drafts · markets" />
+            <Provenance origin="CHAIN" detail="getMarket() per draft, for what can be signed now" />
+          </p>
         </header>
+
+        <SiteNav current="/resolve" />
 
         <ResolveProviders>
           <ResolverGate resolverAddress={resolver} sharedWithCreator={sharedWithCreator}>

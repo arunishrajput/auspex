@@ -13,8 +13,14 @@
   --color-ink-800: #161b26;
   --color-ink-700: #212837;
   --color-ink-600: #323b4f;
+  /* ink-500 and ink-200 were used ~60 times across the app before they existed here, so every
+   * one of those utilities compiled to nothing and the text rendered at its inherited colour.
+   * Tailwind v4 generates a utility only for a token declared in @theme; a missing token is
+   * silent. Found by grepping the built CSS for the classes the pages actually use. */
+  --color-ink-500: #4d5871;
   --color-ink-400: #6b7893;
   --color-ink-300: #9aa6bf;
+  --color-ink-200: #c2cadd;
   --color-ink-100: #dfe5f1;
 
   --color-signal-500: #3ba1ff;

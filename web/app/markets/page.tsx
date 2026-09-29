@@ -2,6 +2,8 @@ import Link from "next/link";
 import { explorerUrl, formatMstc, shortHash, MST_TESTNET } from "@/lib/chain";
 import { AUSPEX_MARKET_ADDRESS } from "@/lib/chain/deployment";
 import { getIndexerStatus, getMarketsForDisplay, type MarketView } from "@/lib/markets";
+import { Provenance } from "@/components/Provenance";
+import { SiteNav } from "@/components/SiteNav";
 
 // Every number here is an eth_call made on this request. Never cache it.
 export const dynamic = "force-dynamic";
@@ -50,13 +52,19 @@ export default async function MarketsPage() {
             <span className="font-mono text-ink-200">getMarket()</span>, not from our database —
             so if our indexer were wrong or asleep, these numbers would still be right.
           </p>
+          <p className="mt-3">
+            <Provenance origin="CHAIN" detail="getMarket() · marketCount(), per request" />
+          </p>
         </header>
+
+        <SiteNav current="/markets" />
 
         {/* Indexer status. Separate from the market data on purpose: it is a claim about OUR
             plumbing, not about the chain, and the two must not be confused. */}
         <section className="mb-8 rounded-lg border border-ink-700 bg-ink-900 px-4 py-3">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-xs">
             <span className="text-ink-400">indexer</span>
+            <Provenance origin="DB" detail="indexer_cursors · chain_events" />
             {indexer.error === null ? (
               <>
                 <span className="text-ink-200">

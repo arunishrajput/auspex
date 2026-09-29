@@ -1331,3 +1331,140 @@ thresholds. With the corrected floor, market #5 retrieves the FEMA article and t
 `UNSETTLED` — "the provided article reports on the court ruling itself but does not contain any
 information regarding whether the Department of Justice has filed a formal notice of appeal" — which
 is the correct answer and writes no row.
+
+---
+
+### ADR-061 — `MOCK` provenance is stopped by a source scan and a runtime throw, not a bundle grep
+
+**Decided:** enforce hard rule #2 with `components/Provenance.tsx` plus
+`web/scripts/check-provenance.mjs`, which runs **after** `next build` in CI and makes four checks:
+nothing outside three allowlisted files may contain the token `MOCK`; the component's runtime guard
+must still be present in its source; no prerendered HTML in `.next/server/app` may contain a rendered
+`data-provenance="MOCK"`; and every route must render a `<Provenance>` badge or be on a written
+exemption list. The component itself throws rather than render `MOCK` when `NODE_ENV === "production"`.
+
+**Why the obvious check does not work.** The plan said "CI fails if `MOCK` provenance appears in a
+production build", and the natural reading is a grep of the build output. That cannot work:
+`Provenance.tsx` necessarily contains the string `MOCK` — it is the branch being forbidden — so every
+JavaScript bundle contains it whether or not a single page uses it. A bundle grep would fail always,
+or need an exception wide enough to be useless.
+
+What *can* be tested on the build is **rendered output**: prerendered HTML contains only what a page
+actually produced, so a `data-provenance="MOCK"` attribute in it is proof a page displayed invented
+data. That check is in, and it is honest about its reach — every page in this app is `force-dynamic`,
+so on most builds it scans the two static routes and proves little. The runtime throw is what covers
+the dynamic ones: a statically rendered page carrying `MOCK` fails `next build` outright, and a
+dynamic one fails the request rather than showing a badge.
+
+The source scan is deliberately blunt — an allowlist of three exact paths rather than a pattern — so
+it catches every spelling at once: `origin="MOCK"`, an origin arriving through a variable, a constant
+named `MOCK_ROWS`, a comment promising to remove one later. The Phase 6 placeholder it replaces
+matched two literal JSX spellings and would have missed all of those.
+
+**Cost:** three files may name the forbidden origin, and that exception is a line of code rather than
+a convention. The fourth check — every route must declare a provenance — is a maintenance cost paid on
+every new page, which is the point: "I forgot to say where this came from" should not look identical
+to "there is nothing to say".
+
+**Evidence:** `pnpm --filter web check:provenance` — 130 source files scanned, guard intact, every
+route declaring. It failed on its first run against seven real pages, which is how the badges got
+written.
+
+---
+
+### ADR-062 — Judge mode is a transaction the contract refuses, and it writes no decision row
+
+**Decided:** the judge-mode button on `/trust` reads a registered agent's on-chain per-transaction
+cap, adds one wei, and sends the bet with the policy gate deliberately not consulted. It records an
+`audit_log` row and an `onchain_intents` row, and **no `agent_decisions` row**.
+
+**Why a refused transaction and not a successful one.** The exit criterion is that a judge with no
+wallet can produce a real transaction. Any button that produced a *successful* one would mean this
+application holds a key that can do something consequential on a stranger's say-so — which is the
+exact opposite of what the project claims. The only kind of transaction it is safe to hand a stranger
+is one the contract is going to refuse. That constraint turned out to be a feature: the over-cap bet
+is also the single most load-bearing claim in the system, so judge mode makes a sceptic prove it
+themselves rather than read about it.
+
+Three properties follow. It cannot move money — a reverted `placeBet` returns its value, so a click
+costs gas. It needs no authority at all. And it is repeatable, unlike `finalizeResolution` or
+`invalidateStale`, which are genuinely permissionless but one-shot per market and usually out of
+scope.
+
+**The guard is the `eth_call`, not the cooldown.** `runCapProbe` simulates the bet first and
+**refuses to broadcast unless the chain confirms it reverts with `AgentPerTxCapExceeded`.** A
+successful simulation is the failure case: it would mean the cap is not what the contract reported a
+moment earlier, and broadcasting would stake real funds on a visitor's click. A revert for any other
+reason is also refused, because the transaction would then not show what the button says it shows.
+The 45-second module-scope cooldown is a courtesy limit on top, with the same honest caveat as
+`runTickAction`: several serverless instances means "a few probes per cooldown", which is acceptable
+only because the worst case is bounded in gas rather than in stake.
+
+**Why no `agent_decisions` row.** That table means "this agent decided this". No model was asked and
+no gate ran, so a row would put a stranger's button press into a member's trading record and render
+on `/agents` beside real decisions. `scripts/over-cap-bet.ts` does write one, and should — an operator
+running it by hand is claiming it. The complete record of a probe is its audit row, its intent row and
+its hash.
+
+**Cost:** each click spends gas from a real agent wallet, and the probe refuses to run when no wallet
+can cover cap + 1 wei + gas or when no market is open — both of which it explains on screen rather
+than failing silently.
+
+**Evidence:** `0x72fde34abea889831dd21aab56f05b94b066e6e22e5a37f6ad4e9e2a695be112` (CLI, block
+5,798,322) and `0xcfc34dff963bd7f1ea81df4ec7373794a34dd56dda99d18955ce6bfccbaa08c3` (clicked in a
+browser with no wallet extension, block 5,798,488). Both resolve on MSTScan as `placeBet`, value
+`20000000000000001`, `execution reverted`, decoded
+`AgentPerTxCapExceeded(attempted: 20000000000000001, cap: 20000000000000000)`.
+
+---
+
+### ADR-063 — `/trust` has no kill-switch button, and says why in the page
+
+**Decided:** `/trust` reads `paused()` live and shows an `eth_call` of `pause()` **from the human
+authority's address**, which reverts. It offers no control to pull the switch.
+
+**Why.** The build plan listed "kill switch control" as a Phase 7 task. Implementing it literally
+would require the deployed application to hold `DEFAULT_ADMIN_ROLE` — the role that can also register
+an agent, change a cap and grant every other role. A button that halts the contract is therefore a
+button that proves the running system *could* do all of those, which contradicts the claim the rest of
+the page is built on and would make a server compromise strictly worse. ADR-047 already put the admin
+key on a laptop and deliberately not in Vercel; a pause button would undo that for a convenience
+nobody needs during a demo.
+
+**What replaces it is stronger than a button.** `eth_call` costs nothing and changes nothing, so the
+page can ask the contract what it *would* do: probed from `0xA9F6…1fF1` — the wallet that creates
+every market and signs every resolution on this deployment — `pause()` reverts with
+`AccessControlUnauthorizedAccount(0xA9F6…1fF1, 0x00…00)`. That is a live demonstration that the most
+privileged key in the running system cannot halt the contract, which a working button could never
+show.
+
+The two off-chain switches we *do* operate — `AGENTS_KILL_SWITCH` and the per-member flag — are shown
+with their real state and labelled as weaker by construction: they stop our code asking for a bet,
+they do not stop a stolen agent key from placing one. What stops that is the cap.
+
+**Cost:** halting the contract in an emergency is a local command with the admin key, not a click.
+Correct for a system whose whole argument is where authority lives.
+
+**Evidence:** the panel on `/trust`, rendered from `probePause()` in `lib/trust/roles.ts`. It
+distinguishes a revert from a transport failure and refuses to present the second as the first.
+
+---
+
+### ADR-064 — Two Tailwind colour tokens were used sixty times and never defined
+
+**Decided:** add `--color-ink-500` and `--color-ink-200` to the `@theme` block in `globals.css`.
+
+**Why this is worth an entry.** `text-ink-500` and `text-ink-200` were written across seven pages —
+roughly sixty occurrences — and neither token existed. Tailwind v4 generates a utility only for a
+token declared in `@theme`; an undeclared one produces **no CSS at all** and no warning, so every one
+of those elements silently rendered at its inherited colour. Text meant to be de-emphasised was not.
+
+It was found by grepping the *built* stylesheet for the classes the pages use, not by reading the
+source: `grep -c "text-ink-400"` returned 1 and `grep -c "text-ink-500"` returned 0. The source looks
+correct either way, which is the whole problem with a system that fails silently.
+
+**Cost:** two lines. The general lesson is the one worth keeping: for a build step that degrades
+quietly rather than erroring, the check has to be against its output.
+
+**Evidence:** `.next/static/chunks/*.css` before the fix — `text-ink-200` and `text-ink-500` absent,
+every other `ink-*` utility present.

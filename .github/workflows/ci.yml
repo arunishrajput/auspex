@@ -61,16 +61,14 @@ jobs:
         run: pnpm --filter web build
 
       # Hard rule #2: no mock data may reach a production build.
-      # Phase 7 replaces this grep with a real check against the Provenance component.
+      #
+      # Runs AFTER `Build web`, deliberately: one of its four checks scans the prerendered HTML in
+      # `.next/server/app` for a badge that actually rendered, and that output does not exist until
+      # the build has run. The other three — nothing outside the component may name the forbidden
+      # origin, the runtime guard must still be present, and every route must declare a provenance
+      # — are static and would pass either way. See web/scripts/check-provenance.mjs.
       - name: Guard against mock data in production build
-        run: |
-          if grep -rn --include="*.ts" --include="*.tsx" \
-               -e 'origin="MOCK"' -e "origin={'MOCK'}" -e 'DataOrigin.MOCK' \
-               web/app web/components web/lib 2>/dev/null; then
-            echo "::error::MOCK provenance found in production source. See CLAUDE.md hard rule #2."
-            exit 1
-          fi
-          echo "No MOCK provenance in production source."
+        run: pnpm --filter web check:provenance
 
       # Secrets must never be committed. Cheap, catches the expensive mistake.
       - name: Guard against committed secrets

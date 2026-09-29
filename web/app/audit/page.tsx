@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Provenance } from "@/components/Provenance";
+import { SiteNav } from "@/components/SiteNav";
 import { explorerUrl, shortHash } from "@/lib/chain";
 import { hasDatabase } from "@/lib/db/client";
 import {
@@ -248,6 +250,9 @@ function Shell({
             are the half worth reading: a log of successes alone would be indistinguishable from a
             system with no gates at all.
           </p>
+          <p className="mt-3">
+            <Provenance origin="DB" detail="audit_log, append-only, ordered by created_at" />
+          </p>
 
           <nav className="mt-5 flex flex-wrap gap-2">
             {(Object.keys(AUDIT_GROUPS) as AuditGroup[]).map((key) => (
@@ -290,6 +295,8 @@ function Shell({
             </div>
           )}
         </header>
+
+        <SiteNav current="/audit" />
 
         {children}
 
