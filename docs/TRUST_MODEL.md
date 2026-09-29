@@ -41,6 +41,22 @@ crosses at least one boundary that no model controls.
                                      │    placeBet()              [CONTRACT]
                                      │    per-tx cap · per-market cap · pause
                                      │
+  News after close ─┐                │
+  (deterministic    │                │
+   retrieval, not   ▼                │
+   the model's)  Resolution agent ───┼──> Quote verified in the evidence  [DETERMINISTIC]
+                 (LLM)               │         │ not found → SCHEMA_REJECTED, kept, shown
+                                     │         ▼
+                                     │    Human resolver queue    [HUMAN]
+                                     │         │ sign → BridgeKey signature
+                                     │         ▼
+                                     │    proposeResolution()     [CONTRACT]
+                                     │    RESOLVER_ROLE · challenge window must elapse
+                                     │         │
+                                     │         ▼
+                                     │    finalizeResolution() · claim()   [PERMISSIONLESS]
+                                     │    no role required · paid to the registered owner
+                                     │
  ────────────────────────────────────┴──────────────────────────────────────
 ```
 
@@ -75,13 +91,31 @@ News is arbitrary third-party text and therefore a prompt-injection surface.
 - Because the model can only emit fields we defined, it cannot smuggle an instruction into a field
   that is later executed.
 
-### 3. The human gate — a checklist, not prose
+### 3. The human gates — a checklist, not prose. There are two of them.
 
-The reviewer sees the spec as discrete fields — question, resolution source, the exact field to
-check, deadline, outcome rules — not a paragraph to skim. Ambiguous wording is easier to catch in a
-checklist than in prose, and catching it here is the whole point: it happens *before* money exists.
+**Creation (`/review`).** The reviewer sees the spec as discrete fields — question, resolution source,
+the exact field to check, deadline, outcome rules — not a paragraph to skim. Ambiguous wording is
+easier to catch in a checklist than in prose, and catching it here is the whole point: it happens
+*before* money exists.
 
 **Until approval: nothing goes on-chain, and no member is notified.**
+
+**Resolution (`/resolve`).** The second gate is the one that decides who gets paid, so it asks less of
+the human and gives them more to work with. The resolver is not shown a summary to agree with. They
+are shown **the exact sentence the model says settles the question**, a link to the article it came
+from, and the fact that deterministic code has already confirmed that sentence really is in that
+article, word for word (ADR-054). The remaining job is one Ctrl-F — which is a job a person does well,
+unlike "form an independent view of a wire report".
+
+The model is deliberately **not** asked for a confidence score here. In Phase 5 `confidence` was the
+agent's own number and the threshold had to be policy (ADR-041); here a human reads every draft, so
+there is no threshold for a self-assessment to inform and a number on the page would only invite being
+read as a gate.
+
+**Why resolution needs a human at all**, when deterministic validation plus a challenge window would
+technically satisfy hard rule #3: the window is **120 seconds and immutable**. Nobody vetoes anything
+in 120 seconds. If that were the only thing between a model emitting `YES` and a payout, a model would
+be deciding who gets paid. ADR-052 records the alternative we rejected and what the decision cost.
 
 ### 4. The policy gate — deterministic, pure, tested
 
@@ -129,7 +163,12 @@ that holds regardless.
 | An agent cannot create or resolve markets | it holds **no role** |
 | A stolen agent key cannot steal winnings | `claim()` pays the registered **owner** |
 | No one can block a payout by going silent | `finalizeResolution` is **permissionless** |
-| Everything can be halted | `Pausable` |
+| A payout cannot happen early | `ChallengeWindowOpen` revert until the window elapses |
+| A resolver who never appears cannot lock funds up | `invalidateStale` is **permissionless** after `resolveDeadline` |
+| A challenged resolution cannot stand | the outcome is discarded and must be re-proposed |
+| The admin cannot cancel an inconvenient market | `forceInvalidate` needs `MAX_CHALLENGES` on the record first |
+| A claim cannot be made twice | `claimed[marketId][account]` → `AlreadyClaimed` |
+| Everything can be halted — except withdrawing what is owed | `Pausable`, and `claim` is deliberately **not** `whenNotPaused` |
 
 **The claim to make to judges, and then demonstrate:**
 
@@ -159,13 +198,34 @@ what makes the rest of the claims credible.
 ### Resolution is trusted
 
 A small set of authorised resolvers submits outcomes with an evidence URL. Mitigations: an evidence
-URL is required and stored on-chain; a challenge window must elapse before finality; challenges are
-recorded on-chain with a reason; finalisation is permissionless.
+URL is required and stored on-chain; the outcome is signed by a **human's browser wallet**, not by any
+server AuspeX runs; a challenge window must elapse before finality; challenges are recorded on-chain
+with a reason; finalisation is permissionless, and so is invalidating a market whose resolver never
+appeared.
 
 **This is not a decentralised oracle.** A malicious resolver colluding with the challenger set could
 still settle a market wrongly. A production system would use a staked dispute mechanism (UMA-style)
 or a decentralised oracle network. We had 72 hours and chose a mechanism we could implement correctly
 and explain honestly over one we could only gesture at.
+
+### The resolver and the market creator are the same wallet
+
+They should be different people. On this deployment
+`0xA9F68fDf84388fa548a685085E2bee0e5b311fF1` holds `MARKET_CREATOR_ROLE`, `RESOLVER_ROLE` and
+`CHALLENGER_ROLE` — every role that requires human judgement. It holds **no** `DEFAULT_ADMIN_ROLE`, so
+it cannot register an agent, change a cap, or pause the contract.
+
+That is a property of a solo project, not a design commitment. `humanResolverAddress()` reads
+`HUMAN_RESOLVER_ADDRESS` and falls back to the market authority, so separating the duties is a
+configuration change plus two `grant:testnet` calls. `/resolve` states it on the page rather than
+letting a reader assume otherwise, and `pnpm --filter web verify:resolution` asserts all four role
+facts with live `hasRole` calls.
+
+**What does hold, and is the claim worth making:** *no key the deployed application holds can create a
+market, resolve one, challenge one, register an agent, change a cap or pause the contract.* Production
+holds agent keys only — capped by the contract and holding no role at all. The three transactions that
+finish a market (`closeMarket`, `finalizeResolution`, `claim`) are signed by one of those keys
+precisely because none of them needs permission (ADR-058).
 
 ### Agent keys are server-held
 
@@ -186,8 +246,14 @@ do not eliminate it.
 
 ### The challenge window is short
 
-Set to roughly 120 seconds so the full lifecycle fits in a live demo. A real deployment would use
-hours or days. The value is configurable and the demo value is stated wherever it is shown.
+Set to 120 seconds so the full lifecycle fits in a live demo, and **immutable** — an admin who could
+shrink it to zero would defeat it (ADR-022). A real deployment would use hours or days.
+
+This is the limitation that shapes the architecture above it. Because 120 seconds is too short for a
+human to notice and veto a wrong outcome, the human has to be *before* the proposal rather than after
+it — which is why `proposeResolution` is signed in a browser instead of by the server (ADR-052). A
+longer window would permit the optimistic shape: AI proposes publicly, a human vetoes within the
+window. That is a real design; it needs hours, and ours is fixed at two minutes.
 
 ### Other bounded assumptions
 

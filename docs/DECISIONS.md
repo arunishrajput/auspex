@@ -1084,3 +1084,250 @@ for another.
 **Measured:** production `POST /api/tick` returned 200 in **15,058 ms** with zero stage errors after
 this phase, against 14,900 ms before it — but on a pass that made no agent model calls, so the worst
 case remains unmeasured. The deadline is what makes the unmeasured case safe.
+
+---
+
+### ADR-052 — Resolution needs a human signature, not just deterministic validation and a window
+
+**Decided:** `proposeResolution` is signed by a human's browser wallet, exactly as `createMarket` is.
+The resolution agent drafts an outcome; it cannot send one. `RESOLVER_ROLE` and `CHALLENGER_ROLE` were
+granted to the BridgeKey wallet
+(`0xA9F68fDf84388fa548a685085E2bee0e5b311fF1`) to make that possible.
+
+**Why the obvious alternative was rejected.** Hard rule #3 permits a decision to pass through
+deterministic code *or* a human *or* the contract, and a server-signed resolution would technically
+satisfy it: the outcome is schema-constrained, the evidence URL is substituted from our own record,
+and the contract holds the result for a challenge window before anyone is paid. We nearly built that.
+
+It fails on one number. **The challenge window is 120 seconds and immutable.** Nobody vetoes anything
+in 120 seconds. If that window were the only thing between a model emitting `YES` and a payout, then a
+model would be deciding who gets paid, and the project's central claim would be decoration. The
+optimistic-oracle shape — AI proposes publicly, a human vetoes within a window — is a real design and
+a defensible one, but it needs a window measured in hours. Ours is immutable at two minutes, by an
+earlier decision we do not want to undo (ADR-022: an admin who could shrink the window could defeat
+it).
+
+**What it costs, stated plainly.** The BridgeKey wallet no longer holds "`MARKET_CREATOR_ROLE` and
+nothing else" — a sentence `PROGRESS.md` used to lean on. The honest replacement is narrower and
+still checkable on MSTScan: it holds **every role that requires human judgement and none that confers
+power**. It cannot register agents, change a cap, or pause the contract, because it does not hold
+`DEFAULT_ADMIN_ROLE`. `verify:resolution` asserts all four of those facts with live `hasRole` calls.
+
+**The separation we did not make.** A market creator and a resolver should be different people, and
+here they are one wallet. That is a property of a solo project, not a design commitment:
+`humanResolverAddress()` reads `HUMAN_RESOLVER_ADDRESS` and falls back to the authority, so splitting
+them is a configuration change plus two `grant:testnet` calls. `/resolve` says so on the page rather
+than letting a reader assume otherwise.
+
+**Evidence:** `grantRole(RESOLVER_ROLE)`
+`0x886d021b0c4fe46674e685fd9eea17901f6ca1458d1ada6ed06c01bb1f7da4e2` (block 5,796,170) and
+`grantRole(CHALLENGER_ROLE)`
+`0xf1ce96cf43e44e674f58d6c082f8bfe50274e16d29773de57984774c0ad14268` (block 5,796,177).
+
+---
+
+### ADR-053 — The resolution agent does not choose its own evidence
+
+**Decided:** candidate evidence articles are selected by IDF-weighted Jaccard similarity between the
+market's question and each article's headline, restricted to articles ingested since the market was
+created, ranked, and labelled `EVIDENCE_1…n`. The model receives six articles it did not select, in an
+order it did not set.
+
+**Why:** a model that picks which sources to read has already chosen the answer. Retrieval is the
+decision that determines the outcome far more than the reasoning on top of it, so it belongs in
+deterministic code — the same measure Phase 3 clusters with, calibrated the same way (ADR-029).
+
+The recency filter carries as much weight as the ranking. An article published before the market
+opened cannot report the thing the market asked about; at best it is the story the market was *created
+from*. Those are excluded from ranking, and when one arrives with no publication date and slips
+through, `validate.ts` turns it into a warning the human sees rather than silently trusting it.
+
+**Cost:** a market whose outcome is reported under wording the headline similarity misses gets no
+draft that tick. The floor is set at `BORDERLINE_THRESHOLD` (0.25) rather than the merge threshold for
+exactly that reason — offering an article is not asserting it is relevant, because the model still has
+to find a sentence in it that settles the question, and the validator still has to find that sentence
+in the text.
+
+---
+
+### ADR-054 — The model must quote the sentence, and the quote is verified against the text it was given
+
+**Decided:** `settledByQuote` is required for every settled outcome and must appear in the labelled
+article **as a contiguous run of at least four words**, compared case- and punctuation-insensitively.
+A paraphrase fails. A draft whose quote is not found is refused before a human sees it.
+
+**Why:** this is the check that turns "read the model's summary and agree with it" into a job a human
+can actually do well. A resolver is given one sentence and one link, and the remaining work is a
+Ctrl-F. It is also the only mechanical defence against confabulation available here: a model that
+invents a source it was not given produces a quote that is not in the text, and the comparison is
+against *the bytes the model actually saw*, truncation included — which is why `IssuedEvidence` stores
+that text rather than re-reading the article.
+
+**Why four words.** "He said yes" would match half the corpus. Three words is noise; four is the
+shortest span that is plausibly a quotation.
+
+**Cost:** a correct outcome stated in the model's own words is rejected. That is the right trade: the
+draft is retried on the next round with the same evidence, and an unverifiable quote in front of a
+resolver is worse than no draft at all.
+
+---
+
+### ADR-055 — `UNSETTLED` is a fourth outcome, and it writes no row
+
+**Decided:** the model may return `UNSETTLED`, which is not one of the contract's outcomes. It
+short-circuits every other validation check and produces **no `resolution_drafts` row** — only an
+audit entry. `UNRESOLVED`, the contract's own "no outcome" value, is excluded from the schema
+entirely, because `proposeResolution` reverts on it.
+
+**Why:** `resolution_drafts` is unique on `(market_id, round)`, so a row is terminal for that round. A
+market that closed an hour ago usually has nothing reporting its answer yet, and "not yet" is the
+correct answer — writing it as a rejection would spend the round's only draft slot on a condition that
+resolves itself when the next articles arrive. This is the same three-versus-two-outcomes distinction
+that ADR-045 got wrong first in Phase 5 and that Phase 4's `proposals.event_id` got wrong before that:
+**before writing a terminal row, ask whether its reason can ever change.**
+
+Keeping "I don't know" and "no outcome" as different words is the other half. Collapsing them would
+make the model able to express an unresolvable state *as an outcome*, which is the one thing the enum
+exists to prevent.
+
+---
+
+### ADR-056 — Auto-claim is keyed on `previewPayout`, not on our own decision rows
+
+**Decided:** the claim worker iterates settled markets × agent wallets and asks the contract
+`previewPayout(marketId, agent)`. Anything non-zero gets a `CLAIM` intent. `PROGRESS.md` had planned
+to key it on `agent_decisions` instead.
+
+**Why the departure:** `previewPayout` is the contract's own answer to "what would you pay this
+address right now", and it already returns 0 for an unsettled market, a losing side, a zero stake and
+an account that has already claimed. Keying on it means there is **no number in Postgres that can
+disagree with the payout**, a stake placed outside the normal path is still claimed because the chain
+knows about it even though no decision row does, and a double claim is impossible for two independent
+reasons — we never try, and `claimed[marketId][msg.sender]` reverts if we did.
+
+**Cost:** one `eth_call` per (settled market, agent) pair per pass. Bounded at four claims per pass and
+a handful of markets, so it is a few calls on a chain where reads are free.
+
+---
+
+### ADR-057 — `invalidateStale` is permissionless and deliberately not automated
+
+**Decided:** the keeper runs `closeMarket`, `finalizeResolution` and `claim` on a timer. It does
+**not** run `invalidateStale`. That call is exercised by hand in `scripts/lifecycle.ts`.
+
+**Why:** invalidation refunds every bettor and destroys the market. Running it the instant
+`resolveDeadline` passes would mean our own resolver being ten minutes late costs everyone their
+market — a policy nobody asked for, enforced by a cron job. The contract made the call permissionless
+precisely so the decision belongs to whoever is harmed by the delay, and a judge can make it from
+their own wallet. Automating it would quietly take that back.
+
+**Cost:** a market with a genuinely absent resolver stays unsettled until somebody acts. The UI says
+so on the market detail page — "past — anyone may call `invalidateStale` and refund every bettor" —
+rather than leaving a reader to work it out.
+
+---
+
+### ADR-058 — The keeper signs with an agent wallet, because none of its calls needs a role
+
+**Decided:** `closeMarket`, `finalizeResolution` and `claim` are signed by whichever agent wallet holds
+the largest balance above a gas floor. Not the deployer.
+
+**Why:** production holds no deployer key by design, so a keeper that needed one would be a keeper
+that only worked on a laptop. More to the point, all three calls are permissionless in the contract,
+and signing them from a wallet that holds **no role at all** is the claim executed rather than
+asserted: *nothing privileged is needed to finish a market.* The market detail page prints the signing
+address for every call, so a reader can check it.
+
+Picking the richest funded agent rather than a fixed one means a single drained wallet does not stop
+markets being finished. A pass with no funded candidate reports that and queues nothing, rather than
+signing a transaction that cannot mine.
+
+**Cost:** an agent wallet spends a little of its balance on gas for work that is not its own betting.
+Measured at roughly 0.0001 tMSTC per call on this chain, against a 0.0005 floor and a 0.001 gas
+reserve the policy gate already holds back.
+
+---
+
+### ADR-059 — The Phase 6 lifecycle is proved on a market created for it, labelled on chain
+
+**Decided:** `scripts/lifecycle.ts` creates its own market with a 70-second close time and bets on
+both sides, then drives create → bet → close → propose → challenge → re-propose → finalize → claim,
+plus a double claim and a losing claim that both revert. The market says
+`[Phase 6 lifecycle test <id>] Not a product market.` in its own on-chain question text.
+
+**Why not the real markets:** #4–#7 close on 2026-09-30 and carry live agent stakes. They are the ones
+worth resolving in the demo and they cannot be resolved today. **Why not markets #1–#3:** each has a
+single bettor, so the parimutuel payout degenerates to a refund of that bettor's own stake — it
+demonstrates the arithmetic without exercising it. A two-sided market is the only way to show a real
+split today, and no market on chain had two sides.
+
+**The label is in the question text, not in our database**, for the same reason markets #1–#3 carry
+theirs there: the label has to travel with the market to MSTScan and survive being quoted out of
+context. Hard rule #2 is about never presenting test data as real, and a disclaimer that lives only in
+our own UI is one screenshot away from being lost.
+
+**The agent bet is an operator action and is recorded as one.** It did not go through the policy gate,
+no model was asked, and **no `agent_decisions` row was written** — the audit log says exactly that. It
+exists because demonstrating that `claim()` pays the agent's registered *owner* and not the agent
+requires an agent with a winning stake. The stake is inside the agent's caps and the chain enforced
+them regardless of what the script believed.
+
+**The payout is checked three independent ways** — hand-computed parimutuel, `previewPayout`, and the
+owner's balance delta measured at explicit block tags either side of the claim. A contract test can
+prove the arithmetic; only this proves the arithmetic *and* that the money arrives at the right
+address on a real chain.
+
+---
+
+### ADR-060 — Retrieval scores question *coverage*, not similarity — and the first threshold was wrong
+
+**Decided:** candidate evidence is ranked by IDF-weighted **coverage of the question's own terms**
+(`lib/resolution/retrieve.ts`), not by the Jaccard similarity Phase 3 clusters with:
+
+```
+coverage = Σ idf(t) for t in question ∩ article  /  Σ idf(t) for t in question
+```
+
+Asymmetric on purpose. The floor is **0.12**.
+
+**Why, and how it was found.** The first implementation reused `weightedJaccard` from
+`news/similarity.ts` — the obvious choice, and it returned **zero candidates for all four live
+markets** on the first real run. The cause is structural rather than a tuning problem: Jaccard divides
+by the weight of the **union**, and a market question is long by construction while a headline is
+short. A headline reporting exactly the thing the question asked about shares only its rare terms and
+differs on everything else, so the union dominates and the score collapses. No threshold on that
+measure separates "answers the question" from "unrelated", because the measure answers a different
+question — *are these the same story?*
+
+Coverage asks the retrieval question instead: how much of what is being asked about does this article
+mention? A longer article is not punished for its extra words, because those are not what was asked.
+
+**Then the threshold was wrong too, which is the more useful half of this entry.** 0.18 was chosen
+because it looked reasonable. Measured against the live corpus it missed the Washington Post article
+for market #5 — a genuine match on the same story — **by 0.003**. The observed distribution:
+
+| Score | Article | Truth |
+|---|---|---|
+| 0.297 | Iran war live: Trump says he did not offer Tehran sanctions relief | same story |
+| 0.177 | FEMA can't condition security grants on election changes, judge says | same story |
+| 0.165 | Trump denies willingness to give Iran sanctions relief | same story |
+| 0.087 and below | eight unrelated articles, then 96% of pairs at exactly 0 | unrelated |
+
+True matches at 0.165 and above, false ones at 0.087 and below. 0.12 is inside that gap. This is the
+third time this project has hit the same shape of defect — ADR-029 (clustering thresholds inherited
+from the build plan), ADR-049 (two sensible prompts composing into a pipeline that could never bet) —
+and the lesson is identical: **a threshold is a property of a measure, and a measure is a property of
+the question being asked.** A number nobody has looked at a distribution for is a guess.
+
+**What the calibration does not cover, stated because it matters.** No article in that corpus reported
+the *outcome* of any of the four markets, because none of those outcomes has happened yet. The sample
+therefore contains true matches on *subject* and none on *settlement* — the case the resolver actually
+depends on is not in it. The floor is set generously for that reason: a missed article costs a
+resolution, while an extra one costs a few tokens and still has to survive the quote check and a human.
+
+**Evidence, reproducible:** `pnpm --filter web resolution:dry-run` prints every candidate's score,
+passed or not. It is to this constant what `pnpm --filter web calibrate` is to the clustering
+thresholds. With the corrected floor, market #5 retrieves the FEMA article and the agent answers
+`UNSETTLED` — "the provided article reports on the court ruling itself but does not contain any
+information regarding whether the Department of Justice has filed a formal notice of appeal" — which
+is the correct answer and writes no row.

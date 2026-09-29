@@ -13,6 +13,7 @@ import {
 } from "@/lib/news/dashboard";
 import { queueCounts, type QueueCounts } from "@/lib/proposer/queue";
 import { gateCounters, type GateCounters } from "@/lib/agents/dashboard";
+import { resolutionCounters, type ResolutionCounters } from "@/lib/resolution/dashboard";
 import { BORDERLINE_THRESHOLD, SAME_STORY_THRESHOLD } from "@/lib/news/similarity";
 import { REQUIRED_INDEPENDENT_SOURCES } from "@/lib/news/confirm";
 import { scanForInjection } from "@/lib/news/injection";
@@ -42,6 +43,7 @@ type PipelineData = {
   tick: Awaited<ReturnType<typeof lastTick>>;
   queue: QueueCounts;
   gate: GateCounters;
+  resolution: ResolutionCounters;
 };
 
 /**
@@ -56,15 +58,16 @@ async function loadPipeline(): Promise<{ data: PipelineData | null; error: strin
     return { data: null, error: "DATABASE_URL is not configured on this deployment." };
   }
   try {
-    const [counts, events, flagged, tick, queue, gate] = await Promise.all([
+    const [counts, events, flagged, tick, queue, gate, resolution] = await Promise.all([
       pipelineCounts(),
       recentEventsWithArticles(14),
       flaggedItems(6),
       lastTick(),
       queueCounts(),
       gateCounters(),
+      resolutionCounters(),
     ]);
-    return { data: { counts, events, flagged, tick, queue, gate }, error: null };
+    return { data: { counts, events, flagged, tick, queue, gate, resolution }, error: null };
   } catch (error) {
     return { data: null, error: error instanceof Error ? error.message : String(error) };
   }
@@ -146,6 +149,24 @@ export default async function Home() {
                 </span>
               )}{" "}
               →
+            </Link>
+            <Link
+              href="/resolve"
+              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
+            >
+              Resolve
+              {pipeline.data !== null && pipeline.data.resolution.pendingReview > 0 && (
+                <span className="ml-1.5 text-warn-500">
+                  {pipeline.data.resolution.pendingReview}
+                </span>
+              )}{" "}
+              →
+            </Link>
+            <Link
+              href="/audit"
+              className="rounded border border-ink-700 bg-ink-850 px-3 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-500"
+            >
+              Audit log →
             </Link>
           </nav>
         </header>

@@ -204,6 +204,10 @@ describe("projectMarkets — lifecycle stages the chain has not reached yet", ()
     expect(market?.state).toBe("CLOSED");
     expect(market?.outcome).toBe("UNRESOLVED");
     expect(market?.proposedBy).toBeNull();
+    // The contract sets `m.evidenceUrl = ""`, so the projection must not keep showing the
+    // evidence for a resolution that was thrown away.
+    expect(market?.evidenceUrl).toBeNull();
+    expect(market?.challengeEndsAt).toBeNull();
     // The count survives — forceInvalidate needs three of them (ADR-022).
     expect(market?.challengeCount).toBe(1);
   });

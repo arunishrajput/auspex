@@ -197,8 +197,14 @@ export function projectMarkets(logs: DecodedLog[]): ProjectionResult {
         // Matches AuspexMarket.challengeResolution: the market drops back to CLOSED and the
         // proposed outcome is discarded, so a challenged resolution leaves no trace of the
         // outcome it proposed. The challenge COUNT survives — `forceInvalidate` needs 3.
+        //
+        // `evidenceUrl` is cleared because the contract clears it (`m.evidenceUrl = ""`). It was
+        // being kept here, so a challenged market rendered the discarded proposal's evidence
+        // beside an `UNRESOLVED` outcome — evidence for a resolution that no longer exists. The
+        // contract is right and this was a bug.
         market.state = "CLOSED";
         market.outcome = "UNRESOLVED";
+        market.evidenceUrl = null;
         market.challengeEndsAt = null;
         market.proposedBy = null;
         market.challengeCount += 1;

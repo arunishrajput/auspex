@@ -22,7 +22,10 @@
     "verify:approval": "tsx scripts/verify-approval.ts",
     "agents:register": "tsx scripts/register-agents.ts",
     "agents:over-cap": "tsx scripts/over-cap-bet.ts",
-    "verify:agents": "tsx scripts/verify-agents.ts"
+    "verify:agents": "tsx scripts/verify-agents.ts",
+    "lifecycle": "tsx scripts/lifecycle.ts",
+    "verify:resolution": "tsx scripts/verify-resolution.ts",
+    "resolution:dry-run": "tsx scripts/resolution-dry-run.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

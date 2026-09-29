@@ -177,7 +177,12 @@ function MarketCard({ market }: { market: MarketView }) {
   return (
     <li className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
-        <span className="font-mono text-xs text-ink-400">#{market.onchainId}</span>
+        <Link
+          href={`/markets/${market.onchainId}`}
+          className="font-mono text-xs text-ink-400 underline-offset-2 hover:text-signal-500 hover:underline"
+        >
+          #{market.onchainId}
+        </Link>
         <span
           className={`rounded border px-1.5 py-0.5 font-mono text-[10px] tracking-wide uppercase ${
             STATE_STYLE[market.state] ?? "border-ink-600 bg-ink-800 text-ink-300"
@@ -200,6 +205,14 @@ function MarketCard({ market }: { market: MarketView }) {
             created in {shortHash(market.createdTxHash, 8, 6)} ↗
           </a>
         )}
+        <Link
+          href={`/markets/${market.onchainId}`}
+          className={`font-mono text-[11px] text-ink-300 underline-offset-2 hover:text-signal-500 hover:underline ${
+            market.createdTxHash === null ? "ml-auto" : ""
+          }`}
+        >
+          lifecycle &amp; payout →
+        </Link>
       </div>
 
       <div className="px-4 py-4">

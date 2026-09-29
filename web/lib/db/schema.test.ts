@@ -210,6 +210,36 @@ describe.skipIf(!canRun)("migrations against a fresh database", () => {
       );
       expect(Number(rows[0].count)).toBe(2);
     });
+
+    it("UNIQUE(market_id, round) lets a challenge produce a second draft but not a duplicate", async () => {
+      const { rows } = await client.query<{ id: string }>(
+        `insert into markets (spec_hash, question, resolution_source_url, close_time, resolve_deadline)
+         values ($1, 'Q?', 'https://example.org', now(), now()) returning id`,
+        [`0x${"d".repeat(64)}`],
+      );
+      const marketId = rows[0].id;
+
+      const insertDraft = `insert into resolution_drafts (market_id, round, outcome, evidence_url)
+        values ($1, $2, 'YES', 'https://example.org/e')`;
+
+      await client.query(insertDraft, [marketId, 1]);
+
+      // A re-run pass derives the same round from the chain's challengeCount and conflicts, so a
+      // human is never asked to read the same outcome twice.
+      await expect(client.query(insertDraft, [marketId, 1])).rejects.toThrow(
+        /duplicate key value|resolution_drafts_market_round_key/,
+      );
+
+      // But a challenge increments the round on chain, and that second draft is legitimate —
+      // otherwise a challenged market could never be re-proposed and its funds would strand.
+      await client.query(insertDraft, [marketId, 2]);
+
+      const { rows: counted } = await client.query<{ count: string }>(
+        "select count(*)::text as count from resolution_drafts where market_id = $1",
+        [marketId],
+      );
+      expect(Number(counted[0].count)).toBe(2);
+    });
   });
 
   it("money columns keep a uint256 exact", async () => {

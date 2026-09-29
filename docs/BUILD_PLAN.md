@@ -198,12 +198,12 @@ off-chain cap *and* the on-chain cap side by side.
 **Ships (visible):** market detail through to payout, plus `/audit` — the append-only decision log.
 
 **Exit criteria**
-- [ ] Full lifecycle exercised on-chain: create → bet → close → propose → finalize → claim.
-- [ ] A challenge is exercised on-chain and forces re-proposal.
-- [ ] Winner balances increase by the correct parimutuel amount (asserted against computed values).
-- [ ] Double-claim reverts.
-- [ ] `winningPool == 0` refunds everyone (tested).
-- [ ] Every step has a real tx hash recorded in `PROGRESS.md`.
+- [x] Full lifecycle exercised on-chain: create → bet → close → propose → finalize → claim.
+- [x] A challenge is exercised on-chain and forces re-proposal.
+- [x] Winner balances increase by the correct parimutuel amount (asserted against computed values).
+- [x] Double-claim reverts.
+- [x] `winningPool == 0` refunds everyone (tested).
+- [x] Every step has a real tx hash recorded in `PROGRESS.md`.
 
 ---
 

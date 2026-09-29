@@ -15,6 +15,20 @@
       "when": 1790630732289,
       "tag": "0001_phase4_proposals_and_external_signer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790642298421,
+      "tag": "0002_phase6_resolution_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790644049425,
+      "tag": "0003_phase6_invalidate_stale_intent_kind",
+      "breakpoints": true
     }
   ]
 }

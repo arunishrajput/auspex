@@ -99,13 +99,25 @@ Proposal     DRAFTED ──> VALIDATED ──> PENDING_REVIEW ──> APPROVED |
    │
    │  ══════════ HUMAN GATE ══════════  BridgeKey-signed createMarket
    ▼
-Market       ONCHAIN_PENDING ──> OPEN ──> CLOSED ──> RESOLUTION_PROPOSED
-                        ──> CHALLENGE_WINDOW ──> FINALIZED ──> PAID
+Market       ONCHAIN_PENDING ──> OPEN ──> CLOSED ──> RESOLUTION_PROPOSED ──> FINALIZED
+                                              ▲            │                      │
+                                              └─ challenge ─┘                      │ keeper
+                                    (outcome discarded, round + 1)                 ▼
+                                                                                claim()
+             OPEN | CLOSED ──> INVALIDATED   (invalidateStale, past resolveDeadline, by anyone)
    │
    │  member agents (per-user, constrained twice)
    ▼
 AgentDecision  PROPOSED ──> POLICY_APPROVED ──> TX_PENDING ──> TX_CONFIRMED | TX_FAILED
                        └──> POLICY_REJECTED (reason recorded and shown)
+   │
+   │  resolution agent (deterministic retrieval, human-gated)
+   ▼
+ResolutionDraft  PENDING_REVIEW ──> APPROVED (a human signed proposeResolution)
+                            ├──> REJECTED       (a human refused it, with a signature)
+                            ├──> SCHEMA_REJECTED (the validator refused it; kept and shown)
+                            └──> STALE          (the market moved on before it was used)
+                 UNSETTLED writes **no row** — the model said "not yet", which is not a refusal
 ```
 
 `OnChainIntent` sits beside `Market` and `AgentDecision` and owns every write to the chain.
@@ -162,18 +174,25 @@ because an LLM cannot reach money without passing a human and a contract.
 
 ---
 
-## 6. Two kinds of agent — kept deliberately separate
+## 6. Three kinds of agent — kept deliberately separate
 
-| | **Market Proposer** | **Member Agent** |
-|---|---|---|
-| Scope | System-level, one instance | Per user, many instances |
-| Proposes | A market specification | A bet (side, size, confidence) |
-| Bounded by | Schema validation + **human approval** | **Policy gate** + **on-chain caps** |
-| Can reach chain? | Only via a human's signature | Only via its own capped wallet |
-| Failure mode | A bad proposal is rejected in review | A bad bet is clamped, rejected, or reverted |
+| | **Market Proposer** | **Member Agent** | **Resolution Agent** |
+|---|---|---|---|
+| Scope | System-level, one instance | Per user, many instances | System-level, one instance |
+| Proposes | A market specification | A bet (side, size, confidence) | An outcome + an evidence label + a quote |
+| Bounded by | Schema validation + **human approval** | **Policy gate** + **on-chain caps** | Quote verification + **human approval** + the **challenge window** |
+| Can reach chain? | Only via a human's signature | Only via its own capped wallet | Only via a human's signature |
+| Chooses its own inputs? | No — the event's own articles | No — the market's own articles | **No** — deterministic similarity retrieval (ADR-053) |
+| Failure mode | A bad proposal is rejected in review | A bad bet is clamped, rejected, or reverted | A bad outcome is refused by the validator, the resolver, or a challenge |
 
 They never share code paths or credentials. Conflating them would destroy the argument that authority
 is separated.
+
+The resolution agent is the one with the most consequential output — it decides who gets paid — so it
+holds the least authority of the three. It cannot pick which articles to read, cannot type a URL,
+cannot name the round it belongs to, and cannot emit the contract's `UNRESOLVED` value. Its entire
+output is four constrained fields, one of which is a quotation that deterministic code then searches
+for in the text the model was shown.
 
 ---
 
@@ -227,6 +246,7 @@ with BridgeKey and with any other MST-compatible wallet.
 | `event_items` | Join: which raw items formed an event | `UNIQUE(event_id, raw_item_id)` |
 | `proposals` | Draft market spec + validation outcome | **`UNIQUE(event_id)`** |
 | `markets` | Mirror of on-chain market + off-chain spec | `UNIQUE(spec_hash)`, `UNIQUE(onchain_id)` |
+| `resolution_drafts` | AI-drafted outcome + evidence + what a human did with it | **`UNIQUE(market_id, round)`** |
 | `members` | User, BridgeKey address, agent wallet address | `agent_address` unique |
 | `agent_policies` | Per-tx cap, daily budget, min confidence, categories, kill switch | one per member |
 | `agent_decisions` | Every proposal + gate outcome + reasons | **`UNIQUE(market_id, member_id, round)`** |
@@ -242,8 +262,14 @@ progress, and re-scanning it on every tick would grow without bound. The cursor 
 optimisation, not a correctness mechanism — losing it costs a rescan and nothing else, because
 the projection is a pure fold (ADR-026).
 
+`resolution_drafts` is keyed on `(market_id, round)` rather than on the market alone, because a
+challenge legitimately returns a market for **re-proposal**. The round is derived from the chain's own
+`challengeCount + 1`, never from a counter we keep — so a crashed pass re-derives the same round and
+conflicts instead of queueing a second draft for a human to read twice.
+
 `audit_log` is the spine of the `/audit` page and of the "every decision is logged with a reason"
-guarantee. Nothing deletes from it.
+guarantee. Nothing deletes from it, and `/audit` reports how many rows carry a blank reason so the
+guarantee is substantiated on the page rather than repeated.
 
 ---
 
@@ -283,8 +309,12 @@ one finishes well inside a serverless function's limits.
 
 Named here so they are never implied elsewhere:
 
-- **Resolution is trusted.** A small authorised set proposes outcomes. The challenge window and
-  permissionless finalisation are *mitigations*, not decentralisation. This is not an oracle.
+- **Resolution is trusted.** A small authorised set proposes outcomes, signed from a human's browser
+  wallet. The challenge window, permissionless finalisation and permissionless `invalidateStale` are
+  *mitigations*, not decentralisation. This is not an oracle.
+- **The market creator and the resolver are the same wallet on this deployment.** They should be
+  different people. `HUMAN_RESOLVER_ADDRESS` makes the split a configuration change; we have not made
+  it. `docs/TRUST_MODEL.md` states it and `verify:resolution` asserts which roles that wallet holds.
 - **Agent keys are server-held.** See §7.
 - **The independence check is heuristic.** Two distinct domains can still both be syndicating one wire
   story; we mitigate with an allowlist and syndication detection, and do not claim it is airtight.

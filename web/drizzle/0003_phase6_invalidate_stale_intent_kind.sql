@@ -1,0 +1,1 @@
+ALTER TYPE "public"."intent_kind" ADD VALUE 'INVALIDATE_STALE' BEFORE 'CLAIM';

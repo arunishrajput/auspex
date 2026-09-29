@@ -66,6 +66,25 @@ export const proposalStatusEnum = pgEnum("proposal_status", [
 ]);
 
 /**
+ * What happened to one AI-drafted resolution.
+ *
+ * The same three-way split `proposalStatusEnum` carries, for the same reason: a model that
+ * *answered badly* (`SCHEMA_REJECTED`) is terminal and kept as evidence, while a model that did
+ * not answer at all writes no row and is retried. `PENDING_REVIEW` is the state a human resolver
+ * acts on; `APPROVED` means they signed `proposeResolution` from their own wallet.
+ */
+export const resolutionDraftStatusEnum = pgEnum("resolution_draft_status", [
+  "PENDING_REVIEW",
+  "APPROVED",
+  "REJECTED",
+  "SCHEMA_REJECTED",
+  /** The model read the evidence and said the question is not settled yet. Not a failure. */
+  "UNSETTLED",
+  /** Superseded: the market moved on (challenged, invalidated) before this draft was used. */
+  "STALE",
+]);
+
+/**
  * Mirrors the contract's `STATE_*` constants, plus one off-chain-only state.
  *
  * `ONCHAIN_PENDING` exists off-chain only: a human has approved the spec and an intent is in
@@ -135,6 +154,15 @@ export const intentKindEnum = pgEnum("intent_kind", [
   "PROPOSE_RESOLUTION",
   "CHALLENGE_RESOLUTION",
   "FINALIZE_RESOLUTION",
+  /**
+   * `invalidateStale` — permissionless, and a genuinely different call from finalisation.
+   *
+   * It has its own value rather than reusing `FINALIZE_RESOLUTION` because the market detail page
+   * prints this column as the function name. Labelling a refund-everyone invalidation as a
+   * finalisation would be a misleading record of what happened on chain, which is exactly what
+   * hard rule #2 forbids.
+   */
+  "INVALIDATE_STALE",
   "CLAIM",
   "REGISTER_AGENT",
 ]);
@@ -363,6 +391,75 @@ export const markets = pgTable(
       .on(t.onchainId)
       .where(sql`${t.onchainId} is not null`),
     index("markets_state_idx").on(t.state),
+  ],
+);
+
+/**
+ * An AI-drafted outcome for a closed market, and what the human resolver did with it.
+ *
+ * ## Why a separate table and not columns on `markets`
+ *
+ * `markets` is a projection of the chain and nothing else — every column below `onchainId` is
+ * written by the indexer from an indexed log. A *draft* is the opposite: it is off-chain
+ * material that has never been signed, may be rejected, and may be superseded by a challenge.
+ * Putting it in `markets` would mix "what the chain says" with "what we propose to ask the chain",
+ * which is exactly the confusion the projection's comment warns about.
+ *
+ * ## `round` is what makes a challenge survivable
+ *
+ * A challenge returns the market to `CLOSED` for **re-proposal**, so one market can legitimately
+ * need several drafts. `UNIQUE(market_id, round)` therefore keys on the round rather than the
+ * market: round 1 is the first proposal, round 2 the answer to the first challenge. The round a
+ * draft belongs to is derived from the market's on-chain `challengeCount` — the chain's own
+ * count, not a number we keep — so a crashed pass re-derives the same round and conflicts
+ * instead of queueing a duplicate for a human to read twice.
+ */
+export const resolutionDrafts = pgTable(
+  "resolution_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    marketId: uuid("market_id")
+      .notNull()
+      .references(() => markets.id, { onDelete: "cascade" }),
+    /** `challengeCount + 1` at drafting time. See the note above. */
+    round: integer("round").notNull().default(1),
+    status: resolutionDraftStatusEnum("status").notNull().default("PENDING_REVIEW"),
+
+    /** The outcome the model proposes. Only YES, NO and INVALID are values the contract takes. */
+    outcome: outcomeEnum("outcome").notNull().default("UNRESOLVED"),
+    /**
+     * The evidence a human can open, written on-chain by `proposeResolution`.
+     *
+     * Substituted deterministically from the `SOURCE_n` label the model chose — the model never
+     * emits a URL, for the reason `proposer/schema.ts` gives at length.
+     */
+    evidenceUrl: text("evidence_url"),
+    /** The model's reasoning, shown to the resolver. Never used as a gate. */
+    rationale: text("rationale"),
+    /** The sentence in the evidence that the model says settles it. The resolver checks this. */
+    settledByQuote: text("settled_by_quote"),
+    /** Advisory notes for the resolver — injection flags, an indirect link, a stale article. */
+    warnings: jsonb("warnings")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+
+    rawModelOutput: text("raw_model_output"),
+    rejectionReason: text("rejection_reason"),
+    model: varchar("model", { length: 64 }),
+    reviewedBy: address("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** The `PROPOSE_RESOLUTION` intent a human signed, once they have. */
+    intentId: uuid("intent_id"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    // THE resolution idempotency guarantee: one draft per market per challenge round, so a
+    // re-run pass cannot ask a human to read the same outcome twice, and cannot produce two
+    // `proposeResolution` transactions for one round.
+    uniqueIndex("resolution_drafts_market_round_key").on(t.marketId, t.round),
+    index("resolution_drafts_status_idx").on(t.status),
   ],
 );
 
@@ -638,6 +735,8 @@ export const auditLog = pgTable(
 );
 
 export type Market = typeof markets.$inferSelect;
+export type ResolutionDraft = typeof resolutionDrafts.$inferSelect;
+export type ResolutionDraftStatus = ResolutionDraft["status"];
 export type NewMarket = typeof markets.$inferInsert;
 export type Proposal = typeof proposals.$inferSelect;
 export type ProposalStatus = Proposal["status"];

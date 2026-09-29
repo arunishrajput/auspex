@@ -196,6 +196,9 @@ in Phase 4.
 | Balance | 50 tMSTC, verified against `testnetrpc.mstblockchain.com` |
 | Chain | `91562037` ✅ |
 | `MARKET_CREATOR_ROLE` | ✅ granted — tx `0xe4ed912c309db55a0cfa51e597ad4845369714a51fe77b0c282e39b8cc932069` |
+| `RESOLVER_ROLE` | ✅ granted 2026-09-29 — tx `0x886d021b0c4fe46674e685fd9eea17901f6ca1458d1ada6ed06c01bb1f7da4e2` |
+| `CHALLENGER_ROLE` | ✅ granted 2026-09-29 — tx `0xf1ce96cf43e44e674f58d6c082f8bfe50274e16d29773de57984774c0ad14268` |
+| `DEFAULT_ADMIN_ROLE` | ❌ **deliberately not held** — it cannot register agents, change a cap, or pause |
 
 **The balance was verified against our own RPC, not against the wallet UI.** BridgeKey ships a
 built-in "MST Testnet" entry, and `mstscan.com` indexes a *different* chain — so a wallet can
@@ -214,9 +217,19 @@ The script refuses to run if the signer is not an admin, refuses an address with
 exits without sending anything if the role is already held, and reads the role back over the RPC
 afterwards rather than trusting the receipt.
 
-`RESOLVER_ROLE` is deliberately **not** on the BridgeKey wallet yet. Phase 6 is not blocked (the
-deployer holds it), and granting a capability two phases before anything uses it is how least
-privilege stops meaning anything.
+**Phase 6 granted `RESOLVER_ROLE` and `CHALLENGER_ROLE` to this wallet**, and the reasoning is worth
+knowing because it replaced an earlier claim. The challenge window is 120 seconds and immutable, which
+is far too short for a human to notice a wrong outcome and veto it — so the human has to be *before*
+the proposal, which means `proposeResolution` must be signed in a browser. ADR-052 has the full
+argument and what it cost.
+
+The honest sentence is now narrower than "MARKET_CREATOR_ROLE and nothing else", and still checkable:
+**this wallet holds every role that requires human judgement and none that confers power.** Verify it
+yourself, without trusting the docs:
+
+```bash
+pnpm --filter web verify:resolution   # live hasRole for all four roles, plus the lifecycle gates
+```
 
 ### If you ever need to recreate this wallet
 
@@ -364,8 +377,13 @@ Run through this before judging, not during.
       role boundary, DB, Gemini, the contract, and all three agents registered and funded.
 - [ ] `pnpm --filter web verify:agents` — all checks pass, including "one wei over the cap is
       refused" against the live contract. Writes nothing, signs nothing.
+- [ ] `pnpm --filter web verify:resolution` — all checks pass: the resolver's roles, no agent holding
+      any role, `finalizeResolution` refused inside a window and allowed after it, `claim` matching
+      `previewPayout`. Writes nothing, signs nothing.
 - [ ] Deployer (`0xc71dC478…`) and BridgeKey (`0xA9F68fDf…`) both funded.
-- [ ] BridgeKey still holds `MARKET_CREATOR_ROLE` and **nothing else** — that is the trust claim.
+- [ ] BridgeKey holds `MARKET_CREATOR_ROLE`, `RESOLVER_ROLE` and `CHALLENGER_ROLE` — the roles that
+      need judgement — and **not** `DEFAULT_ADMIN_ROLE`. That is the trust claim, and
+      `verify:resolution` checks all four.
 - [ ] Contract shows **Verified** on `https://testnet.mstscan.com/address/<address>`.
 - [ ] Public Vercel URL loads in a **private window** with no wallet installed.
 - [ ] Discord channel visible on a second screen.
@@ -375,6 +393,11 @@ Run through this before judging, not during.
 - [ ] `AGENTS_KILL_SWITCH=false`, or the agents will not bet during the demo.
 - [ ] Every tx hash in the README opens on `testnet.mstscan.com`.
 - [ ] The over-cap transaction shows **Reverted** (that is the point — it is evidence).
+- [ ] `/resolve` loads and either shows a drafted outcome or says plainly why nothing is queued.
+- [ ] `/markets/8` shows the finished lifecycle: the `signed by` column going browser wallet →
+      capped agent → browser wallet → no-role keeper, and a payout paid to an owner address that is
+      not the sender.
+- [ ] `/audit` shows a non-zero count under **refusals**, and "every entry carries a reason" in green.
 - [ ] You can explain the contract, the policy gate, and the pipeline without notes.
 
 ---

@@ -183,11 +183,15 @@ async function checkHumanAuthority() {
     return;
   }
 
-  // keccak256("MARKET_CREATOR_ROLE"), confirmed equal to what the deployed contract returns
-  // from its own MARKET_CREATOR_ROLE() getter. DEFAULT_ADMIN_ROLE is zero by OpenZeppelin
-  // convention. Both are literals so this check needs no ABI and no workspace dependency.
+  // keccak256 of each role name, confirmed equal to what the deployed contract returns from its
+  // own getters. DEFAULT_ADMIN_ROLE is zero by OpenZeppelin convention. Literals, so this check
+  // needs no ABI and no workspace dependency.
   const MARKET_CREATOR_ROLE =
     "0xd3065a24ad9e7725d223007135762d2902038999e3e5829146654498a58d9795";
+  const RESOLVER_ROLE =
+    "0x92a19c77d2ea87c7f81d50c74403cb2f401780f3ad919571121efe2bdb427eb1";
+  const CHALLENGER_ROLE =
+    "0xe752add323323eb13e36c71ee508dfd16d74e9e4c4fd78786ba97989e5e13818";
   const DEFAULT_ADMIN_ROLE = `0x${"0".repeat(64)}`;
   // hasRole(bytes32,address) selector
   const SELECTOR = "0x91d14854";
@@ -202,8 +206,10 @@ async function checkHumanAuthority() {
     const balanceHex = await rpc("eth_getBalance", [address, "latest"]);
     const mstc = Number(BigInt(balanceHex)) / 1e18;
 
-    const [creator, admin] = await Promise.all([
+    const [creator, resolver, challenger, admin] = await Promise.all([
       hasRole(MARKET_CREATOR_ROLE),
+      hasRole(RESOLVER_ROLE),
+      hasRole(CHALLENGER_ROLE),
       hasRole(DEFAULT_ADMIN_ROLE),
     ]);
 
@@ -226,13 +232,38 @@ async function checkHumanAuthority() {
       );
       return;
     }
+    // Phase 6 granted this wallet RESOLVER_ROLE and CHALLENGER_ROLE too — the other two roles that
+    // require human judgement (ADR-052). Missing either is not the hard failure a missing
+    // MARKET_CREATOR_ROLE is (markets can still be created and bet on) but it is reported loudly,
+    // because resolution would then revert in front of an audience.
+    const missing = [
+      resolver ? null : "RESOLVER_ROLE",
+      challenger ? null : "CHALLENGER_ROLE",
+    ].filter((role) => role !== null);
+
     if (admin) {
-      // Louder than a missing role: the trust claim is that this wallet is bounded.
+      // Louder than a missing role, because this is THE trust claim: the wallet holds every role
+      // that needs judgement and none that confers power. DEFAULT_ADMIN_ROLE would let it register
+      // agents, change a cap and pause the contract.
       record(
         "Human authority",
         false,
-        `${address} holds DEFAULT_ADMIN_ROLE. It should hold MARKET_CREATOR_ROLE and nothing else.`,
+        `${address} holds DEFAULT_ADMIN_ROLE. It should hold the judgement roles ` +
+          `(MARKET_CREATOR, RESOLVER, CHALLENGER) and NOT admin.`,
         "the trust model in the README",
+      );
+      return;
+    }
+
+    if (missing.length > 0) {
+      record(
+        "Human authority",
+        false,
+        `${address} does not hold ${missing.join(" or ")} — Phase 6 resolution needs it. Run: ` +
+          missing
+            .map((role) => `ROLE=${role} TO=${address} pnpm --filter contracts grant:testnet`)
+            .join(" && "),
+        "Phase 6 resolution",
       );
       return;
     }
@@ -240,7 +271,8 @@ async function checkHumanAuthority() {
     record(
       "Human authority",
       true,
-      `${address} — ${mstc.toFixed(4)} tMSTC, MARKET_CREATOR_ROLE only`,
+      `${address} — ${mstc.toFixed(4)} tMSTC, holds MARKET_CREATOR + RESOLVER + CHALLENGER, ` +
+        `NOT admin`,
     );
   } catch (error) {
     record("Human authority", false, String(error.message ?? error), "Phase 4 approvals");

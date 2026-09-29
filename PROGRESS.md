@@ -8,8 +8,8 @@
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
 **Last updated:** 2026-09-29
-**Current status:** ✅ Phase 5 complete — all exit criteria met, agents betting under caps, over-cap bet refused on chain
-**Next phase:** **Phase 6 — Resolution, challenge window, payout**
+**Current status:** ✅ Phase 6 complete — the full lifecycle is on chain, a real parimutuel payout landed with an agent's owner
+**Next phase:** **Phase 7 — Dashboard polish + trust surface**
 
 ---
 
@@ -23,8 +23,8 @@
 | 3 | News ingestion, dedup, 2-source confirmation | ✅ Complete |
 | 4 | Market proposer agent + human approval gate | ✅ Complete |
 | 5 | Member agents + deterministic policy gate | ✅ Complete |
-| 6 | Resolution, challenge window, payout | ⬜ **NEXT** |
-| 7 | Dashboard polish + trust page | ⬜ Not started |
+| 6 | Resolution, challenge window, payout | ✅ Complete |
+| 7 | Dashboard polish + trust page | ⬜ **NEXT** |
 | 8 | Live end-to-end run + README + submission | ⬜ Not started |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete with known gaps
@@ -80,19 +80,59 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete w
 | `pnpm --filter web verify:agents` | 41 live checks: roles, registry, cap boundary, kill switch | ✅ all pass, writes nothing |
 | `pnpm preflight` | now **11/11**, including all three agents registered and funded | ✅ |
 | **`POST /api/tick` in production, post-Phase 5** | 200 in **15.06s**, 0 stage errors, agents stage included | ✅ verified 2026-09-29 |
-| Resolution tx (with evidence URL) | _n/a_ | ⬜ Phase 6 |
-| Payout / claim tx | _n/a_ | ⬜ Phase 6 |
+| **`grantRole(RESOLVER_ROLE)` → BridgeKey** | **`0x886d021b0c4fe46674e685fd9eea17901f6ca1458d1ada6ed06c01bb1f7da4e2`** | ✅ block 5,796,170 |
+| **`grantRole(CHALLENGER_ROLE)` → BridgeKey** | **`0xf1ce96cf43e44e674f58d6c082f8bfe50274e16d29773de57984774c0ad14268`** | ✅ block 5,796,177 |
+| **`/resolve` — the human resolver gate** | **https://auspex-web-mu.vercel.app/resolve** | ✅ live |
+| **`/audit` — the append-only decision log** | **https://auspex-web-mu.vercel.app/audit** | ✅ live |
+| **`/markets/8` — lifecycle through to payout** | **https://auspex-web-mu.vercel.app/markets/8** | ✅ live |
+| `pnpm --filter web verify:resolution` | 20 live checks, 3 skipped for want of a market in that state | ✅ writes nothing |
+| **Lifecycle market #8** (labelled test, two-sided) | `createMarket` `0xc0faa60c373fc7ff59520073a29bbeb5755c59f3571f581ceb4b819e52bc61a7` | ✅ block 5,796,280 |
+| `placeBet` YES 0.01 (deployer) | `0x40368a6c5376004cf6802a34a87b60e8fc068b2851c675d59a8b137a8d907f89` | ✅ block 5,796,284 |
+| `placeBet` NO 0.005 (atlas's agent) | `0x6c6dbf0da04665f8bfdf11e6ed20facd912f077e0821b6926534d43322b573c1` | ✅ block 5,796,288 |
+| Late bet (expected revert) | `0x078b9c76e0a6752f6245c6b60fb55a6281e5f768a83e64d8789381dd3da6b73f` | ✅ **`BettingClosed()`** |
+| `closeMarket` (agent wallet, permissionless) | `0x7ad7fd5659ec07c50efec49bbf2a67d379d13de64fc3abcdf6140e59c89751eb` | ✅ block 5,796,311 |
+| **`proposeResolution` NO, round 1** | **`0x5c2df8b38c35d3218b5a7095bf658a6996f1deefe836c0f83be02d47121e2127`** | ✅ block 5,796,314 |
+| `finalizeResolution` inside the window (expected revert) | `0x39e30155507d037d5db8ac983f15b1ef6239d714116d8b21c436ba01204864df` | ✅ **`ChallengeWindowOpen(1790644321)`** |
+| **`challengeResolution`** | **`0x1e38128c1423aca8e5501a3c6727d66e3fa211ede52d555282753ba689f43fc9`** | ✅ block 5,796,326 — market back to `CLOSED` |
+| **`proposeResolution` NO, round 2** | **`0xe7068be69e329a444270134f354e4695b39103c89384c5fe21ee5d23c643b9f4`** | ✅ block 5,796,331 |
+| **`finalizeResolution`** (agent wallet, no role) | **`0x2f4fd42833a6aaa04819d92a2f1e3de04c4dd897145eb1b0c5b53dfaa5d407fc`** | ✅ block 5,796,378 |
+| **`claim` — 0.015 tMSTC paid to the OWNER** | **`0x7ae9c6830335f810629b63dfef47cbfbbd7757385bbbc25779bc676b1970e0a2`** | ✅ block 5,796,384 |
+| Second `claim` (expected revert) | `0x108c50cb6a364699f210d003f55dddc5c2004ad4972fb7a3e7570ca5e603903c` | ✅ **`AlreadyClaimed()`** |
+| Losing side's `claim` (expected revert) | `0x6237ea0ce42bea18a6349fe34b001d8bfb9d4fe98e97acad3be9030ab4094929` | ✅ **`NothingToClaim()`** |
+| **`invalidateStale(#1)`** (agent wallet, permissionless) | **`0xefe33de28f5424940e6e94b123c30c052f83261f3bcb96bd8aa741ba20f3ca6b`** | ✅ block 5,796,402 |
+| Refund `claim` on the invalidated market | `0x17a3d09a957e922aec15ae1d224339d24361aa38de0adfa19be057b81f0488bb` | ✅ block 5,796,407 — 0.01 tMSTC returned |
+| **Keeper `closeMarket` #2** (from a tick, not a script) | `0x9588280c82402a72204af12f6132871e68fd40c9d0b9541b41f0c42399ed35a7` | ✅ block 5,796,567 |
+| **Keeper `closeMarket` #3** (from a tick, not a script) | `0x65ed1cf6c728553ab5217c5cb4bb202c59ab28d7ee975b212e2f03667baceeb0` | ✅ block 5,796,572 |
 
-**Seven markets exist on-chain.** Ids 1–2 are the Phase 1 smoke-test runs and 3 is the Phase 2
+**Eight markets exist on-chain.** Ids 1–2 are the Phase 1 smoke-test runs and 3 is the Phase 2
 idempotency crash test; all three say what they are in their own on-chain question text, and none is
 presented anywhere as a product market. **Ids 4–7 are the real ones** — drafted by an AI agent from
 confirmed news, read as a checklist by a human, and created by a signature from a key no server
 holds. MSTScan decodes every method name because the source is verified.
 
-**The distinction a judge can check without trusting us:** markets 1–3 were sent by the deployer
-`0xc71dC478…4ad24`; markets 4–7 were sent by `0xA9F68fDf…311fF1`, which holds `MARKET_CREATOR_ROLE`
-and **nothing else** — not `DEFAULT_ADMIN_ROLE`, not `RESOLVER_ROLE`, not `CHALLENGER_ROLE`. The
-`from` address on the explorer is the human gate, made visible.
+**Market 8 is the Phase 6 lifecycle test** — created by `scripts/lifecycle.ts` with a 70-second close
+time and bets on both sides, because no market on chain had two sides and a one-sided market's payout
+degenerates into a refund. It says `[Phase 6 lifecycle test …] Not a product market.` in its own
+on-chain question text, for the same reason 1–3 do: the label has to travel to MSTScan and survive
+being quoted out of context. ADR-059 has the full reasoning, including why its agent bet was an
+operator action and is recorded as one.
+
+**The distinction a judge can check without trusting us:** markets 1–3 and 8 were sent by the deployer
+`0xc71dC478…4ad24`; markets 4–7 were sent by `0xA9F68fDf…311fF1` — the human authority.
+
+⚠️ **That wallet's role set changed in Phase 6, and the old sentence is no longer true.** It used to
+hold `MARKET_CREATOR_ROLE` and nothing else. It now also holds `RESOLVER_ROLE` and `CHALLENGER_ROLE`,
+because the 120-second challenge window is far too short for a human to veto a wrong outcome, so the
+human has to be *before* the proposal — which means `proposeResolution` must be signed in a browser
+(ADR-052). The honest replacement is narrower and still checkable on MSTScan:
+
+> **It holds every role that requires human judgement and none that confers power.** It does **not**
+> hold `DEFAULT_ADMIN_ROLE`, so it cannot register an agent, change a cap, or pause the contract.
+
+And the claim that got *stronger*: **no key the deployed application holds can create a market,
+resolve one, challenge one, register an agent, change a cap or pause the contract.** Production holds
+agent keys only. `pnpm --filter web verify:resolution` asserts all four role facts with live
+`hasRole` calls, and `pnpm preflight` checks them too.
 
 **Also on chain, no longer in the repo:** `Ping` at `0x540d73793f5AA5E605A0243EA3DfCF106D6558D8`
 (verified). It was the Phase 0 toolchain probe used to prove the deploy→verify pipeline works before
@@ -100,6 +140,146 @@ and **nothing else** — not `DEFAULT_ADMIN_ROLE`, not `RESOLVER_ROLE`, not `CHA
 
 ---
 
+## Phase 6 — what shipped
+
+### The shape of it
+
+```
+CLOSED market ──> deterministic retrieval ──> resolution agent ──> quote verified ──> PENDING_REVIEW
+ (past close)      IDF coverage of the         (LLM, bounded)       in the text            │
+                   question's own terms              │                   │            ═══ HUMAN ═══
+                   NOT chosen by the model    UNSETTLED → no row    SCHEMA_REJECTED         │
+                                             (correct, retried)      (row, shown)      BridgeKey
+                                                                                       signature
+                                                                                            │
+                                                                                            ▼
+  ══════════════════ AND THEN THE CONTRACT HOLDS IT ══════════════════      proposeResolution()
+   challenge window must elapse · challengeResolution discards the outcome          │
+   finalizeResolution is PERMISSIONLESS · invalidateStale is PERMISSIONLESS         ▼
+                                                                          claim() → the OWNER
+```
+
+**The second human gate, and the one that decides who gets paid.** `/review` decides whether a market
+exists; `/resolve` decides what its answer is.
+
+### Why resolution is human-signed, when it did not have to be
+
+Hard rule #3 permits a decision to pass through deterministic code *or* a human *or* the contract, and
+a server-signed resolution would have satisfied it: the outcome is schema-constrained, the evidence URL
+is substituted from our own record, and the contract holds the result for a challenge window before
+anyone is paid. That version was nearly built.
+
+It fails on one number. **The challenge window is 120 seconds and immutable.** Nobody vetoes anything
+in 120 seconds. If that window were the only thing between a model emitting `YES` and a payout, a model
+would be deciding who gets paid. So the human is *before* the proposal, which means `proposeResolution`
+is signed in a browser — and `RESOLVER_ROLE` + `CHALLENGER_ROLE` went to the BridgeKey wallet. ADR-052
+records what that cost: the sentence "holds `MARKET_CREATOR_ROLE` and nothing else" is gone, replaced by
+a narrower one that is still checkable.
+
+### The authority the resolution agent does NOT have
+
+It has the most consequential output of the three agents, so it holds the least authority:
+
+| It may say | It may **not** | Who decides instead |
+|:--|:--|:--|
+| `outcome` — YES / NO / INVALID / UNSETTLED | `UNRESOLVED` | the schema; `proposeResolution` reverts on it |
+| `evidenceLabel` — one of the `EVIDENCE_n` we issued | a URL | `validate.ts` substitutes the real one |
+| `settledByQuote` — copied verbatim | a paraphrase | the quote is **searched for in the text it was shown** |
+| `rationale` — in words | a confidence score | it is not asked for one; a human reads every draft |
+| — | **which articles to read** | IDF coverage over articles ingested since the market opened |
+
+That last row is the one that matters most (ADR-053). A model that picks its own sources has already
+picked the answer.
+
+### What measurement changed — a fourth time, and the same shape again
+
+| Found in live output | Fix |
+|:--|:--|
+| **Retrieval returned zero candidates for all four live markets.** Reusing Phase 3's headline-vs-headline Jaccard | Structural, not tuning: Jaccard divides by the *union*, and a market question is long by construction, so a headline reporting exactly the right thing still scores near zero. Replaced with asymmetric IDF **coverage of the question's terms** (ADR-060) |
+| **Then the new threshold was wrong too.** 0.18 missed a true match by **0.003** | Measured the distribution: true matches at 0.165+, noise at 0.087 and below. Floor set to **0.12**, inside the gap, with the table in the code |
+| The tick's `settle` skip was pushed into `report.errors`, so `pnpm tick` exited 1 | A deliberate skip is not a stage error. It is a note on the settle report now, and `errors` keeps meaning "something went wrong" |
+| Fixed 60s-shaped stage deadlines made a **local** tick skip its last three stages — the tick did less on the machine you are watching than in production | The ladder now scales from one `maxDurationMs`; the CLI passes 300s, the route passes `maxDuration * 1000` so the two cannot drift |
+| `SettleReport.claimableWei` was a `bigint` in a report returned by `NextResponse.json` | `JSON.stringify` throws on a `bigint` — a 500 on the endpoint the cron calls, caused by a field added for a log line. It is a decimal string now |
+| `preflight` still printed "MARKET_CREATOR_ROLE only" about a wallet that now holds three roles | Checks all four roles and says which. The literal hashes were verified against the contract's own getters, because the first `CHALLENGER_ROLE` literal was wrong and the check passed anyway for the wrong reason |
+| The projection kept `evidenceUrl` after a challenge; the contract clears it | A challenged market rendered the discarded proposal's evidence beside an `UNRESOLVED` outcome. Fixed, with a test |
+
+ADR-029, ADR-049 and now ADR-060 are the same defect three times: **a threshold is a property of a
+measure, and a measure is a property of the question being asked.** Every one was invisible to the unit
+tests and obvious in one look at real output.
+
+### The lifecycle, on chain, in one run
+
+`pnpm --filter web lifecycle` — every check passed, ~5 minutes, market #8:
+
+```
+createMarket              deployer, MARKET_CREATOR_ROLE      block 5,796,280
+placeBet YES 0.01         deployer, an ordinary bettor       block 5,796,284
+placeBet NO  0.005        atlas's agent, capped by chain     block 5,796,288
+a late bet                                                   REVERTED BettingClosed()
+closeMarket               atlas's agent — no role at all     block 5,796,311
+proposeResolution NO      deployer, RESOLVER_ROLE            block 5,796,314
+finalize, too early                                          REVERTED ChallengeWindowOpen(…)
+challengeResolution       → back to CLOSED, outcome gone     block 5,796,326
+proposeResolution NO      round 2                            block 5,796,331
+finalizeResolution        atlas's agent — no role at all     block 5,796,378
+claim                     signed by atlas, PAID TO ITS OWNER block 5,796,384
+claim again                                                  REVERTED AlreadyClaimed()
+claim, losing side                                           REVERTED NothingToClaim()
+invalidateStale(#1)       atlas's agent — permissionless     block 5,796,402
+refund claim on #1        0.01 tMSTC returned                block 5,796,407
+```
+
+**The payout was checked three independent ways and all three agreed to the wei:**
+
+```
+hand-computed parimutuel   0.005 × (0.01 + 0.005) / 0.005  =  15000000000000000 wei
+previewPayout(8, atlas)                                       15000000000000000 wei
+owner balance delta        49998889067000000000 → 50013889067000000000
+                                                            = 15000000000000000 wei
+agent balance delta        −72489000000000 wei (gas only — it received nothing)
+```
+
+A contract test proves the arithmetic. Only this proves the arithmetic **and** that the money arrives
+at an address that is not the sender, on a real chain.
+
+### The keeper, and the claim it executes rather than asserts
+
+`closeMarket`, `finalizeResolution` and `claim` are all permissionless in the contract, so the keeper
+signs them with **an agent wallet holding no role at all** (ADR-058). Production has no admin key; a
+keeper that needed one would be a keeper that only worked on a laptop. Two keeper closes came out of an
+ordinary tick, not a script, sent by `kestrel`'s agent wallet — blocks 5,796,567 and 5,796,572.
+
+`invalidateStale` is deliberately **not** automated (ADR-057): it refunds everyone, and running it the
+instant `resolveDeadline` passes would mean our own resolver being ten minutes late costs every bettor
+their market.
+
+### The resolution agent, proved on real data without writing anything
+
+`pnpm --filter web resolution:dry-run` runs deterministic retrieval, the real model and the real
+validator against a live market and writes nothing. On market #7 it retrieved the correct Al Jazeera
+article (coverage 0.297), quoted it **verbatim**, and the validator confirmed the quote was in the text
+— then refused the draft because the market is still open (`BettingStillOpen`), which is the validator
+proving it is wired up. On market #5 it retrieved the Washington Post piece and answered `UNSETTLED`:
+
+> "The provided article reports on the court ruling itself but does not contain any information
+> regarding whether the Department of Justice has filed a formal notice of appeal."
+
+That is the correct answer, and it writes no row (ADR-055).
+
+### Exit criteria
+
+| Criterion | Result |
+|:--|:--|
+| Full lifecycle on chain: create → bet → close → propose → finalize → claim | ✅ market #8, every hash above |
+| A challenge is exercised on chain and forces re-proposal | ✅ `0x1e38128c…` → `CLOSED`, outcome discarded, count 1 |
+| Winner balances increase by the correct parimutuel amount, asserted against computed values | ✅ **three independent ways, agreeing to the wei** |
+| Double-claim reverts | ✅ on chain `AlreadyClaimed()` **and** a contract test |
+| `winningPool == 0` refunds everyone (tested) | ✅ contract test; the INVALID refund path also exercised live on #1 |
+| Every step has a real tx hash recorded in `PROGRESS.md` | ✅ 15 hashes in "Real artifacts" |
+| `pnpm -r build` / `lint` / `typecheck` / `test` | ✅ **404 tests** (57 contracts + 347 web), zero warnings |
+| Visible: market detail through to payout, plus `/audit` | ✅ `/resolve`, `/audit`, `/markets/[id]` |
+
+---
 ## Phase 5 — what shipped
 
 ### The shape of it
@@ -740,19 +920,33 @@ New in Phase 5:
 **1. ~~Gemini unusable.~~** ✅ **Closed.** Free tier, no billing. See above and RUNBOOK §1.
 
 **2. Resolution is trusted, by design.** A small set of authorised resolvers submits outcomes with
-an evidence URL. The challenge window, permissionless `finalizeResolution` and permissionless
+an evidence URL, **signed from a human's browser wallet** — no key the deployed application holds can
+resolve a market. The challenge window, permissionless `finalizeResolution` and permissionless
 `invalidateStale` bound what one bad or absent resolver can do — but this is **not** a
 decentralised oracle. This belongs in the README verbatim.
 
+**2b. The market creator and the resolver are the same wallet.** They should be different people.
+`humanResolverAddress()` reads `HUMAN_RESOLVER_ADDRESS` and falls back to the market authority, so
+splitting them is a configuration change plus two `grant:testnet` calls — we have not made it.
+`/resolve` says so on the page, `docs/TRUST_MODEL.md` says so, and `verify:resolution` asserts which
+roles that wallet actually holds.
+
 **3. The 120s challenge window is demo-scale.** Immutable, so it is honest and unchangeable
-rather than quietly tunable. Say so in the README.
+rather than quietly tunable. Say so in the README — **and say what it caused**: because two minutes is
+too short for a human to notice and veto a wrong outcome, the human gate had to move *before* the
+proposal, which is why `proposeResolution` is browser-signed (ADR-052). A longer window would permit the
+optimistic shape (AI proposes publicly, human vetoes inside the window), which is a real design we could
+not use.
 
 **4. ~~`lib/contract.ts` hand-writes ABI fragments.~~** ✅ Closed in Phase 2.
 
 **5. The DB test suite does not run in CI.** `schema.test.ts` creates and drops a real database on
-Neon and this repo is public, so the credential is deliberately not a CI secret. CI runs the 133
-pure tests; the DB suite skips with a loud warning. Run locally before any schema change — this
-session: **9/9 against a fresh database**.
+Neon and this repo is public, so the credential is deliberately not a CI secret. CI runs the pure
+tests; the DB suite skips with a loud warning. Run locally before any schema change — this session:
+**10/10 against a fresh database**, including the new `UNIQUE(market_id, round)` on
+`resolution_drafts` and both Phase 6 migrations applying cleanly. It needs generous timeouts:
+`--testTimeout=180000 --hookTimeout=240000`, because creating and dropping a Neon database is slow
+enough to time out the default teardown hook.
 
 **6. Re-org handling is a confirmation depth (3 blocks) and nothing more.** Honest on a
 3-second-block testnet; not mainnet-grade. `docs/ARCHITECTURE.md` §11 says so.
@@ -827,137 +1021,167 @@ the only place in the repo that broadcasts outside the intent engine — the eng
 receipt, re-run, could overfund an agent by one top-up. The consequence is one of our own wallets
 holding slightly more testnet coin than intended. Stated rather than hidden.
 
-**20. Tick duration: measured at 15.06s in production, with a real worst case that is not measured.**
-`POST /api/tick` returned HTTP 200 in **15,058ms with zero stage errors** after this phase — versus
-14.9s before it — so the agents stage costs almost nothing on a pass that takes no model calls. That
-measurement is honest but it is **not** a worst case: that tick screened or deferred all four pending
-pairs and made no agent LLM calls (`asked: 0`).
+**20. Tick duration, and the deadline ladder that now bounds it.**
+`POST /api/tick` was measured at **15,058ms** in production with zero stage errors at the end of
+Phase 5. Phase 6 added two stages, so that figure is stale until re-measured (see the handoff below).
 
-The ceiling is arithmetic rather than measurement. A tick's LLM allowance is now **nine** calls (4
-clustering + 2 proposer + 3 agents) and `GEMINI_TIMEOUT_MS` is 22,000, against `maxDuration = 60`.
-Those do not multiply out safely, and the failure mode is the worst available: an over-running tick is
-killed before it returns a report **or writes its audit row**, so the one tick that went wrong is the
-one that leaves no trace.
+The ceiling is arithmetic rather than measurement. A tick's LLM allowance is now **ten** calls (4
+clustering + 2 proposer + 1 resolution + 3 agents) and `GEMINI_TIMEOUT_MS` is 22,000, against
+`maxDuration = 60`. Those do not multiply out safely, and the failure mode is the worst available: an
+over-running tick is killed before it returns a report **or writes its audit row**, so the one tick
+that went wrong is the one that leaves no trace.
 
-**Mitigated, not merely noted.** The agents stage now takes an **absolute deadline from the start of
-the tick** (`AGENT_STAGE_DEADLINE_MS = 38_000`) and checks it before admitting a pair and again
-before calling a model. Past it, the stage stops, reports `out of time for this tick`, and the next
-tick picks the pairs up — a graceful partial pass instead of a killed function. It is absolute rather
-than a per-stage budget on purpose: a pass that arrives late because clustering was slow correctly
-does less, rather than pushing the tick over. The check never sits between writing a decision row and
-creating its intent, so committed work is never abandoned.
+**Mitigated by a ladder that scales from one number.** `runTick` takes `maxDurationMs` and derives
+every stage deadline from it as a fraction — resolution 40%, agents 63%, settlement 80% — each
+**absolute from the start of the tick**, so a stage that arrives late does less rather than pushing the
+tick over. Each yields and says so in its report. The route passes `maxDuration * 1000` so the two
+cannot drift; `scripts/tick.ts` passes 300s because it has no serverless limit and a local tick is
+round-trip-bound (~100s, versus ~15s in production — ADR-033).
 
-Still worth doing before demo day: force one production tick that takes a **full** agents pass (three
-model calls and three decisions) and read its `durationMs`. The dials, in order of bluntness, are
-`LLM_AGENT_CALLS_PER_TICK`, `AGENT_STAGE_DEADLINE_MS`, then `MAX_PAIRS_PER_PASS` and
-`MAX_DECISIONS_PER_PASS` in `lib/agents/run.ts`. There are no pairs left at round 1 to trigger one
-with, so the occasion is the next approved market.
+That last part was a real defect found this session: with fixed 60s-shaped constants, `pnpm --filter
+web tick` silently skipped its last three stages, so the tick did **less** on the machine where you
+are watching it than in the place you cannot see.
+
+**Still unbounded:** clustering and the proposer have no deadline, only a call budget. Clustering's
+four calls are the largest single allowance in the tick. Worth doing if a tick is ever seen to be
+killed; not done, and not claimed.
+
+**21. The resolution agent has never run against a market that is genuinely past close.**
+`runResolutionPass` requires `close_time <= now()`, and markets #4–#7 close on **2026-09-30 22:12
+UTC**. Market #8 is finalised and has no proposal row, so it is out of scope by design. Every part of
+the agent has been proved on real data through `resolution:dry-run` — retrieval, the model, the quote
+check, `UNSETTLED`, and the validator's close-time refusal — but the *stage* has only ever reported
+"no human-approved market is past its close time". The first real drafting pass will happen on the
+30th, and that is the moment to watch for the fourth instance of the ADR-029/049/060 pattern.
+
+**22. The coverage floor is calibrated on subject matches, not settlement matches.**
+`MIN_QUESTION_COVERAGE = 0.12` was read off 29 live articles scored against four live questions
+(ADR-060). Every true match in that sample was an article about the *same story*; **none reported the
+*outcome* of any market**, because none of those outcomes has happened. The case the resolver actually
+depends on is not in the sample. The floor is set generously for that reason, and
+`resolution:dry-run` re-derives the distribution on demand.
+
+**23. One market's drafted outcome would probably be refused by a human, and that is the system
+working.** On market #7 the agent proposed `NO` because Trump denied that a sanctions-relief offer
+exists — reasoning from a failed premise rather than from the question ("will Iran accept?"). The quote
+was real and verified. A resolver reading it should refuse it, which is exactly what the human gate is
+for. Worth a sentence if it comes up: the validator checks whether an outcome is *verifiable*, never
+whether it is *wise*.
+
+**24. `resolution_drafts` rows are never deleted, including `STALE` ones.** A draft retired because
+its market was challenged into a new round stays in the table and renders on `/resolve` under
+"already decided". That is deliberate — it is true, and it is what the round mechanism looks like from
+the outside — but a judge scrolling the list will see drafts that were never signed and never refused.
+
+**25. The lifecycle script's agent bet bypassed the policy gate, on purpose.** Market #8's `NO` side
+was placed by an operator from `atlas`'s wallet with no model asked and no gate consulted, because
+demonstrating that `claim()` pays the registered *owner* needs an agent with a winning stake, and no
+such market existed. The audit log says exactly that, no `agent_decisions` row was written, and the
+stake was inside the agent's on-chain caps — which the chain enforced regardless of what the script
+believed. ADR-059.
 
 ## What the next session needs to know
 
-**Start Phase 6: resolution, challenge window, payout.** Read `docs/BUILD_PLAN.md` Phase 6. It
-closes the loop — create → bet → close → propose → challenge → finalize → claim — and it is the last
-phase that puts new transactions on chain.
+**Start Phase 7: dashboard polish + trust surface.** Read `docs/BUILD_PLAN.md` Phase 7. It is the
+`/trust` page with live counters, the `<Provenance>` component plus the CI check that fails a
+production build containing `MOCK`, "judge mode" (a pre-funded guest agent a judge can trigger to
+produce a real on-chain transaction without owning a wallet), and a responsive/empty/error-state pass.
 
-**There is nothing outstanding from Phase 5, and nothing waiting on the user.**
+**Phase 6 is the last phase that had to put new transaction *kinds* on chain.** Every contract
+function is now exercised by a real, resolvable transaction. Phase 7 and 8 are about making that
+legible.
 
-### The clock is the thing to plan around
+**There is nothing outstanding from Phase 6, and nothing waiting on the user.**
 
-Markets 4–7 close at **2026-09-30 22:12 UTC** and their `resolveDeadline` is 24 h after that. Phase 6
-needs a market that is **past** `closeTime` to propose a resolution on, so:
+### The clock, and the one thing only time can unblock
 
-- **markets 1–3 are already past close** (2026-09-28) and are the natural sandbox for the lifecycle
-  — they are labelled as test markets in their own on-chain question text. Market 1 and 2 each hold
-  0.01 tMSTC of `poolYes` from the Phase 1 smoke tests, so a payout is actually computable on them.
-  Market 3 has empty pools, which exercises the `winningPool == 0` refund path.
-- **markets 4 and 5 carry real agent stakes** (0.005 and 0.004 tMSTC on YES) and are the ones worth
-  resolving in the demo, but not until they close. If the session runs before 22:12 UTC on the 30th,
-  do the lifecycle on 1–3 first and leave 4–7 for the live run.
-- `invalidateStale` needs a market past `resolveDeadline` — markets 1–3 are past theirs too.
+Markets **#4–#7 close at 2026-09-30 22:12 UTC**, `resolveDeadline` 24 h later. Until then the
+resolution *stage* has nothing in scope (known gap #21). Two things should happen on the 30th:
 
-### `RESOLVER_ROLE` is on the deployer, not on BridgeKey
+1. **The first real drafting pass.** Watch `resolution:dry-run` and then `/resolve` for the pattern
+   that has now bitten three times — a threshold or a prompt that is individually sensible and wrong
+   in composition. Markets #4 and #5 carry real agent stakes (0.005 and 0.004 tMSTC on YES), so they
+   are the ones worth resolving on camera.
+2. **A production tick with a full agents pass.** Force three agent model calls and read `durationMs`
+   against the new ten-call allowance. The dials, in order of bluntness:
+   `LLM_AGENT_CALLS_PER_TICK`, `LLM_RESOLUTION_CALLS_PER_TICK`, the fractions in
+   `STAGE_DEADLINE_FRACTION`, then `MAX_PAIRS_PER_PASS` / `MAX_DECISIONS_PER_PASS`.
 
-Deliberate (least privilege — see "Blocking items"). Phase 6 is not blocked: the deployer holds it and
-the intent engine can sign with it locally. **But** if the demo wants a *human* to sign
-`proposeResolution` from BridgeKey the way they sign `createMarket`, grant it first:
+Markets **#2 and #3 are CLOSED and past `resolveDeadline`** with no proposal row, so the pipeline will
+never touch them. #2 holds 0.01 tMSTC of `poolYes`; `invalidateStale(#2)` from any wallet would refund
+it, and `verify:resolution` confirms that call would succeed. That is a spare live demonstration of
+permissionless invalidation if one is wanted.
 
-```bash
-ROLE=RESOLVER_ROLE TO=0xA9F68fDf84388fa548a685085E2bee0e5b311fF1 pnpm --filter contracts grant:testnet
-```
+### The role change is the thing to re-read before speaking to a judge
 
-That is a judgement call for Phase 6 to make, not a thing already decided. Note the same applies to
-`CHALLENGER_ROLE` if a human is to raise the challenge on camera.
+`0xA9F68fDf84388fa548a685085E2bee0e5b311fF1` now holds `MARKET_CREATOR_ROLE`, `RESOLVER_ROLE` **and**
+`CHALLENGER_ROLE`. The old line "holds `MARKET_CREATOR_ROLE` and nothing else" is **false** and must
+not be said. The replacement, which is what `verify:resolution` and `preflight` both assert:
 
-### Everything Phases 3–5 built is available and tested. Do not rebuild any of it.
+> It holds every role that requires human judgement and **none** that confers power — no
+> `DEFAULT_ADMIN_ROLE`, so it cannot register an agent, change a cap, or pause the contract. And no
+> key the deployed application holds can create, resolve, challenge, register, re-cap or pause
+> anything.
+
+ADR-052 has the argument for why the change was necessary and what it cost.
+
+### Everything Phases 3–6 built is available and tested. Do not rebuild any of it.
 
 | You need | Use | Notes |
 |:--|:--|:--|
-| A market that came through the human gate | `markets` where `proposal_id is not null` | needs gap #13 closed first |
-| Calling a model safely | `callJson()` from `@/lib/llm/client` | never throws; returns a union; `raw` is set on `SCHEMA_REJECTED` |
-| Delimiting untrusted text | `buildUserMessage()` from `@/lib/llm/prompt` | **mandatory** — hard rule #4 |
-| A per-stage call budget | `new LlmBudget(n)` | **two exist now** — see `tick.ts`; give Phase 5 its own |
-| Adding a stage to the tick | `lib/pipeline/tick.ts` → `stage()` | wrap it, so a failure is recorded not thrown |
-| Writing to chain | `createIntent()` + `runIntentWorker()` | nothing else may broadcast |
-| Signing with a key we hold | `createIntent({ signer: "SERVER" })` | the default; agent wallets are SERVER |
-| Deciding what a worker may do to an intent | `plannedSteps()` — pure, tested | do not re-derive this inline |
-| Decoding a revert for the UI | `describeRevert()` from `@/lib/chain/revert` | proved out by the over-cap bet |
-| Signing as an agent wallet | `createIntent({ from: agentAddress })` | `resolveSigner` finds the key; nothing else decrypts one |
-| A pure gate to copy the shape of | `lib/policy/policyGate.ts` | screen → judge → clamp, three verdicts, reasons on approve too |
-| Reading a market from the chain | `readMarket()` from `@/lib/chain/auspex` | never the projection, when the answer decides money |
-| Agent decisions for a page | `getAgentsForDisplay()` / `gateCounters()` | chain status comes from the intent, not the row's own column |
+| A market past close that a human approved | `resolvableMarkets()` in `lib/resolution/run.ts` | `state IN (OPEN, CLOSED)` + `close_time <= now()` |
+| The chain's own view of a market | `readMarket()` from `@/lib/chain/auspex` | never the projection, when the answer decides money |
+| What the contract will pay an address | `readPreviewPayout()` | **the** number to show; never compute a payout yourself |
+| Ranking articles against a question | `rankByCoverage()` from `lib/resolution/retrieve` | asymmetric coverage, **not** `weightedJaccard` — ADR-060 |
+| A pure validator to copy the shape of | `lib/resolution/validate.ts` | three verdicts, `now` injected, collects every failing rule |
+| The resolver's queue for a page | `pendingResolutions()` / `decidedResolutions()` / `resolutionCounters()` | each row carries live chain state and `blockedBecause` |
+| Whether a draft can be signed right now | `isProposable()` + `roundFor()` | mirrors `proposeResolution` exactly |
+| Running the permissionless calls | `runSettlePass()` from `lib/resolution/settle` | picks a funded agent wallet as keeper; queues, never signs |
+| Intents for one market, for a timeline | `lifecycleIntentsFor(onchainId, proposalId)` | pass the proposal id or `createMarket` is missing |
+| The audit log for a page | `auditPage()` / `auditActionCounts()` from `@/lib/audit` | groups are in `AUDIT_GROUPS`; default view is unfiltered |
+| A human-signed contract call | `createIntent({ signer: "EXTERNAL", from })` then `attachExternalBroadcast` | the hash is verified against the node, calldata included |
+| Adding an LLM stage to the tick | give it its **own** `LlmBudget` and a `deadlineMs` from `deadline(...)` | four budgets exist; a fifth needs a fraction in the ladder |
 
-**The Phase 5 agent is the same shape as `lib/proposer/`.** Read `draft.ts` and `validate.ts`
-together — they are the worked example of the pattern Phase 5 repeats with money instead of text:
-
-- the model fills **constrained fields only**, and never a value that is used directly
-- a **pure** validator with no I/O and no clock turns those fields into the real decision
-- the three-outcome split matters: `PROPOSED` / `REJECTED` (terminal, row written) /
-  `UNAVAILABLE` (**no row**, retried). Collapsing the last two writes a terminal row against a
-  unique constraint on the strength of a 429 — for Phase 5 that means an agent that can never bet
-  on a market again because one call rate-limited
-- the model's self-assessment is shown, never used as a gate (ADR-041). `confidence` in Phase 5 is
-  the same trap: it is the agent's own number, so the *threshold* must be policy, not the model's
-
-**`policyGate.ts` must be pure.** No network, no DB, **no clock read inside it** — time and balances
-are injected. `validate.ts` is the precedent: it takes `now` as an argument, which is why its 20
-tests need no infrastructure and pin exact output.
-
-**Commands added this phase:**
-
-```bash
-pnpm --filter web verify:approval   # 8 live checks + eth_call of the real calldata. Writes nothing.
-pnpm --filter web tick              # now also runs propose → intents → index → notify
-```
-
-**Phase 6 should reuse these three patterns rather than reinvent them:**
-
-- **`verify:agents` and `verify:approval` are the template for proving a phase.** `eth_call` from the
-  acting address, against the deployed contract, at the current block — it catches a revoked role, a
-  paused contract and a wrong encoding without signing anything. Phase 6 wants
-  `verify:resolution`: does `proposeResolution` succeed from the resolver, does `finalizeResolution`
-  revert while the window is open, does `claim` return the amount `previewPayout` promises.
-- **Auto-claim is a worker over `agent_decisions`, not a new table.** A confirmed decision already
-  carries `market_id` and `member_id`; `previewPayout(marketId, agentAddress)` says what the contract
-  will pay, and `claim()` pays the **owner**. Key the intent on the decision id, as `placeBet` does.
-- **Reconcile at the end of the tick as well as the start.** `runAgentPass` reconciles first (so a
-  halted tick still learns the chain's answer) and `tick.ts` calls `reconcileDecisions()` again after
-  the intent worker, so a bet approved, signed and confirmed in one tick does not sit at
-  `TX_PENDING` for three minutes. Do the same for resolution state.
-
-**Commands added this phase:**
-
-```bash
-pnpm --filter web agents:register   # seed members, fund wallets, register caps ON CHAIN. Local only.
-pnpm --filter web verify:agents     # 41 live checks incl. the cap boundary + kill switch. Writes nothing.
-pnpm --filter web agents:over-cap   # the over-cap bet. Sends cap+1 wei; the chain refuses it.
-pnpm preflight                      # now 11/11 — includes all three agents registered and funded
-```
+**`lib/resolution/` is the worked example of the pattern, one step further than `lib/proposer/`.**
+Read `retrieve.ts` → `draft.ts` → `validate.ts` → `propose.ts` in that order. The new idea over Phase 4
+is that **retrieval is part of the gate**: the model is not only constrained in what it may say, it is
+constrained in what it may look at.
 
 **Things that will cost you an hour if you rediscover them:**
 
+- **A `bigint` in anything returned by `NextResponse.json` is a 500.** `JSON.stringify` throws on it.
+  Every wei value in a report is a decimal string, same as the DB columns.
+- **A deliberate skip must not go into `report.errors`.** The CLI and the cron heartbeat both exit
+  non-zero on that array, so a tick that correctly declined optional work would read as broken.
+- **`resolution_drafts` is unique on `(market_id, round)`, and `round` comes from the chain's
+  `challengeCount + 1`.** Derive it from `readMarket`, never from a counter of our own, or a re-run
+  keys a draft to the wrong round and the unique index silently hides it.
+- **`UNSETTLED` must write no row.** It is the common answer for a market that closed an hour ago. A
+  row would spend the round's only draft slot on "not yet". Same trap as ADR-045 and ADR-049.
+- **The quote check compares against the text the model was *shown*, truncation included.** That is
+  why `IssuedEvidence` stores it. Score and offer the same string, or true quotes get rejected for
+  living in a part that was never sent.
+- **Hardcoded role hashes must be verified against the contract's own getters.** The first
+  `CHALLENGER_ROLE` literal in `preflight.mjs` was wrong, and the check still "passed" — for the
+  wrong reason — until it was compared against `eth_call`.
+- **`maxDuration` in the route and the tick's time budget must come from one number.** They are tied
+  now (`TICK_BUDGET_MS = maxDuration * 1000`); untying them is how a stage starts work the platform
+  then kills.
+
+**Commands added this phase:**
+
+```bash
+pnpm --filter web lifecycle           # the full lifecycle on chain, ~5 min. Creates a labelled test market.
+pnpm --filter web verify:resolution   # 20+ live eth_call checks of the resolution gates. Writes nothing.
+pnpm --filter web resolution:dry-run  # the resolution agent on a real market, with candidate scores. Writes nothing.
+MARKET=5 pnpm --filter web resolution:dry-run   # a specific market
+```
+
+**Carried forward from Phases 3–5 — still true, still worth an hour each:**
+
 - **`agent_decisions` is unique on `(market_id, member_id, round)`, and a row is terminal.** Before
   writing one, ask whether its reason can ever change. Kill switch, unfunded wallet, spent budget →
-  no row. This is the single most expensive thing to get backwards in this phase's code.
+  no row. `resolution_drafts` repeats this shape exactly.
 - **`agentRemainingOnMarket` returns 0 for an agent the contract does not know** — identical to a
   genuinely exhausted cap. Any check on it must be guarded on `registered && active`.
 - **Postgres reads a naive timestamp in the *session* time zone.** `date_trunc('day', now() at time
@@ -967,43 +1191,34 @@ pnpm preflight                      # now 11/11 — includes all three agents re
   intent kind, decide whose key signs it, and remember production has no admin key.
 - **A reverting `eth_estimateGas` is not an error to avoid.** The engine falls back to
   `FALLBACK_GAS_LIMIT` precisely so a transaction we *want* refused reaches the chain where a judge
-  can read the revert.
-
-- **Read the real output before trusting the pipeline.** Both Phase 4 defects — a Google News
-  redirect on a spec, and a 2024 deadline on a market closing tomorrow — were invisible to the
-  tests and obvious in one `SELECT`. Print what the model actually produced.
-- **`eth_call` from the acting address is the cheapest possible proof.** `verify:approval` catches a
-  revoked role, a paused contract, a used spec hash and a wrong calldata encoding without signing
-  anything. Phase 5 should simulate every bet the same way — except the one it *wants* to revert.
-- **`onchain_intents` now has a `signer` column, and `claimIntent` filters on it.** If you add a new
-  intent kind, decide which it is. `SERVER` is the default and is right for agent wallets.
-- **The tick has two LLM budgets, not one.** `report.llm.callsMade` sums them. Adding a third stage
-  means a third budget, or clustering will starve it.
-- **Server actions are public HTTP endpoints.** `app/review/actions.ts` re-checks authority on the
-  server in every function; the page saying who is connected is a claim, not a fact.
-
+  can read the revert. Phase 6 relies on this for four deliberate reverts.
+- **Read the real output before trusting the pipeline.** Every defect worth finding in Phases 4, 5 and
+  6 was invisible to the tests and obvious in one look at live output.
+- **`eth_call` from the acting address is the cheapest possible proof.** Three `verify:*` scripts now
+  do it, and none of them signs anything.
+- **Server actions are public HTTP endpoints.** `app/review/actions.ts` and `app/resolve/actions.ts`
+  both re-check authority on the server in every function; the page saying who is connected is a
+  claim, not a fact. `settleNow()` is the deliberate exception — every call it makes is
+  permissionless, so gating it would be theatre.
+- **The tick has four LLM budgets, not one.** `report.llm.callsMade` sums them. A fifth stage needs a
+  fifth budget and a fraction in `STAGE_DEADLINE_FRACTION`, or clustering will starve it.
 - **Read the whole error body before believing a status code.** Two sessions recorded Gemini as
   needing a credit card on the strength of `402`. The body said *prepayment credits depleted* —
-  project-scoped, fixed with a new key in a project that has no billing account.
-- **A tick is round-trip-bound, not CPU-bound.** 19,900 similarity comparisons take under 20ms;
-  400 sequential Neon round trips take 400 seconds. Batch writes, and never put a query inside a
-  per-row loop. ADR-033.
-- **Next 16 writes `web/AGENTS.md` and `web/CLAUDE.md` on every `next dev`.** The generated
-  `CLAUDE.md` would sit below the repo-root one that carries the session protocol. Disabled with
+  project-scoped, fixed with a new key in a project with no billing account.
+- **A tick is round-trip-bound, not CPU-bound.** 19,900 similarity comparisons take under 20ms; 400
+  sequential Neon round trips take 400 seconds. Batch writes, never a query inside a per-row loop.
+  ADR-033. This is also why a local tick takes ~100s and a production one ~15s.
+- **Next 16 writes `web/AGENTS.md` and `web/CLAUDE.md` on every `next dev`.** Disabled with
   `agentRules: false` in `next.config.mjs` — do not remove it.
-- **`turbopackIgnore` on `lib/env.ts`'s `fs` calls is load-bearing for deploy size.** Without it
-  Turbopack traces the entire project into the serverless bundle.
-- **Thresholds in `similarity.ts` are empirical.** If you change the feed list, re-run
-  `pnpm --filter web calibrate` — they are only as good as the distribution they came from.
-- **`scanForInjection(title, body)` takes two arguments now**, not a spread. Some signatures are
-  headline-scoped.
+- **`turbopackIgnore` on `lib/env.ts`'s `fs` calls is load-bearing for deploy size.**
+- **Thresholds in `similarity.ts` and `retrieve.ts` are empirical.** Re-run `calibrate` and
+  `resolution:dry-run` respectively if the feed list changes.
+- **`scanForInjection(title, body)` takes two arguments**, not a spread.
 - **Google News entity-encodes its HTML**, so `cleanText` strips tags, decodes, then strips again.
-  Removing either pass puts raw markup in the database and in the prompt.
-- **Postgres cannot `ON CONFLICT` against a row in its own `VALUES` list** — it raises "cannot
-  affect row a second time". De-duplicate a batch in memory first; Google News returns the same
-  story under two topic queries routinely.
+- **Postgres cannot `ON CONFLICT` against a row in its own `VALUES` list.** De-duplicate a batch in
+  memory first.
 
-**Still true from earlier phases:**
+**Environment facts, still true:**
 
 - `vercel env pull` cannot retrieve the Neon variables (marked sensitive; writes `[SENSITIVE]`).
   Use `neonctl` — RUNBOOK §3.

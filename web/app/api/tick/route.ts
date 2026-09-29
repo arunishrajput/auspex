@@ -23,6 +23,15 @@ import { optionalEnv } from "@/lib/env";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+/**
+ * The tick's time budget, tied to `maxDuration` above so the two cannot drift.
+ *
+ * `runTick` derives every stage deadline from this. A budget larger than the function's limit would
+ * let a stage start work the platform then kills mid-flight — losing the report and the tick's own
+ * audit row, which is the one failure the deadline ladder exists to prevent.
+ */
+const TICK_BUDGET_MS = maxDuration * 1000;
+
 function authorize(request: NextRequest): NextResponse | null {
   const expected = optionalEnv("TICK_SECRET");
   if (expected === undefined) {
@@ -49,7 +58,7 @@ export async function POST(request: NextRequest) {
   const skipIndex = request.nextUrl.searchParams.get("skipIndex") === "true";
 
   try {
-    const report = await runTick({ skipIndex });
+    const report = await runTick({ skipIndex, maxDurationMs: TICK_BUDGET_MS });
     // 207 when some stage failed: the body is a real report, but calling it 200 would let the
     // heartbeat's `--fail-with-body` treat a half-broken pipeline as healthy.
     const status = report.errors.length === 0 ? 200 : 207;

@@ -4,19 +4,26 @@
  *   pnpm --filter web tick              # full tick, including the chain indexer
  *   pnpm --filter web tick --no-index   # news stages only
  *
- * Identical to what `POST /api/tick` runs. Having both matters: the HTTP route is what the
- * cron and the dashboard button call, and this is what you use to watch a tick's output while
- * developing, without needing `TICK_SECRET` or a running server.
+ * Identical to what `POST /api/tick` runs, with one deliberate difference: the **time budget**. The
+ * HTTP route has a 60-second `maxDuration` and the tick's stage deadlines are derived from it; this
+ * has no such limit, and a local tick is dominated by laptop→Neon round trips rather than by work
+ * (ADR-033) — measured at ~90s against ~15s in production. With the production budget, running this
+ * locally silently skipped its last three stages, so the tick did *less* on the machine where you
+ * are watching it than in the place you cannot see. `TICK_BUDGET_MS` overrides it.
  */
 
 import { runTick } from "../lib/pipeline/tick";
 
+/** Generous, because there is no serverless timeout here. Overridable for an experiment. */
+const LOCAL_BUDGET_MS = Number(process.env.TICK_BUDGET_MS ?? 300_000);
+
 async function main(): Promise<void> {
   const skipIndex = process.argv.includes("--no-index");
 
-  console.log(`AuspeX tick — ${new Date().toISOString()}${skipIndex ? "  (news only)" : ""}\n`);
+  console.log(`AuspeX tick — ${new Date().toISOString()}${skipIndex ? "  (news only)" : ""}`);
+  console.log(`  time budget ${LOCAL_BUDGET_MS}ms (production uses 60,000 — see the header)\n`);
 
-  const report = await runTick({ skipIndex });
+  const report = await runTick({ skipIndex, maxDurationMs: LOCAL_BUDGET_MS });
 
   if (report.ingest !== null) {
     const ingest = report.ingest;
@@ -72,6 +79,23 @@ async function main(): Promise<void> {
     console.log();
   }
 
+  if (report.resolution !== null) {
+    const resolution = report.resolution;
+    console.log("Resolution agent  (deterministic retrieval; writes to the resolver's queue only)");
+    console.log(`  closed markets seen   ${resolution.pending}`);
+    console.log(`  model calls           ${resolution.attempted}`);
+    console.log(`  queued for a human    ${resolution.drafted}   <- each one needs a signature to reach the chain`);
+    console.log(`  "not settled yet"     ${resolution.unsettled}   <- no row written; the correct answer, and retried`);
+    console.log(`  refused by validator  ${resolution.schemaRejected}   <- rows kept and shown`);
+    console.log(`  no evidence to read   ${resolution.skippedNoEvidence}   <- no candidate article passed the similarity floor`);
+    console.log(`  no model answer       ${resolution.unavailable}   <- no row written, retried next tick`);
+    if (resolution.staled > 0) {
+      console.log(`  retired as stale      ${resolution.staled}   <- the market moved on before the draft was used`);
+    }
+    if (resolution.haltedBecause !== null) console.log(`  halted                ${resolution.haltedBecause}`);
+    console.log();
+  }
+
   if (report.agents !== null) {
     const agents = report.agents;
     console.log("Member agents  (the policy gate decides the stake; the contract caps it again)");
@@ -102,6 +126,19 @@ async function main(): Promise<void> {
     console.log("Chain index");
     console.log(`  blocks ${report.index.fromBlock}–${report.index.toBlock} of ${report.index.headBlock}`);
     console.log(`  logs   ${report.index.logsFetched} fetched, ${report.index.logsInserted} new`);
+    console.log();
+  }
+
+  if (report.settle !== null) {
+    const settle = report.settle;
+    console.log("Keeper  (closeMarket, finalizeResolution, claim — none of them needs a role)");
+    console.log(`  closes queued         ${settle.closed}`);
+    console.log(`  finalisations queued  ${settle.finalized}   <- permissionless; nobody can block a payout`);
+    console.log(`  claims queued         ${settle.claimed}, worth ${settle.claimableWei} wei to the registered owners`);
+    if (settle.reconciled > 0) {
+      console.log(`  drafts reconciled     ${settle.reconciled}   <- brought up to date with the chain`);
+    }
+    for (const note of settle.notes) console.log(`  note: ${note}`);
     console.log();
   }
 
