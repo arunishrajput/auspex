@@ -33,6 +33,16 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 /**
+ * Applies to this segment's server actions, not just the page render.
+ *
+ * `syncAfterApproval` waits out the indexer's three-block confirmation depth — about ten
+ * seconds — before indexing and announcing. The platform default is ten seconds, which would
+ * kill it at exactly the wrong moment, and `recordApproval` already polls for a receipt on top
+ * of that. Sixty is the ceiling available to us and the same figure `/api/tick` uses.
+ */
+export const maxDuration = 60;
+
+/**
  * A constructed model response used by the worked-example panel at the foot of the page.
  *
  * It is not feed data and the panel says so. It breaks four rules at once — an invented source

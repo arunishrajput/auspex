@@ -1520,3 +1520,64 @@ asserted over all of them — which means that when it does appear, it is worth 
 computed from that data. ADR-045 and ADR-049 were the same shape in the pipeline; this is the same
 shape in the UI. A sentence a human wrote once, beside numbers a query produces, is a sentence that
 will be wrong later.
+
+---
+
+### ADR-066 — Every market notification was late, because the pass sent to fetch the log ran three blocks too early
+
+**Decided:** wait out the indexer's confirmation depth before indexing an approval, rather than
+lowering the depth; move the indexer-then-notifier pair into `POST /api/sync` and a
+`syncAfterApproval` server action the browser fires without awaiting; and stop describing the
+GitHub Actions cron as a five-minute heartbeat.
+
+**The symptom.** A market approved on `/review` produced no Discord message for tens of minutes.
+Measured from the database, not inferred: market #10 was approved at `05:26:50Z` and announced at
+`06:11:19Z` — **44m29s**. Market #9: approved `04:29:31Z`, announced `05:19:15Z` — **49m44s**.
+
+**The cause, which was arithmetic.** `recordApproval` already ran the intent worker, the indexer and
+the notifier inline, precisely so this would be fast. It could never work:
+
+- `runIntentWorker` returns after `waitForTransaction(hash, 1, …)` — **one** confirmation.
+- `runIndexer` reads only to `head - confirmations`, with `DEFAULT_CONFIRMATIONS = 3`.
+
+So the inline indexer ran with the market's own log three blocks *above* the horizon it reads to.
+It was structurally guaranteed to miss it, every time, and the notifier then correctly reported
+"no notification yet — the market is not indexed". The cursor proves it: after the 05:26:50 pass it
+stood at **5,801,448**, while market #10 was mined in **5,801,451**. The next pass — the 06:11
+cron — read `5801449 → 5802337`, found exactly one log, and sent exactly one message.
+
+**Why the second half of the bug was invisible.** The repair depended on the cron, and the cron is
+not what it says. `heartbeat.yml` schedules `*/5 * * * *`; GitHub delivered **three runs in fourteen
+hours** (20:42Z, 00:36Z, 06:10Z). Scheduled workflows are best-effort and free runners are shed
+first. The README's claim of "a five-minute GitHub Actions heartbeat" was false, and is now
+corrected with the measurement beside it.
+
+**Why wait for the depth instead of lowering it.** Dropping to zero or one confirmation would have
+fixed the latency in one line. It would also have redefined the word the whole notifier is built
+around. `announceable()` selects on `onchain_id` and `created_tx_hash` — columns only the indexer
+writes, only from a confirmed log — because the exit criterion forbids telling members about a
+market that does not exist. The confirmation depth *is* that definition. Waiting costs ~7.5s of a
+background request (measured against the live chain: `waited 7557ms`, horizon reached). Lowering it
+would cost the claim.
+
+**Why the browser fires it and does not await it.** The wait is about ten seconds. Holding the
+reviewer's spinner open for a transaction already mined is the wrong trade, and a server action on
+the `/review` segment gets the platform's ten-second default — which would kill the wait at exactly
+the wrong moment. So the action is fired with `void`, the segment declares `maxDuration = 60`, and
+the button frees the instant the transaction is recorded.
+
+**Why `/api/sync` exists beside `/api/tick`.** A tick fetches eight feeds, clusters two hundred
+articles and spends an LLM budget to reach the notifier: ~19s measured. The notification path needs
+none of it — the indexer half of that same tick took **98ms**. Separating them means the path a
+member's notification travels can be run often and cheaply. `CRON_SECRET` first, `TICK_SECRET` as
+fallback; the name is Vercel's, so a `vercel.json` cron would need no further wiring.
+
+**What is still true and unfixed.** `.github/workflows/sync.yml` is documented as a repair path, not
+a delivery path, because nothing makes GitHub honour a `*/5`. The delivery path is now the request
+that caused the market. If the browser is closed mid-wait, the backstop is the cron, and it is
+honest about being measured in hours.
+
+**The general lesson.** The inline fast-path had been there since Phase 4 and read as correct — it
+called the right functions in the right order. Two constants written in different files, a year of
+comments apart, made it a no-op. `wouldIndex` is now one exported expression with a table test, so
+the horizon and the receipt depth are compared in a place where they can be seen disagreeing.

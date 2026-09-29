@@ -75,6 +75,13 @@ free on public repos) as a background heartbeat, and by a **"Run tick" button** 
 live demo control. GH Actions cron can be delayed under load, so the button — not the cron — is what
 gets pressed in front of judges.
 
+**How badly delayed, measured rather than assumed.** On 2026-09-29 the `*/5` heartbeat had been
+delivered three times in fourteen hours — 20:42Z, 00:36Z, 06:10Z. Treat the cron as a backstop that
+fires *somewhere between minutes and hours*, never as a latency guarantee. Anything a member sees
+must be driven by the request that caused it. That is why market notifications now leave from
+`/review` via `POST /api/sync` (indexer → notifier, ~1s) rather than waiting for a tick, and why
+`.github/workflows/sync.yml` is documented as a repair path rather than the delivery path.
+
 ---
 
 ## 3. The pipeline is a state machine

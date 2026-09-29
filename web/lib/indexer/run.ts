@@ -39,10 +39,23 @@ const CHUNK_BLOCKS = 500_000;
 /** Blocks left unread below the head. ~9 seconds of chain at 3s blocks. */
 const DEFAULT_CONFIRMATIONS = 3;
 
+/** How often the confirmation wait re-reads the head. Blocks are 3s, so this is ~2 polls a block. */
+const CONFIRM_POLL_MS = 1_500;
+
+/**
+ * Longest the indexer will wait for a specific block to clear the confirmation depth.
+ *
+ * Three confirmations at 3s blocks is ~9s. 20s absorbs a slow block or two and still leaves
+ * most of a 60s function for the indexing and notification that follow.
+ */
+const CONFIRM_TIMEOUT_MS = 20_000;
+
 export type IndexReport = {
   fromBlock: number;
   toBlock: number;
   headBlock: number;
+  /** ms spent waiting for `confirmBlock` to clear the confirmation depth. 0 when not asked. */
+  waitedMs: number;
   /** Logs returned by the RPC in this run. */
   logsFetched: number;
   /** Rows actually written — zero on a replay, which is the point. */
@@ -208,21 +221,97 @@ async function upsertMarkets(projected: ProjectedMarket[]): Promise<number> {
 }
 
 /**
+ * The highest block a pass started at `head` will read.
+ *
+ * One expression, exported, because the whole of the late-notification bug lived in the gap
+ * between this number and where a freshly-mined transaction sits. `runIndexer` and
+ * `awaitConfirmationDepth` both derive from it so the two cannot drift apart again.
+ */
+export function confirmationHorizon(head: number, confirmations: number): number {
+  return head - confirmations;
+}
+
+/**
+ * Whether a pass started at `head` would see a log mined in `block`.
+ *
+ * False for a transaction that has just been confirmed, which is the property that matters:
+ * a caller holding a one-confirmation receipt must wait, not index.
+ */
+export function wouldIndex(head: number, block: number, confirmations: number): boolean {
+  return confirmationHorizon(head, confirmations) >= block;
+}
+
+/**
+ * Waits until `block` sits at or below the confirmation horizon (`head - confirmations`).
+ *
+ * This exists because of a race the approval path loses every single time. A wallet's
+ * `createMarket` is confirmed after **one** block, and the caller reaches the indexer with the
+ * receipt in hand — so the market's own log is, by construction, within `confirmations` of the
+ * head and therefore *above* the horizon this indexer reads to. An indexer run at that instant
+ * is guaranteed to miss the very log it was run to collect, and the notifier that follows it
+ * correctly reports that the market is not indexed yet. Measured on market #10: the inline run
+ * left the cursor at 5,801,448 while the market was mined in 5,801,451.
+ *
+ * The fix is to wait for the depth, **not** to lower it. The confirmation depth is what the
+ * word "confirmed" means here, and a notification that outran it would be exactly the claim
+ * the notifier exists to refuse to make.
+ *
+ * Returns how long it waited. Giving up is not an error: the next pass indexes the block.
+ */
+async function awaitConfirmationDepth(
+  provider: ReturnType<typeof getProvider>,
+  block: number,
+  confirmations: number,
+  timeoutMs: number,
+): Promise<number> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (wouldIndex(await provider.getBlockNumber(), block, confirmations)) break;
+    await new Promise((resolve) => setTimeout(resolve, CONFIRM_POLL_MS));
+  }
+
+  return Date.now() - startedAt;
+}
+
+export type IndexOptions = {
+  /** Ignore the cursor and re-read from the deployment block. */
+  fullReplay?: boolean;
+  /**
+   * Wait for this block to clear the confirmation depth before reading the head.
+   *
+   * Passed by the approval path with the block its `createMarket` was mined in, so that one
+   * pass both sees the log and announces it. Bounded by `CONFIRM_TIMEOUT_MS`; on timeout the
+   * pass runs anyway and the next one picks up the block.
+   */
+  confirmBlock?: number;
+};
+
+/**
  * One indexing pass.
  *
  * `fullReplay` ignores the cursor and re-reads from the deployment block. It exists because
  * "replay produces the same answer" is a claim worth being able to demonstrate on demand
  * rather than merely assert — `pnpm --filter web index:replay` runs it.
  */
-export async function runIndexer(
-  options: { fullReplay?: boolean } = {},
-): Promise<IndexReport> {
+export async function runIndexer(options: IndexOptions = {}): Promise<IndexReport> {
   const startedAt = Date.now();
   const provider = getProvider();
 
   const cursor = await readCursor();
+
+  const waitedMs =
+    options.confirmBlock === undefined
+      ? 0
+      : await awaitConfirmationDepth(
+          provider,
+          options.confirmBlock,
+          cursor.confirmations,
+          CONFIRM_TIMEOUT_MS,
+        );
+
   const headBlock = await provider.getBlockNumber();
-  const toBlock = headBlock - cursor.confirmations;
+  const toBlock = confirmationHorizon(headBlock, cursor.confirmations);
   const fromBlock = options.fullReplay === true ? DEPLOY_BLOCK : cursor.lastBlock + 1;
 
   if (toBlock < fromBlock) {
@@ -231,6 +320,7 @@ export async function runIndexer(
       fromBlock,
       toBlock,
       headBlock,
+      waitedMs,
       logsFetched: 0,
       logsInserted: 0,
       marketsUpserted: 0,
@@ -282,6 +372,7 @@ export async function runIndexer(
     fromBlock,
     toBlock,
     headBlock,
+    waitedMs,
     logsFetched: logs.length,
     logsInserted,
     marketsUpserted,

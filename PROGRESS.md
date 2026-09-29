@@ -1461,6 +1461,37 @@ role, and #2 holds 0.01 tMSTC that would be refunded. It was skipped because `in
 already on chain once (`0xefe33de2…20f3ca6b`, with its refund claim), so a second one proves nothing new
 and spends a real market. Say that if asked why the button was not pressed.
 
+## Discord notifications were arriving up to 50 minutes late — fixed 2026-09-29
+
+**Root cause was arithmetic, not scheduling.** `recordApproval` already ran indexer + notifier
+inline. It could never work: `runIntentWorker` returns after **1** confirmation, `runIndexer` reads
+only to `head - 3`. The inline pass sat three blocks below its own market's log, every time.
+Cursor after market #10's approval pass: **5,801,448**. Market #10 was mined in **5,801,451**.
+
+**Measured delays** (from `notifications` and `audit_log`, not inferred):
+market #10 approved `05:26:50Z` → announced `06:11:19Z` = **44m29s**;
+market #9 approved `04:29:31Z` → announced `05:19:15Z` = **49m44s**.
+
+**The cron is not a five-minute heartbeat and never was.** `heartbeat.yml` schedules `*/5`; GitHub
+delivered **3 runs in 14 hours** (20:42Z, 00:36Z, 06:10Z on 2026-09-28/29). Verified with
+`gh run list --workflow=heartbeat.yml`. The README claimed five minutes; corrected.
+
+**What shipped:** `wouldIndex`/`confirmationHorizon` exported and table-tested
+(`lib/indexer/confirm.test.ts`, 8 tests); `runIndexer({ confirmBlock })` waits out the depth
+(bounded 20s, measured **7,557ms** against the live chain); `lib/pipeline/sync.ts` pairs
+indexer→notifier; `POST /api/sync` (`CRON_SECRET`, falling back to `TICK_SECRET`);
+`syncAfterApproval` fired from `/review` with `void`, with `maxDuration = 60` on the segment so the
+wait is not killed by the platform's 10s default; `.github/workflows/sync.yml` as the backstop.
+ADR-066 has the full reasoning.
+
+**Do not "fix" this by lowering `DEFAULT_CONFIRMATIONS`.** The confirmation depth is what the
+notifier means by "confirmed" — `announceable()` selects on columns only the indexer writes from a
+confirmed log. Lowering it trades the exit criterion for 7 seconds.
+
+**Still open:** nothing makes GitHub honour a `*/5`. Delivery is the request that caused the market;
+the cron repairs misses in hours. If a notification is ever missing, run the `Chain sync` workflow
+from the Actions tab — RUNBOOK §"Notifications are not delivered by the cron".
+
 ## What the next session needs to know
 
 **Phase 8 is four-sixths done and the rest is not code.** The README, `DEMO_SCRIPT.md` and the

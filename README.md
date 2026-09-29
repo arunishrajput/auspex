@@ -322,7 +322,11 @@ that does not take the system down.
 clustered events, 13 two-source `CONFIRMED` · 12 market specs drafted (5 approved, 1 refused by a
 human, 6 awaiting review) · 12 agent decisions (3 on chain, 8 refused by the gate) · 34 on-chain
 intents · 290 audit rows, every one carrying a reason. The pipeline has been running unattended on a
-five-minute GitHub Actions heartbeat.
+GitHub Actions heartbeat — scheduled every five minutes, though GitHub delivers it far less often
+than that: three runs in the fourteen hours to 2026-09-29T06:10Z. Scheduled workflows are
+best-effort and free runners are dropped first, so nothing user-facing is allowed to depend on the
+cron. Market notifications are sent by `/review` itself the moment a creation is confirmed, and the
+cron is only the backstop.
 
 Worth reading: [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the system,
 [`CONTRACTS.md`](./docs/CONTRACTS.md) for the contract design,

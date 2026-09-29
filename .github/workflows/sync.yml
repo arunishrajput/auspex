@@ -1,0 +1,72 @@
+name: Chain sync
+
+# Indexes confirmed chain logs and announces new markets. The SAFETY NET, not the primary path.
+#
+# The primary path is `/review` itself: approving a market fires `syncAfterApproval`, which
+# waits out the confirmation depth and announces within ~10s of the transaction being mined.
+# This workflow exists for the cases that path cannot cover — a market approved in a browser
+# that was closed mid-wait, a sync that threw, a deployment restarted at the wrong moment.
+#
+# ## Read this before trusting the schedule
+#
+# The cron below says five minutes. GitHub does not honour it. Measured on this repository
+# 2026-09-29, the sibling `heartbeat.yml` — same `*/5` schedule — was delivered three times in
+# fourteen hours: 20:42Z, 00:36Z, 06:10Z. Scheduled workflows are explicitly best-effort and are
+# dropped under load, and free runners are the first to be dropped.
+#
+# So this is a backstop measured in hours, not minutes, and nothing user-facing may depend on
+# it. It is cheap to leave running (a sync is well under a second, versus ~19s for a full tick),
+# and `workflow_dispatch` makes it a one-click repair when something has been missed.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: chain-sync
+  cancel-in-progress: false # never cut a sync short mid-write
+
+jobs:
+  sync:
+    name: Index and announce
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: POST /api/sync
+        env:
+          SYNC_URL: ${{ secrets.SYNC_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Falls back to the heartbeat's secret so this runs before a new one is set.
+          TICK_SECRET: ${{ secrets.TICK_SECRET }}
+          TICK_URL: ${{ secrets.TICK_URL }}
+        run: |
+          url="${SYNC_URL:-${TICK_URL%/api/tick}/api/sync}"
+          secret="${CRON_SECRET:-$TICK_SECRET}"
+
+          if [ -z "$url" ] || [ "$url" = "/api/sync" ] || [ -z "$secret" ]; then
+            echo "No sync URL or secret configured — skipping."
+            echo "Set them with: gh secret set SYNC_URL / gh secret set CRON_SECRET"
+            exit 0
+          fi
+
+          http_code=$(curl --silent --show-error --location \
+            --max-time 90 \
+            --write-out "%{http_code}" \
+            --output /tmp/sync-response.json \
+            --request POST "$url" \
+            --header "Content-Type: application/json" \
+            --header "Authorization: Bearer $secret" \
+            --data '{"source":"github-actions"}')
+
+          echo "HTTP $http_code"
+          cat /tmp/sync-response.json || true
+          echo
+
+          # A sync that found nothing is the normal outcome, so only a transport or server
+          # failure fails the workflow.
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Sync endpoint returned $http_code"
+            exit 1
+          fi

@@ -9,6 +9,12 @@
  *   sendTransaction → the wallet signs. This is the only step AuspeX cannot perform itself.
  *   recordApproval  → the server verifies the hash against the node and records it
  *
+ * A fourth step, `syncAfterApproval`, runs afterwards and is deliberately **not awaited**. It
+ * waits out the indexer's confirmation depth — about ten seconds — before indexing the new
+ * market and announcing it, and making the reviewer watch that would be ten seconds of spinner
+ * for something that has already succeeded. The approve button is free again the moment the
+ * transaction is recorded; the announcement catches up on its own and says so when it lands.
+ *
  * The browser's job in the middle is to relay bytes it did not author. It receives `to` and
  * `data` from the server and hands them to the wallet unchanged — so a page that had been
  * tampered with could refuse to send a transaction, but could not send a different one. The
@@ -25,10 +31,22 @@
 import { useState, useTransition } from "react";
 import { useSendTransaction, useSignMessage } from "wagmi";
 import { explorerUrl, shortHash } from "@/lib/chain";
-import { planApproval, recordApproval, rejectionPreamble, submitRejection } from "./actions";
+import {
+  planApproval,
+  recordApproval,
+  rejectionPreamble,
+  submitRejection,
+  syncAfterApproval,
+} from "./actions";
 import { useReviewer } from "./WalletGate";
 
-type Status = { kind: "idle" | "busy" | "ok" | "error"; message: string; txHash?: string };
+type Status = {
+  kind: "idle" | "busy" | "ok" | "error";
+  message: string;
+  txHash?: string;
+  /** Appended once the background sync reports back. Never blocks anything. */
+  sync?: string;
+};
 
 export function DecisionControls({
   proposalId,
@@ -80,10 +98,24 @@ export function DecisionControls({
 
     startTransition(async () => {
       const recorded = await recordApproval(proposalId, plan.intentId, txHash, reviewer.address!);
-      setStatus(
-        recorded.ok
-          ? { kind: "ok", message: recorded.settled, txHash: recorded.txHash }
-          : { kind: "error", message: recorded.error },
+      if (!recorded.ok) {
+        setStatus({ kind: "error", message: recorded.error });
+        return;
+      }
+
+      setStatus({
+        kind: "ok",
+        message: recorded.settled,
+        txHash: recorded.txHash,
+        sync: "announcing — waiting for the confirmation depth…",
+      });
+
+      // Fire and forget. Deliberately outside the transition: awaiting it would hold the
+      // pending state through a ten-second wait for a transaction that is already mined.
+      void syncAfterApproval(recorded.block).then((result) =>
+        setStatus((current) =>
+          current.kind === "ok" ? { ...current, sync: result.message } : current,
+        ),
       );
     });
   }
@@ -208,6 +240,9 @@ export function DecisionControls({
                 {shortHash(status.txHash, 10, 8)} on MSTScan ↗
               </a>
             </>
+          )}
+          {status.sync !== undefined && (
+            <span className="block text-ink-400">↳ {status.sync}</span>
           )}
         </p>
       )}

@@ -351,7 +351,19 @@ Optional, all defaulted in code and all safe to leave unset: `LLM_CALLS_PER_TICK
 `LLM_PROPOSER_CALLS_PER_TICK`, `MARKET_MIN_CLOSE_HOURS`, `MARKET_MAX_CLOSE_HOURS`. Set the last two
 when a demo needs a market that closes during the event.
 
-**GitHub Actions** (the cron heartbeat): `TICK_SECRET`, `TICK_URL`.
+**GitHub Actions** (the cron heartbeat): `TICK_SECRET`, `TICK_URL`. For `sync.yml`, optionally
+`CRON_SECRET` and `SYNC_URL`; with neither set it falls back to `TICK_SECRET` and derives the URL
+from `TICK_URL`, so the workflow runs as-is.
+
+**Notifications are not delivered by the cron.** Approving a market on `/review` fires
+`syncAfterApproval`, which waits out the indexer's three-block confirmation depth (~7.5s) and then
+indexes and announces. The cron is a backstop only: GitHub delivered the `*/5` heartbeat three times
+in the fourteen hours to 2026-09-29T06:10Z, so it repairs a missed announcement in hours, not
+minutes. To repair one by hand, run the `Chain sync` workflow from the Actions tab, or:
+
+```bash
+curl -fsS -X POST "$SYNC_URL" -H "Authorization: Bearer $CRON_SECRET"
+```
 
 **`DEPLOYER_PRIVATE_KEY` is deliberately absent from Vercel.** Nothing in the deployed app signs
 a transaction — the indexer only reads, and market creation in Phase 4 is signed by a human in
