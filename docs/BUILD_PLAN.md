@@ -498,7 +498,8 @@ Cut a release. Nothing new is built; everything is verified once, together, and 
 - `PROGRESS.md` gets a closing summary: what this is, what it does, what it does not do, and where
   the history lives.
 
-**Done, 2026-09-30. Released as `v1.0.0`.** Fifteen commands, all passing, numbers in PROGRESS.md.
+**Done, 2026-09-30. Released as `v1.0.0`.** Sixteen command runs across thirteen distinct checks,
+all passing, numbers in PROGRESS.md.
 The phase's real yield was **drift** — four sentences that were true in the commit that wrote them and
 that a later phase falsified: `verify:agents` claiming to write nothing while appending one
 `agents.halted` row per run since Phase 5; the README describing the resolution starvation defect in

@@ -8,9 +8,9 @@
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
 **Last updated:** 2026-09-30 (Phase 12)
-**Current status:** ✅ **Phase 12 complete. Released as `v1.0.0`.** Nothing new was built. Fifteen
-commands were run in one sweep and all fifteen pass, with their numbers recorded below rather than
-their adjectives. The sweep's job was to catch **drift** — a sentence true when it was written that a
+**Current status:** ✅ **Phase 12 complete. Released as `v1.0.0`.** Nothing new was built. **Sixteen
+command runs across thirteen distinct checks**, all passing, with their numbers recorded below rather
+than their adjectives. The sweep's job was to catch **drift** — a sentence true when it was written that a
 later phase falsified — and it caught five: `verify:agents` has claimed to write nothing since
 Phase 5 while appending one `agents.halted` row per run; the README still described the resolution
 starvation defect in the present tense one phase after it was fixed; the cron delivery rate was
@@ -375,8 +375,9 @@ different and worse gap than the one #21 describes, and it is the correction to 
 
 ### The shape of it
 
-**Nothing was built.** Fifteen commands were run in one session, their real output recorded, the
-version moved `0.1.0` → `1.0.0` across all four workspace packages, `CHANGELOG.md` written from the
+**Nothing was built.** Thirteen distinct checks were run — sixteen invocations, counting `test`,
+`build` and `check-links` twice each — their real output recorded, the version moved
+`0.1.0` → `1.0.0` across all four workspace packages, `CHANGELOG.md` written from the
 36-commit history, and `v1.0.0` tagged and pushed.
 
 **The phase existed to catch drift, and drift is what it caught.** Every earlier phase verified its
@@ -544,14 +545,25 @@ consumers, so moving it cost nothing real. **Written down rather than quietly do
 force-updated public ref is exactly the kind of thing a reader is entitled to know about, and because
 "the tag was moved" is a cheaper sentence than a reader discovering it from a reflog.
 
-**Main is one commit ahead of the tag**, carrying only this note — a commit cannot record the act of
-tagging itself.
+**Main is ahead of the tag**, carrying this note and one correction after it — a commit cannot record
+the act of tagging itself.
+
+⚠️ **One number in the tag message is imprecise, and it is not being retouched.** It says *"Fifteen
+commands, all passing"*. The exact figure is **sixteen command runs across thirteen distinct
+checks** — `test`, `build` and `check-links` each ran twice, on different inputs, and the first count
+folded two of those and missed one. Every other figure in the tag message (498 tests, 11/11
+preflight, 41 agent checks, 8 routes) is exact. The tag was moved once, for a claim that was
+materially incomplete; it is not being moved again for a count of commands, because a second
+force-update would cost a reader more confidence than the word "fifteen" costs them. The repository's
+prose carries the exact figure and this note says where the two disagree — which is the same trade
+this project made on `judge.cap_probe` and on the human refusal whose signed reason is the literal
+string `test`: **disclose the discrepancy, do not edit the artifact.**
 
 ### Exit criteria
 
 | # | Criterion | Result |
 |:--|:--|:--|
-| 1 | Every command in the sweep passes, output recorded | ✅ 15 commands, numbers above |
+| 1 | Every command in the sweep passes, output recorded | ✅ 16 runs / 13 checks, numbers above |
 | 2 | `git tag v1.0.0` exists and is pushed; `CHANGELOG.md` covers Phases 0–12 | ✅ annotated tag; changelog written from the 36-commit history |
 | 3 | A clean clone builds and its tests pass with no undocumented step | ✅ `git clone --local`, no `.env.local`: install 4.2s, compile, 431 passed / 10 skipped, build |
 | 4 | All routes 200 on the deployed URL and read correctly **as rendered pages** | ✅ 8 routes read top to bottom on `9ec7a35`; the read caught a fifth drifted claim |

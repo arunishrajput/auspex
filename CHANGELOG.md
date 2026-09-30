@@ -64,7 +64,8 @@ approved and refused alike — is logged with the reason it carried at the time.
 
 ### Verified for this release
 
-One sweep, in one session, with the numbers rather than the adjectives:
+One sweep, in one session — **sixteen command runs across thirteen distinct checks** — with the
+numbers rather than the adjectives:
 
 | Command | Result |
 |:--|:--|
@@ -75,6 +76,7 @@ One sweep, in one session, with the numbers rather than the adjectives:
 | `pnpm lint` | clean, 3.1 s |
 | `pnpm typecheck` | clean, 2.1 s |
 | `pnpm build` | 8 page routes + 4 API routes, Next.js 16.3.6, 4.4 s |
+| `pnpm build` (clean clone) | same route table, 9.1 s |
 | `pnpm preflight` | **11/11** — RPC, explorer, both wallets' role boundaries, Neon (15 tables), Gemini, all three agents |
 | `pnpm check:links` | every hash, abbreviation, sender and URL in `README.md`, against the live chain |
 | `check-links docs/WALKTHROUGH.md` | same, for the walkthrough |
