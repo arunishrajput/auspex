@@ -11,14 +11,16 @@
 **Current status:** ✅ **Phase 12 complete. Released as `v1.0.0`.** Nothing new was built. **Sixteen
 command runs across thirteen distinct checks**, all passing, with their numbers recorded below rather
 than their adjectives. The sweep's job was to catch **drift** — a sentence true when it was written that a
-later phase falsified — and it caught five: `verify:agents` has claimed to write nothing since
+later phase falsified — and it caught **five**: `verify:agents` has claimed to write nothing since
 Phase 5 while appending one `agents.halted` row per run; the README still described the resolution
 starvation defect in the present tense one phase after it was fixed; the cron delivery rate was
 computed by dividing the *gaps* between runs rather than the runs; the database has had 15 tables
 since Phase 6, not 14; and **the fifth was caught by reading the deployed page** — market #11's
 undrafted outcome was being blamed on the retrieval floor when its question cannot be answered before
-its own resolve deadline. All five are corrected, and `check:render` ran for the first time in the
-project's history — 8 routes, clean. No chain data, address or hash changed.
+its own resolve deadline. All five are corrected. Two of them needed a second pass of their own: the
+percentage fix missed `docs/ARCHITECTURE.md`, and the first rewrite of the market #11 paragraph was
+itself incomplete. `check:render` ran for the first time in the project's history — 8 routes, clean.
+No chain data, address or hash changed.
 **Next phase:** none. Part II is finished and the build is released. What a future session should
 read first is "After v1.0.0" at the end of this file.
 
@@ -531,40 +533,44 @@ available from the source, or from the tests, or from this file — it was on a 
 page had assembled out of the database, sitting next to a number that made the old explanation look
 sufficient.
 
-### The release, and the tag that was moved twice
+### The release, and the tag that was force-updated three times
 
-**`v1.0.0` is an annotated tag at `e4d2aa5`**, pushed to `github.com/arunishrajput/auspex`. There is
-no GitHub Release object; it is a tag ref.
+**`v1.0.0` is an annotated tag on the commit that carries this table.** Its position is
+`git rev-list -n1 v1.0.0`; this section deliberately does not hardcode a hash, for a reason the
+history below makes obvious. There is no GitHub Release object — it is a tag ref.
 
-**It was pushed three times, at `9ec7a35`, then `c48a10f`, then `e4d2aa5`, and both moves were
-force-updates of a public ref.** That is worth more than a footnote, so here is each one:
+**It was pushed four times, and each move is here with what the previous tree got wrong:**
 
-| Push | Why it moved | What the previous tree got wrong |
+| Tag pointed at | Moved because | What that tree still got wrong |
 |:--|:--|:--|
-| `9ec7a35` | first tag | — |
-| `c48a10f` | the deployed-page read-through found the fifth drifted claim | README blamed the retrieval floor alone for market #11's undrafted outcome |
-| `e4d2aa5` | a residual-number scan found the corrected percentage had not reached every file | `docs/ARCHITECTURE.md` still read **1.6%**, a number known to be wrong |
+| `9ec7a35` | — (first push) | README blamed the retrieval floor alone for market #11's undrafted outcome |
+| `c48a10f` | the deployed-page read-through found that claim | `docs/ARCHITECTURE.md` still read **1.6%**, a number already known to be wrong |
+| `e4d2aa5` | a residual-number scan found the file the percentage fix had missed | this table named `e4d2aa5` as the tag's position, which moving the tag made false |
+| this commit | the note describing the moves could not describe its own | — |
 
-**The reasoning both times was the same.** A tag whose own message says *"every claim in the
+**The reasoning was the same every time.** A tag whose own message says *"every claim in the
 repository was verified once"* must not point at a tree containing a claim known to be false. The
-alternative — an immutable `v1.0.0` shipping a wrong number, with a note on `main` explaining it — is
-the thing this product exists not to do.
+alternative — an immutable `v1.0.0` shipping a wrong number with an erratum on `main` — is precisely
+what this product exists not to do.
 
-⚠️ **An earlier version of this section said the tag would not be moved again**, and reasoned that a
-second force-update would cost a reader more confidence than an imprecise *count of commands* was
-worth. **That reasoning was sound and its premise was wrong**: it was written before the residual scan
-found `1.6%` still in `ARCHITECTURE.md`, which is not a count nuance but a wrong measurement of the
-same kind that caused the first move. The sentence is replaced rather than deleted, and this paragraph
-is why — a note that pre-commits to an action, and is then overtaken by a fact, should say so.
+**The third move is the funny one and it is worth keeping.** A note that states the tag's hash cannot
+survive being tagged, so the act of recording the second move invalidated the record of it. The fix
+was not another hash but removing the hash: the note now describes *where* the tag is rather than
+*what* it is, and a reader who wants the sha asks git. **A fact about an artifact cannot live inside
+that artifact if it changes when the artifact is made** — which is the same lesson as "prose beside
+data has to be derived from that data", applied to a tag instead of a table.
 
-**One number in the tag message stays imprecise, and this one genuinely is not worth a fourth push.**
-It says *"Fifteen commands, all passing"*; the exact figure is **sixteen command runs across thirteen
-distinct checks** — `test`, `build` and `check-links` each ran twice on different inputs. Every other
-figure in the tag message is exact: 498 tests, 11/11 preflight, 41 agent checks, 8 routes. The
-repository's prose carries the precise count and this note says where the two disagree, which is the
-same trade this project already made on the stored `judge.cap_probe` identifier and on the human
-refusal whose signed reason is the literal string `test`: **disclose the discrepancy, do not edit the
-artifact** — and where the artifact *was* edited, say how many times and why.
+⚠️ **An earlier version of this section said the tag would not be moved again.** That reasoning was
+sound and its premise was wrong: it was written before the residual scan found `1.6%` in
+`ARCHITECTURE.md`, which is a wrong measurement rather than the count nuance the sentence was about.
+Replaced rather than deleted, and this paragraph is why — a note that pre-commits to an action and is
+then overtaken by a fact should say so.
+
+**Nothing in the tag message is now imprecise.** The first three versions of it said *"Fifteen
+commands"* against an exact figure of sixteen runs over thirteen checks, and said *"six"* drifted
+claims where the count is five; both are corrected in the final message, since the ref was being
+rewritten anyway. Every other figure was exact throughout: 498 tests, 11/11 preflight, 41 agent
+checks, 8 routes.
 
 **Main is at the tag.**
 

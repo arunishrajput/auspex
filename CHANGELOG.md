@@ -62,6 +62,16 @@ approved and refused alike — is logged with the reason it carried at the time.
 - **`PROGRESS.md` said the database has 14 tables.** It has 15; `resolutionDrafts` arrived in
   Phase 6 and the count was not updated.
 
+**Two of those five needed a second pass of their own**, which is worth knowing because it is the same
+failure repeating at a smaller scale: the percentage correction missed `docs/ARCHITECTURE.md`, found
+only by grepping for the old number afterwards; and the first rewrite of the market 11 paragraph was
+itself incomplete, found only by reading the deployed `/resolve` page. A correction is not finished
+when the sentence that prompted it is fixed — it is finished when nothing still says the old thing.
+
+**The `v1.0.0` tag was force-updated three times** as those later corrections landed, because a tag
+whose message says every claim was verified must not point at a tree containing a claim known to be
+false. `PROGRESS.md` has a table of every position and what each previous tree got wrong.
+
 ### Verified for this release
 
 One sweep, in one session — **sixteen command runs across thirteen distinct checks** — with the
