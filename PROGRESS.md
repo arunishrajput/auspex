@@ -530,6 +530,23 @@ available from the source, or from the tests, or from this file — it was on a 
 page had assembled out of the database, sitting next to a number that made the old explanation look
 sufficient.
 
+### The release, and the one tag that was moved
+
+**`v1.0.0` is an annotated tag at `c48a10f`**, tag object `7f97f2a`, pushed to
+`github.com/arunishrajput/auspex`. There is no GitHub Release object; it is a tag ref.
+
+**It was first pushed at `9ec7a35` and then moved, deliberately and with the owner's decision.** The
+deployed read-through happened after the tag, found the fifth drifted claim, and the fix landed in
+`c48a10f`. A tag whose own message says *"every claim in the repository was verified once"* pointing
+at a tree with a known-incomplete claim in its README would be the same species of untruth this
+release exists to remove. The tag was twelve minutes old, carried no GitHub Release and had no
+consumers, so moving it cost nothing real. **Written down rather than quietly done**, because a
+force-updated public ref is exactly the kind of thing a reader is entitled to know about, and because
+"the tag was moved" is a cheaper sentence than a reader discovering it from a reflog.
+
+**Main is one commit ahead of the tag**, carrying only this note — a commit cannot record the act of
+tagging itself.
+
 ### Exit criteria
 
 | # | Criterion | Result |
