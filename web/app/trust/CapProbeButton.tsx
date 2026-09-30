@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { runCapProbeAction, type JudgeProbeResponse } from "./actions";
+import { runCapProbeAction, type CapProbeResponse } from "./actions";
 
 /**
  * The one button on this site a stranger is allowed to press.
@@ -15,9 +15,9 @@ import { runCapProbeAction, type JudgeProbeResponse } from "./actions";
  * A probe takes ~10-20s — an `eth_call`, a signature, a broadcast and a receipt on 3-second blocks
  * — so the page says so up front rather than appearing to hang.
  */
-export function JudgeButton({ explorerBase }: { explorerBase: string }) {
+export function CapProbeButton({ explorerBase }: { explorerBase: string }) {
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<JudgeProbeResponse | null>(null);
+  const [result, setResult] = useState<CapProbeResponse | null>(null);
 
   function onClick() {
     setResult(null);

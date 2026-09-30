@@ -2,10 +2,10 @@
 /**
  * Proves the README's claim that every value in it is real.
  *
- * Phase 8's first exit criterion is "every tx hash in the README resolves on testnet.mstscan.com".
- * That is worth automating rather than asserting once, because the README is the document a judge
+ * The rule being enforced is "every tx hash in the README resolves on testnet.mstscan.com".
+ * That is worth automating rather than asserting once, because the README is the document a reader
  * reads first and a single mistyped character in it looks exactly like fabricated data — which the
- * buildathon rules treat as disqualifying. So this runs five checks over any markdown file:
+ * hard rule #1 treats as the whole product failing. So this runs five checks over any markdown file:
  *
  *   1. **Every 32-byte hash resolves** through the explorer's API, and its status is printed.
  *      A reverted transaction is reported as reverted rather than as a failure, because six of
@@ -13,7 +13,7 @@
  *   2. **Every abbreviated hash is really an abbreviation** of the hash it links to. `0xabc…def`
  *      must be a prefix and suffix of the full hash in the href. This caught four typos on the
  *      first run, none of which any other check would have found: the link worked, the text beside
- *      it was wrong, and a judge comparing the two would have concluded the table was invented.
+ *      it was wrong, and anyone comparing the two would have concluded the table was invented.
  *   2b. **Every named sender is the address that actually signed.** The most important check, and
  *      the reason the others were not enough: the first draft credited three transactions to the
  *      human's browser wallet that the operator key had sent. Nothing else would have caught it.
@@ -24,7 +24,7 @@
  * Read-only. It fetches; it signs nothing and writes nothing.
  *
  *   node scripts/check-links.mjs                 # checks README.md
- *   node scripts/check-links.mjs docs/DEMO_SCRIPT.md
+ *   node scripts/check-links.mjs docs/WALKTHROUGH.md
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -134,7 +134,7 @@ for (const [, head, tail, href] of abbreviations) {
 const senderRows = [];
 for (const line of text.split("\n")) {
   if (!line.startsWith("|")) continue;
-  // The hash may be a /tx/ link (README) or bare, for copy-pasting (DEMO_SCRIPT).
+  // The hash may be a /tx/ link (README) or bare, for copy-pasting (WALKTHROUGH).
   const hash = line.match(/0x[0-9a-fA-F]{64}/)?.[0];
   if (hash === undefined) continue;
   // An abbreviated 20-byte address: 0x + at least 4 hex, an ellipsis, then at least 4 hex.

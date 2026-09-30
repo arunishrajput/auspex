@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { runCapProbe, type ProbeResult } from "@/lib/judge/probe";
+import { runCapProbe, type ProbeResult } from "@/lib/probe/capProbe";
 
 /**
- * Judge mode's one action.
+ * The cap probe's one action.
  *
  * ## Why this is not gated on a wallet signature
  *
@@ -37,9 +37,9 @@ const COOLDOWN_MS = 45_000;
 
 let lastProbeAt = 0;
 
-export type JudgeProbeResponse = ProbeResult | { ok: false; reason: string };
+export type CapProbeResponse = ProbeResult | { ok: false; reason: string };
 
-export async function runCapProbeAction(): Promise<JudgeProbeResponse> {
+export async function runCapProbeAction(): Promise<CapProbeResponse> {
   const now = Date.now();
   const since = now - lastProbeAt;
 

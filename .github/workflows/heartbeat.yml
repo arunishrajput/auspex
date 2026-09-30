@@ -2,12 +2,18 @@ name: Pipeline heartbeat
 
 # Advances the AuspeX pipeline state machine on a schedule.
 #
-# This is the BACKGROUND driver. The dashboard's "Run tick" button is the one used
-# during a live demo, because GitHub's cron is best-effort: it can be delayed under
-# load, and GitHub pauses scheduled workflows on public repos after ~60 days of
-# inactivity. Never let a demo depend on this firing on time.
+# This is the BACKGROUND driver, and it is a backstop rather than a clock. The
+# dashboard's "Run tick" button is what actually advances the pipeline when someone
+# is looking at it, because GitHub's cron is best-effort: it is delayed under load,
+# free runners are dropped first, and GitHub pauses scheduled workflows on public
+# repos after ~60 days of inactivity. Nothing user-facing may depend on this firing
+# on time.
 #
-# Free on public repositories, which we need anyway for the buildathon.
+# MEASURED, not configured: the expression below asks for every five minutes and
+# GitHub delivers roughly every five hours on this repository. Runs observed on
+# 2026-09-29/30 landed at 12:55, 18:28, 22:32, 01:29 and 07:18 UTC — every one of
+# them successful. Do not quote the expression as the cadence anywhere; quote the
+# measurement. Closing the gap between the two is Phase 11's job.
 
 on:
   schedule:

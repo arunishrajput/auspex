@@ -2,13 +2,13 @@
  * The one navigation bar, on every page.
  *
  * Before this, only the home page listed the routes and every other page had a bare `← AuspeX`
- * link, so reaching `/agents` from `/markets` meant two clicks through the landing page. A judge
+ * link, so reaching `/agents` from `/markets` meant two clicks through the landing page. A visitor
  * clicking around for four minutes should never have to go back to the top to get somewhere.
  *
  * A server component with no hooks: `current` is passed in rather than read from
  * `usePathname()`, which would make every page that renders a nav a client component and ship
  * React to `/` and `/markets` for the sake of one highlighted link. Known gap #14 in
- * `PROGRESS.md` is about keeping wallet code off the pages a judge lands on first; this is the
+ * `PROGRESS.md` is about keeping wallet code off the pages a visitor lands on first; this is the
  * same instinct applied to the nav.
  */
 

@@ -13,7 +13,7 @@
  * capped by the contract, and the only kind of key the deployed application has.
  *
  * That is not a workaround. It is the claim, executed: *nothing privileged is needed to finish a
- * market.* A judge can call `finalizeResolution` themselves from any address and it will work.
+ * market.* Anyone can call `finalizeResolution` themselves from any address and it will work.
  * The counterpart is `invalidateStale`, which is equally permissionless and equally not ours —
  * see why it is deliberately **not** run automatically, below.
  *
@@ -32,7 +32,7 @@
  * `docs/DECISIONS.md` ADR-050 records this as a deliberate departure from the plan, which said
  * to key the worker on decisions.
  *
- * ## `invalidateStale`, and the grace period that replaced "never" (ADR-066)
+ * ## `invalidateStale`, and the grace period that replaced "never" (ADR-066b)
  *
  * ADR-057 kept this call out of the keeper entirely, on the grounds that invalidation refunds
  * everyone and destroys the market, so a resolver who is ten minutes late should not cost every
@@ -44,7 +44,7 @@
  * So the call is automated, behind `STALE_GRACE_SECONDS` — a deliberate wait *after* the
  * contract's own `resolveDeadline` before the keeper acts. The late resolver ADR-057 worried
  * about still wins the race; the absent one no longer strands the funds. The decision is still
- * permissionless, so a judge can always make the call themselves, sooner, from their own wallet.
+ * permissionless, so anyone can always make the call themselves, sooner, from their own wallet.
  *
  * Eligibility is read from `getMarket`, never from the projection, and the contract re-checks it:
  * `invalidateStale` reverts with `MarketNotClosed` on anything that is not `OPEN` or `CLOSED`
@@ -83,7 +83,7 @@ const KEEPER_MIN_BALANCE_WEI = 5n * 10n ** 14n;
 /**
  * How long after the contract's `resolveDeadline` the keeper waits before invalidating.
  *
- * This number is the whole of ADR-066's compromise with ADR-057. `invalidateStale` refunds every
+ * This number is the whole of ADR-066b's compromise with ADR-057. `invalidateStale` refunds every
  * bettor and ends the market, so acting the instant the deadline passes would let a resolver who
  * is a few minutes late destroy a market nobody wanted destroyed. Waiting forever — which is what
  * not automating it amounted to — strands the stakes instead.
@@ -142,7 +142,7 @@ export function staleEligibility(
       ok: false,
       reason:
         `the resolve-by time has passed but the keeper waits ${graceSeconds}s beyond it before ` +
-        `refunding, so a late resolver is not overruled by a cron job (ADR-066). Anyone may call ` +
+        `refunding, so a late resolver is not overruled by a cron job (ADR-066b). Anyone may call ` +
         `invalidateStale now if they would rather have the refund.`,
     };
   }
@@ -355,7 +355,7 @@ export async function runSettlePass(
   //
   // The refund path for a market no resolver ever came back to. Permissionless, like the two
   // above, and gated on the chain's own `resolveDeadline` plus a grace period so a late resolver
-  // is not overruled by a cron job (ADR-066). `RESOLUTION_PROPOSED` is excluded by the state test
+  // is not overruled by a cron job (ADR-066b). `RESOLUTION_PROPOSED` is excluded by the state test
   // inside `staleEligibility`, and the contract re-checks both conditions itself.
   if (keeper.ok) {
     let queued = 0;
@@ -389,7 +389,7 @@ export async function runSettlePass(
           `${new Date(onChain.resolveDeadline * 1000).toISOString()} with no resolution proposed, ` +
           `and the ${grace}s grace period after it has elapsed too, so invalidateStale was queued. ` +
           `Every bettor is refunded their exact stake; nobody wins. The call is permissionless and ` +
-          `is signed by an agent wallet holding no role — a judge could have made it themselves.`,
+          `is signed by an agent wallet holding no role — anyone could have made it themselves.`,
         metadata: {
           onchainId: market.onchainId,
           resolveDeadline: onChain.resolveDeadline,

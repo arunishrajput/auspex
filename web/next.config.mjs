@@ -43,7 +43,7 @@ const nextConfig = {
   serverExternalPackages: ["ethers"],
 
   env: {
-    // Surfaced in the UI so a judge can tell which build they are looking at.
+    // Surfaced in the UI so a reader can tell which build they are looking at.
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
 };

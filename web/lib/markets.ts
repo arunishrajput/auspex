@@ -22,6 +22,12 @@ export type MarketView = OnChainMarket & {
   /** From the indexer. Null when the log has not been indexed (or the DB is unreachable). */
   createdTxHash: string | null;
   createdBlock: number | null;
+  /**
+   * The address that signed `createMarket`, from the indexed log's own topic — **not**
+   * `proposedBy`, which the contract sets at resolution time and is the zero address until then.
+   * It is what `marketOrigins` uses to say which markets a human signed for.
+   */
+  creator: string | null;
   betCount: number | null;
   /** Non-null when the projection in Postgres disagrees with what the chain just said. */
   projectionDrift: string | null;
@@ -52,6 +58,7 @@ export type MarketsPayload = {
 type IndexedExtra = {
   createdTxHash: string | null;
   createdBlock: number | null;
+  creator: string | null;
   betCount: number;
   state: string;
   poolYesWei: string;
@@ -84,6 +91,7 @@ async function readIndexedExtras(ids: number[]): Promise<Map<number, IndexedExtr
     out.set(row.onchainId, {
       createdTxHash: row.createdTxHash,
       createdBlock: row.createdBlock,
+      creator: row.creator,
       betCount: betsByMarket.get(row.onchainId) ?? 0,
       state: row.state,
       poolYesWei: row.poolYesWei,
@@ -136,6 +144,7 @@ export async function getMarketsForDisplay(): Promise<MarketsPayload> {
         ...m,
         createdTxHash: null,
         createdBlock: null,
+        creator: null,
         betCount: null,
         projectionDrift: null,
       })),
@@ -176,6 +185,7 @@ export async function getMarketsForDisplay(): Promise<MarketsPayload> {
         ...m,
         createdTxHash: extra?.createdTxHash ?? null,
         createdBlock: extra?.createdBlock ?? null,
+        creator: extra?.creator ?? null,
         betCount: extra?.betCount ?? null,
         projectionDrift: drift,
       };

@@ -14,10 +14,10 @@ These were completed automatically during Phase 0. Listed so you know what exist
 | `.env.local` created (chmod 600, git-ignored) | ✅ |
 | Deployer wallet generated | ✅ `0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24` |
 | `AGENT_KEY_ENC_SECRET`, `TICK_SECRET` generated | ✅ |
-| Gemini API key created ("AuspeX MST Buildathon") and written to `.env.local` | ✅ |
+| Gemini API key created and written to `.env.local` | ✅ — listed in Google Cloud as *"AuspeX MST Buildathon"*, created 2026-09-28. The display name is cosmetic and is recorded here only so the key can be found again in the console. |
 | GitHub repo created + pushed, CI green | ✅ github.com/arunishrajput/auspex |
 | Vercel project imported, root dir `web`, auto-deploy on push | ✅ |
-| Vercel Deployment Protection disabled (public demo URL) | ✅ |
+| Vercel Deployment Protection disabled (the URL is public) | ✅ |
 | **Live demo URL** | ✅ https://auspex-web-mu.vercel.app |
 | Deployer wallet funded (10 tMSTC) | ✅ |
 | BridgeKey wallet created, funded (50 tMSTC), role granted | ✅ see §5 |
@@ -53,7 +53,7 @@ tier:
 ```bash
 gcloud services enable generativelanguage.googleapis.com --project=agentforge-gemini-free
 gcloud services api-keys create --project=agentforge-gemini-free \
-  --display-name="AuspeX MST Buildathon" \
+  --display-name="AuspeX" \
   --api-target=service=generativelanguage.googleapis.com
 gcloud services api-keys get-key-string <key-resource-name> --format='value(keyString)'
 ```
@@ -71,7 +71,7 @@ Measured 2026-09-29 across live ticks:
 | `gemini-3.5-flash-lite` | two timeouts and one 503 out of four calls |
 | `gemini-3.8-flash` | 503 "high demand" |
 
-So the chain leads with **3.1-flash-lite** (ADR-034). If a model starts failing on demo day,
+So the chain leads with **3.1-flash-lite** (ADR-034). If a model starts degrading,
 `GEMINI_MODELS_FAST` is an environment variable — reorder it, no deploy needed.
 
 > If you ever *do* want paid capacity, add prepay credits at https://ai.studio/projects. Nothing
@@ -178,8 +178,9 @@ Two minutes, no bot token, no approval flow.
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/.../...
 ```
 
-**Demo tip:** have this channel visible on screen during the demo. Judges watching a notification
-land in real time, seconds after the on-chain market is confirmed, is worth more than describing it.
+**Worth watching once:** keep this channel open while approving a market. Seeing the notification
+land seconds after the on-chain confirmation is the clearest check that the announce path fires on
+confirmation rather than on the cron (ADR-066a).
 
 > The webhook URL is a credential — anyone with it can post to your channel. It stays in `.env.local`.
 

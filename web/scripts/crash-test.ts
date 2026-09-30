@@ -3,7 +3,7 @@
  *
  * Phase 2's exit criteria include: *kill the worker mid-send, re-run — exactly one transaction
  * on chain, no duplicate rows.* This script does exactly that, against the real MST Testnet
- * and the real database, and prints evidence a judge can check on MSTScan.
+ * and the real database, and prints evidence anyone can check on MSTScan.
  *
  * ── What it does ────────────────────────────────────────────────────────────────────────
  *   1. Creates ONE intent to call `createMarket` with a fresh spec hash.

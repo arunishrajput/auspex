@@ -6,7 +6,7 @@ import { keccak256, toUtf8Bytes } from "ethers";
  * `specHash` is the link between "what a human approved" and "what the contract created". The
  * contract stores it and refuses a hash it has already seen, which is the on-chain half of
  * the idempotency argument. For that link to mean anything, the hash has to be reproducible
- * from the spec by anyone — a judge included — so the encoding is fixed here and nowhere else.
+ * from the spec by anyone at all, so the encoding is fixed here and nowhere else.
  *
  * **Canonical form: keys sorted, JSON, UTF-8, keccak256.** Sorting matters: two objects with
  * the same content in a different key order are the same specification, and must not produce

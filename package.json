@@ -2,7 +2,21 @@
   "name": "auspex",
   "version": "0.1.0",
   "private": true,
-  "description": "AuspeX — human-gated, AI-researched prediction markets on MST Blockchain",
+  "description": "Prediction markets created under human authority, researched by AI agents the chain keeps on a leash. On MST Blockchain.",
+  "license": "MIT",
+  "author": "Arunish Rajput",
+  "homepage": "https://auspex-web-mu.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arunishrajput/auspex.git"
+  },
+  "keywords": [
+    "prediction-markets",
+    "ai-agents",
+    "solidity",
+    "mst-blockchain",
+    "human-in-the-loop"
+  ],
   "engines": {
     "node": ">=22"
   },

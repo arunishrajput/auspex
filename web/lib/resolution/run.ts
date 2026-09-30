@@ -212,7 +212,7 @@ export async function scoredCandidates(
 
   return ranked.flatMap(({ score, document: row }) => {
     // The same URL discipline the proposer uses for a resolution source, for a stronger reason:
-    // this URL is written on-chain as the evidence a judge will click. An aggregator redirect
+    // this URL is written on-chain as the evidence a reader will click. An aggregator redirect
     // degrades to the publisher's front page and is flagged for the human.
     const resolved = resolutionUrlFor(row.url, row.domain, row.allowlisted);
     if (resolved === null) return [];

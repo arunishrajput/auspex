@@ -1,11 +1,12 @@
 /**
- * Judge mode: a visitor with no wallet asks the chain to refuse something, and it does.
+ * The cap probe: anyone with no wallet asks the chain to refuse something, and it does.
  *
  * ## What this exists for
  *
- * A judge should not have to install BridgeKey, find a faucet and fund an address to satisfy
- * themselves that AuspeX is really on chain. One click should produce a **real transaction hash
- * that resolves on MSTScan**, from a browser holding nothing.
+ * Nobody should have to install BridgeKey, find a faucet and fund an address to satisfy themselves
+ * that AuspeX is really on chain and that the agent limits are really enforced there. One click
+ * should produce a **real transaction hash that resolves on MSTScan**, from a browser holding
+ * nothing.
  *
  * The transaction chosen is the over-cap bet — the same demonstration as
  * `scripts/over-cap-bet.ts`, triggered from the page instead of a terminal. A registered agent's
@@ -24,10 +25,10 @@
  *   2. **It cannot move money.** A reverted `placeBet` returns its value. The pools are unchanged,
  *      the agent's per-market spend is unchanged, and the only cost is gas — which is ~0.0001
  *      tMSTC on a chain whose base fee is zero.
- *   3. **It needs no authority whatsoever.** A judge-mode button that created a market or resolved
- *      one would mean this application holds a key that can, which is the opposite of what the
- *      project claims. The only kind of transaction it is *safe* to hand a stranger is one the
- *      contract is going to refuse.
+ *   3. **It needs no authority whatsoever.** A public button that created a market or resolved one
+ *      would mean this application holds a key that can, which is the opposite of what the project
+ *      claims. The only kind of transaction it is *safe* to hand a stranger is one the contract is
+ *      going to refuse.
  *   4. **It is repeatable.** Unlike `finalizeResolution` or `invalidateStale`, which are real
  *      permissionless calls but one-shot per market and usually out of scope, this works whenever
  *      an open market exists.
@@ -47,7 +48,14 @@
  * operator running it by hand *is* claiming the row. ADR-062.
  *
  * The complete record of a probe is its `audit_log` row, its `onchain_intents` row and its
- * transaction hash, which is everything a judge needs and nothing a member's record does not want.
+ * transaction hash, which is everything a reader needs and nothing a member's record does not want.
+ *
+ * ## The stored action id says `judge.cap_probe`, and it stays that way
+ *
+ * This feature was built under the name "judge mode" and five `audit_log` rows were written under
+ * `judge.cap_probe` before it was renamed. `audit_log` is append-only, so renaming the action string
+ * now would give one event two names and make the older rows read as a different kind of event. The
+ * label changed; the identifier did not. ADR-069.
  */
 
 import { eq } from "drizzle-orm";
@@ -66,7 +74,7 @@ import { readOnChainLimits } from "../agents/registry";
  *
  * Above `KEEPER_MIN_BALANCE_WEI` (0.0005) because this wallet must also be able to *hold* the
  * over-cap value while the node checks it: a node rejects a transaction whose value exceeds the
- * sender's balance before the contract ever sees it, and "insufficient funds" teaches a judge
+ * sender's balance before the contract ever sees it, and "insufficient funds" teaches a reader
  * nothing about the cap. So the wallet needs cap + 1 wei + gas, and this is the gas part.
  */
 const PROBE_GAS_FLOOR_WEI = 10n ** 15n; // 0.001 tMSTC
@@ -98,7 +106,7 @@ export type ProbeResult =
 /**
  * Runs one probe. Never throws — the caller is a server action rendering into a page.
  *
- * Every early return carries the real reason, because "judge mode is unavailable" with no
+ * Every early return carries the real reason, because "the probe is unavailable" with no
  * explanation is exactly the kind of blank wall this project is trying not to build.
  */
 export async function runCapProbe(trigger: string): Promise<ProbeResult> {
@@ -213,10 +221,12 @@ export async function runCapProbe(trigger: string): Promise<ProbeResult> {
   // --- Send it ------------------------------------------------------------------------------
   //
   // A fresh key per probe: each click is its own transaction rather than a rebroadcast of the
-  // last one, which is the whole point — a judge gets *their* hash. The idempotency guarantee
-  // still holds within a probe: a crash between `createIntent` and the broadcast leaves a row
-  // whose signed bytes the worker re-broadcasts byte-identically (ADR-027).
+  // last one, which is the whole point — the person who clicked gets *their* hash. The idempotency
+  // guarantee still holds within a probe: a crash between `createIntent` and the broadcast leaves
+  // a row whose signed bytes the worker re-broadcasts byte-identically (ADR-027).
   const intent = await createIntent({
+    // Prefix unchanged on purpose: every stored identifier this feature ever wrote stays as it
+    // was written, so one predicate still finds all of them. ADR-069.
     idempotencyKey: `judge:cap-probe:${Date.now()}:${target.onchainId}`,
     kind: "PLACE_BET",
     signer: "SERVER",
@@ -235,6 +245,8 @@ export async function runCapProbe(trigger: string): Promise<ProbeResult> {
     after.poolYesWei === before.poolYesWei && after.poolNoWei === before.poolNoWei;
 
   await db.insert(auditLog).values({
+    // `actor` and `action` are the strings the first five probe rows were written with, kept as
+    // they are so the log has one name per event rather than a before and an after. ADR-069.
     actor: `judge-mode:${trigger}`,
     action: "judge.cap_probe",
     subjectType: "market",

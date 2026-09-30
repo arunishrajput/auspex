@@ -29,7 +29,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
  *      resolver can do, but this is not a decentralised oracle.
  *
  *      Strings (`question`, `resolutionSourceUrl`, `evidenceUrl`) are stored on-chain on
- *      purpose: MST Testnet's `baseFeePerGas` is 0 with a 55M block gas limit, so a judge
+ *      purpose: MST Testnet's `baseFeePerGas` is 0 with a 55M block gas limit, so a reader
  *      reading this contract on MSTScan sees the real question and the real evidence rather
  *      than an opaque hash. We spend free gas to buy auditability.
  *
@@ -449,7 +449,7 @@ contract AuspexMarket is AccessControl, Pausable, ReentrancyGuard {
      *
      *          payout = stake * (poolYes + poolNo) / winningPool
      *
-     *      A judge can verify this by hand from the event log — which is exactly why it was
+     *      Anyone can verify this by hand from the event log — which is exactly why it was
      *      chosen over an AMM. Integer division dust stays in the contract; it is never
      *      silently credited to anyone.
      *

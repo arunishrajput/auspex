@@ -121,7 +121,7 @@ uint8   public constant MAX_CHALLENGES = 3; // challenges required before admin 
 
 ## 4. Agent limits — the headline defence
 
-This is the claim to defend to judges:
+This is the claim the design has to support:
 
 > **Even if our server is fully compromised and the off-chain policy gate is bypassed entirely, an
 > agent wallet cannot exceed its cap — because the contract refuses the transaction.**
@@ -177,10 +177,10 @@ payout(user) = stake(user) * totalPool / winningPool
 ```
 
 Equivalently, the user's own stake back plus a pro-rata share of the losing pool. Protocol fee is
-**0** for the hackathon.
+**0**, deliberately: this is a testnet platform and taking a cut of a testnet pool would be theatre.
 
 Chosen over an AMM or an order book because it is auditable in one line and explainable in one
-sentence. A judge can verify the arithmetic by hand from the event log. LMSR pricing would look more
+sentence. Anyone can verify the arithmetic by hand from the event log. LMSR pricing would look more
 sophisticated and be far harder to defend under questioning.
 
 **Edge cases that must be tested:**
@@ -219,7 +219,7 @@ forceInvalidate(uint256 marketId, string calldata reason)                       
 > unilaterally, but this is **not a decentralised oracle**. A production system would use a staked
 > dispute mechanism (UMA-style) or a decentralised oracle network.
 
-Claiming otherwise would be the one thing that could genuinely sink the submission.
+Claiming otherwise would be the one thing that could genuinely discredit the rest.
 
 ---
 
@@ -245,7 +245,7 @@ mechanism — the contract never pushes funds.
 would be indefensible. Here:
 
 - `baseFeePerGas` is **0**, priority is 1 gwei, and the block gas limit is **55,000,000** (all verified).
-- A judge opening the contract on MSTScan can **read the actual market and the actual evidence**
+- Anyone opening the contract on MSTScan can **read the actual market and the actual evidence**
   rather than an opaque hash.
 
 The tradeoff is explicit: we spend free gas to buy auditability. `specHash` still binds the market to

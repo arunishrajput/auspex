@@ -10,7 +10,7 @@ import { MST_TESTNET } from "@/lib/chain";
  * could call it directly.
  *
  * We keep the proxy anyway because it is ~30 lines and buys three things:
- *   1. insurance if that CORS policy changes back mid-hackathon,
+ *   1. insurance if that CORS policy changes back without warning,
  *   2. a single place to add caching / rate limiting later,
  *   3. the RPC endpoint can be rotated without shipping a new frontend build.
  *

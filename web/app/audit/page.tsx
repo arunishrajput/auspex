@@ -139,6 +139,18 @@ export default async function AuditPage({
                   </span>
                 ))}
               </div>
+              {/* The one action id that does not match the name of the feature that writes it.
+                  Explained here rather than mapped at display time: a log page that renders
+                  something other than what is stored can hide anything. ADR-069. */}
+              {counts.some((row) => row.action === "judge.cap_probe") && (
+                <p className="mt-3 text-xs leading-relaxed text-ink-500">
+                  <span className="font-mono">judge.cap_probe</span> is the cap probe on{" "}
+                  <span className="font-mono">/trust</span>, which was built under an earlier name.
+                  This table is append-only and is never migrated, so the label changed and the
+                  stored identifier did not — one event keeps one name in a log that cannot be
+                  rewritten.
+                </p>
+              )}
             </section>
           )}
 

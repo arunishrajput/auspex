@@ -68,7 +68,7 @@ describe("staleEligibility", () => {
     // job. The chain would accept the call; we decline to make it.
     const result = staleEligibility(market(), DEADLINE + 60);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toContain("ADR-066");
+    if (!result.ok) expect(result.reason).toContain("ADR-066b");
   });
 
   it("refuses a market with a proposal pending, whatever the clock says", () => {

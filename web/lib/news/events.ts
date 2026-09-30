@@ -101,7 +101,7 @@ export type ClusterReport = {
  * Two planning passes over the same pure function: the first reports which borderline pairs
  * exist, the second applies whatever verdicts came back. With no LLM configured the second
  * pass receives an empty verdict map and produces exactly the deterministic clustering — so
- * the code path a judge sees when the model is down is the same one, not a fallback.
+ * the code path a visitor sees when the model is down is the same one, not a fallback.
  */
 export async function runClusteringPass(
   now: Date,

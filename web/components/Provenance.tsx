@@ -9,7 +9,7 @@
  * ## The origins are different trust claims, not decoration
  *
  * They are ordered from "the chain said so" to "we made it up", and the distinctions are the ones
- * a judge would actually press on:
+ * a sceptical reader would actually press on:
  *
  *   `CHAIN`        an `eth_call` or RPC read made during *this request*. Nothing between the
  *                  contract and the screen. The strongest claim on the site.
@@ -110,7 +110,7 @@ export type ProvenanceProps = {
  * The badge. Inline by default so it can sit in a caption or a table header.
  *
  * `data-provenance` is on the element deliberately: it is what `check-provenance.mjs` looks for in
- * prerendered HTML, and it lets a judge confirm the label in devtools rather than trusting the
+ * prerendered HTML, and it lets a reader confirm the label in devtools rather than trusting the
  * colour.
  */
 export function Provenance({ origin, detail, children, className }: ProvenanceProps) {

@@ -8,7 +8,7 @@
  * the stable, documented surface, so this keeps working across Hardhat 3 minor versions.
  *
  * Verified source is not optional for this project — it is what makes the trust claims
- * in docs/TRUST_MODEL.md auditable by a judge instead of merely asserted.
+ * in docs/TRUST_MODEL.md auditable by anyone instead of merely asserted.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";

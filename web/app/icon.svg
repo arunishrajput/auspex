@@ -7,7 +7,7 @@
 
   The mark is a gate with something passing through it — three bars narrowing to one, on the
   signal blue used for chain reads. It is drawn rather than lettered because a favicon is 16px
-  wide on the tab a judge actually looks at, where a glyph of an "A" is a grey smudge.
+  wide on the tab a reader actually looks at, where a glyph of an "A" is a grey smudge.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <rect width="32" height="32" rx="7" fill="#0b0e14" />

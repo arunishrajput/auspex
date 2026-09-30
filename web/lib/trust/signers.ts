@@ -259,3 +259,109 @@ const KIND_LABELS: Record<string, string> = {
   CLAIM: "claim",
   REGISTER_AGENT: "registerAgent",
 };
+
+/**
+ * One market, as much of it as the origin claim needs. `creator` comes from the indexed
+ * `MarketCreated` log, which carries the creating address as an indexed topic.
+ */
+export type OriginRow = {
+  onchainId: number;
+  question: string;
+  /** Lowercased. Null when the log has not been indexed or the database was unreachable. */
+  creator: string | null;
+};
+
+export type MarketOrigin = {
+  /** Created by a signature from the human-authority wallet. The product path. */
+  humanCreated: number[];
+  /** Created by some other key. In practice the operator, commissioning the contract. */
+  operatorCreated: number[];
+  /** Creator unknown — not indexed, or the database could not be read. */
+  unknown: number[];
+  /** Of `operatorCreated`, those whose own on-chain question text says it is a test. */
+  selfLabelled: number[];
+  /** Of `operatorCreated`, those whose text does not. Identifiable only by their sender. */
+  unlabelled: number[];
+};
+
+/**
+ * Which markets a human signed for, which a commissioning script created, and which of those
+ * say so in their own words. **Pure.**
+ *
+ * ## Why this is computed and not written down
+ *
+ * The sentence under `/markets` used to name market ids — "markets 1–3 are tests, markets 4–7 are
+ * the real pipeline". It was written when nine markets existed. By the time thirteen did, it was
+ * wrong about four of them, and it also claimed that *all four* commissioning markets label
+ * themselves in their on-chain text. Two of them do not: markets 1 and 2 ask whether AuspeX would
+ * have a verified contract, which is obviously not a product question but never says it is a test.
+ *
+ * That was the fourth time in this project a hand-written sentence contradicted the rows printed
+ * directly beneath it (ADR-065, ADR-067, the `/markets/8` caption). So the distinction a reader is
+ * invited to check is derived from the same data they are looking at, and the weaker case — a
+ * commissioning market that does *not* announce itself — is named rather than averaged away.
+ *
+ * ## The label test is deliberately narrow
+ *
+ * A leading bracketed clause containing the word "test". That is what `crash-test.ts` and
+ * `lifecycle.ts` write, it is checkable against the immutable strings on chain, and it will not
+ * quietly promote a product market that happens to use the word later in a sentence.
+ */
+const SELF_LABELLED_TEST = /^\s*\[[^\]]*\btest\b[^\]]*\]/i;
+
+export function marketOrigins(
+  rows: readonly OriginRow[],
+  humanAddress: string | null,
+): MarketOrigin {
+  const human = humanAddress?.toLowerCase() ?? null;
+  const origin: MarketOrigin = {
+    humanCreated: [],
+    operatorCreated: [],
+    unknown: [],
+    selfLabelled: [],
+    unlabelled: [],
+  };
+
+  for (const row of rows) {
+    if (row.creator === null) {
+      origin.unknown.push(row.onchainId);
+      continue;
+    }
+    // No configured authority means no claim to make: every market lands in `unknown` rather
+    // than being silently credited to the operator.
+    if (human !== null && row.creator.toLowerCase() === human) {
+      origin.humanCreated.push(row.onchainId);
+      continue;
+    }
+    if (human === null) {
+      origin.unknown.push(row.onchainId);
+      continue;
+    }
+    origin.operatorCreated.push(row.onchainId);
+    if (SELF_LABELLED_TEST.test(row.question)) origin.selfLabelled.push(row.onchainId);
+    else origin.unlabelled.push(row.onchainId);
+  }
+
+  for (const list of Object.values(origin)) list.sort((a, b) => a - b);
+  return origin;
+}
+
+/** `[1, 2, 3, 5]` → `"1–3 and 5"`. Ranges because a list of thirteen ids is unreadable. */
+export function formatIds(ids: readonly number[]): string {
+  if (ids.length === 0) return "none";
+  const runs: string[] = [];
+  let start = ids[0]!;
+  let prev = start;
+  for (const id of ids.slice(1)) {
+    if (id === prev + 1) {
+      prev = id;
+      continue;
+    }
+    runs.push(start === prev ? `${start}` : prev === start + 1 ? `${start} and ${prev}` : `${start}–${prev}`);
+    start = id;
+    prev = id;
+  }
+  runs.push(start === prev ? `${start}` : prev === start + 1 ? `${start} and ${prev}` : `${start}–${prev}`);
+  if (runs.length === 1) return runs[0]!;
+  return `${runs.slice(0, -1).join(", ")} and ${runs[runs.length - 1]}`;
+}

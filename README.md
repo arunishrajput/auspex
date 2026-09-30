@@ -5,11 +5,20 @@
 > **AI proposes. Humans and the chain decide.**
 > Nothing moves money or reaches a member without passing a human gate and an on-chain limit.
 
-Built solo for the **MST Blockchain × Newrro Buildathon** — AI & Web3 Builders track.
+AuspeX is a prediction-market platform for people who want AI to do the reading without giving it the
+authority. Three separate agents draft market questions from confirmed news, research each market and
+propose an outcome — and not one of them can create a market, place a bet over its limit, or resolve
+anything. A person signs for every market. The contract caps every agent. Both of those are facts you
+can check on a public explorer rather than claims you have to accept, and the rest of this file is
+about how to check them.
+
+It is built for someone who would otherwise have to choose between "let the model decide" and "do it
+all by hand". It is running on a testnet, it is not audited, and the
+[Limitations](#limitations--stated-plainly) section is written to be read.
 
 | | |
 |---|---|
-| **Live demo** | **https://auspex-web-mu.vercel.app** |
+| **Live** | **https://auspex-web-mu.vercel.app** |
 | **Contract** (verified) | [`0xc4743d6295311AFead12161881Bfcf601B70104C`](https://testnet.mstscan.com/address/0xc4743d6295311AFead12161881Bfcf601B70104C) |
 | **Network** | MST Testnet · chain `91562037` |
 | **The transaction that matters** | [`0xbfe9bb2c…ced060a`](https://testnet.mstscan.com/tx/0xbfe9bb2c3ffee4be2f660473b3de916380f5d10da8548173d44810118ced060a) — **Reverted**, on purpose |
@@ -22,15 +31,16 @@ build if mock data reaches production.
 
 ## Check it yourself in 60 seconds
 
-No wallet, no signup, and no trust in me required.
+No wallet, no signup, and no trust in anything written here required.
 
 1. Open **[/trust](https://auspex-web-mu.vercel.app/trust)**. Every claim on that page is a live
    `eth_call` against the deployed contract, not a stored copy. The role matrix is read from the
    chain on each load.
-2. Scroll to **judge mode** and press the button. It sends a **real transaction** from a real agent
-   wallet, asking to bet one wei more than that agent's on-chain cap. You get a link to it on
+2. Scroll to the **cap probe** and press the button. It sends a **real transaction** from a real
+   agent wallet, asking to bet one wei more than that agent's on-chain cap. You get a link to it on
    MSTScan. **It reverts** — `AgentPerTxCapExceeded(20000000000000001, 20000000000000000)`.
-3. That is the whole thesis in one click: my code is not what stops the agent. The contract is.
+3. That is the whole thesis in one click: this application's code is not what stops the agent. The
+   contract is.
 
 The button costs about 0.0001 tMSTC in gas and stakes nothing, because the transaction never
 succeeds. It is rate-limited, and it refuses to broadcast unless an `eth_call` first confirms the
@@ -99,7 +109,7 @@ the live database.
 | **Schema** | malformed or out-of-enum model output, a resolution source we never issued | Zod, behind an API-side schema |
 | **Policy gate** | disallowed category, confidence below the member's floor, stake over budget, kill switch | a pure function — no network, no model |
 | **A human** | a question that is ambiguous, unresolvable, or inconsistent with its own source | a person, with a wallet signature |
-| **The chain** | over-cap bets, late bets, double claims, premature finalisation, a stale deadline | the contract, regardless of what my code believed |
+| **The chain** | over-cap bets, late bets, double claims, premature finalisation, a stale deadline | the contract, regardless of what the application believed |
 
 Refused decisions are the evidence, so they are kept, shown and never deleted.
 **[/trust](https://auspex-web-mu.vercel.app/trust) counts all four layers live.** No tally is written
@@ -117,7 +127,9 @@ payout are all enforced on-chain. Remove MST and the central claim disappears �
 that makes the AI safe to run.
 
 - `createMarket` is restricted to `MARKET_CREATOR_ROLE`, held by a **browser wallet whose key no
-  server here has ever seen**. Markets 4–7 and 9 were created by that key.
+  server here has ever seen**. Nine of the thirteen markets on chain were created by that key;
+  [`/markets`](https://auspex-web-mu.vercel.app/markets) names which, computed from the creating
+  address in each indexed log rather than written down.
 - Agent wallets are registered on-chain with **per-transaction and per-market caps**. The contract
   reverts an over-cap bet even if the server is fully compromised. Several such reverts are on
   chain, every one of them deliberate.
@@ -126,11 +138,11 @@ that makes the AI safe to run.
 - Resolution stores an **evidence URL on-chain**, behind a challenge window, with **permissionless
   finalisation** and **permissionless `invalidateStale`** — so no privileged party can block a
   payout, and a resolver who never appears cannot lock funds up either. Both paths are on chain.
-- Payouts are computed and executed by contract logic in native **tMSTC**, not by my server. The UI
-  never computes a payout; it displays `previewPayout()`.
+- Payouts are computed and executed by contract logic in native **tMSTC**, not by any server here.
+  The UI never computes a payout; it displays `previewPayout()`.
 - Because gas on this chain is effectively free (`baseFeePerGas = 0`), the contract deliberately
-  **stores readable strings on-chain** — the question, the resolution source, the evidence URL. Judge
-  legibility on the explorer is worth more here than gas savings.
+  **stores readable strings on-chain** — the question, the resolution source, the evidence URL. A
+  reader being able to understand a market on the explorer is worth more here than gas savings.
 
 BridgeKey is used for what it is for: wallet connection, network switching and contract signing
 (market approval, resolution, claims). The app targets the standard **EIP-1193 / EIP-6963** injected
@@ -218,10 +230,13 @@ it — so these attributions cannot quietly drift into flattery.
 > about.** They are market 8 — the labelled lifecycle test — which was driven from a laptop because
 > proving a payout needs a market with stakes on *both* sides and none existed. The human wallet holds
 > `RESOLVER_ROLE` and `CHALLENGER_ROLE` and `/resolve` signs with it in a browser, but **no market has
-> yet been resolved through that path**, because markets 4–7 and 9 do not close until 2026-09-30.
-> `/markets/8` says the same thing on the page, computed from the rows rather than asserted over them.
-> The claim that survives on market 8 is the one that does not depend on who signed: `finalizeResolution`
-> and `claim` were sent by a wallet holding **no role at all**, so a privileged party cannot block a payout.
+> yet been resolved through that path.** As of 2026-09-30 one human-created market (#11) has reached
+> its close time and is awaiting an outcome; the reason the resolution agent has not yet drafted one is
+> a real defect in the tick's own time budget, not a shortage of candidates, and it is written up as
+> gap #34 in [`PROGRESS.md`](./PROGRESS.md). `/markets/8` says the same thing on the page, computed from
+> the rows rather than asserted over them. The claim that survives on market 8 is the one that does not
+> depend on who signed: `finalizeResolution` and `claim` were sent by a wallet holding **no role at
+> all**, so a privileged party cannot block a payout.
 
 **What the chain refused. These are the important ones.**
 
@@ -241,20 +256,35 @@ would prove nothing extra: `proposeResolution` from an unprivileged address retu
 addresses.
 
 **A failed transaction is not a bug here. It is the product.** Gas is free on this chain, so
-transactions we *want* refused are deliberately allowed to reach it, where a judge can read the
-revert reason in decoded form — which works only because the source is verified.
+transactions we *want* refused are deliberately allowed to reach it, where anyone can read the revert
+reason in decoded form — which works only because the source is verified.
 
 ### The markets on chain
 
-Nine exist. **Markets 4–7 and 9 are the real ones** — drafted by an AI agent from two-source
-confirmed news, read as a checklist by a human, and created by a signature from a key no server
-holds. Markets 1–3 are Phase 1/2 test runs and market 8 is the lifecycle test; all four **say what
-they are in their own on-chain question text**, because a label has to survive being quoted out of
-context, and none is presented anywhere as a product market.
+Thirteen exist, and no count is written down here — [`/markets`](https://auspex-web-mu.vercel.app/markets)
+derives the split from the creating address in each indexed log, so the page cannot drift out of
+agreement with the chain the way a sentence in a README does.
 
-**The distinction a judge can check without trusting me:** markets 1–3 and 8 were sent by the
-deployer `0xc71dC478…4ad24`. Markets 4–7 and 9 were sent by `0xA9F68fDf…311fF1` — the human
-authority, a key that exists only inside a browser extension.
+**Nine are the product path**, drafted by an AI agent from two-source-confirmed news, read as a
+checklist by a person, and created by a signature from a key no server holds.
+
+**Four were created while commissioning the contract**, from the operator key rather than through the
+human gate, and they split into two cases that deserve different sentences:
+
+- **Markets 3 and 8 say what they are in their own on-chain question text** — `[Phase 2 idempotency
+  test …]` and `[Phase 6 lifecycle test …] Not a product market.` Those strings are immutable, which
+  is the point: a label has to survive being quoted out of context.
+- **Markets 1 and 2 do not.** They ask *"Will AuspeX have a verified contract on MST Testnet before
+  the deadline?"* — obviously not a product question, but it never announces itself as a test. This is
+  the weaker case and it is named rather than averaged in with the other two. It is also a correction:
+  an earlier draft of this file claimed all four labelled themselves, and reading the chain showed
+  that two of them do not.
+
+None of the four is presented anywhere as a product market.
+
+**The distinction anyone can check without trusting this file:** markets 1–3 and 8 were sent by the
+deployer `0xc71dC478…4ad24`. The other nine were sent by `0xA9F68fDf…311fF1` — the human authority, a
+key that exists only inside a browser extension.
 
 Market **8** is the one to look at for the full lifecycle, because it is finished.
 **[/markets/8](https://auspex-web-mu.vercel.app/markets/8)** shows create → bets on both sides → a
@@ -268,7 +298,7 @@ and its transaction.
 
 | Page | What it is for |
 |---|---|
-| [`/trust`](https://auspex-web-mu.vercel.app/trust) | the whole design on one page — untrusted zone, authority zone, live role matrix, refusal counters, judge mode |
+| [`/trust`](https://auspex-web-mu.vercel.app/trust) | the whole design on one page — untrusted zone, authority zone, live role matrix, refusal counters, the cap probe |
 | [`/`](https://auspex-web-mu.vercel.app/) | the live pipeline. **Run tick** advances it in front of you |
 | [`/markets`](https://auspex-web-mu.vercel.app/markets) | every market, read from the chain rather than from the projection |
 | [`/markets/8`](https://auspex-web-mu.vercel.app/markets/8) | one market's entire on-chain lifecycle, with the signer of every call |
@@ -297,13 +327,14 @@ web/           Next.js 16 · dashboard · API routes · pipeline stages · the t
   lib/agents/      the policy gate (pure) and the member agents
   lib/resolution/  outcome drafting: retrieve → draft → validate → propose
   lib/trust/       live role reads and the refusal counters
-docs/          PRD · ARCHITECTURE · BUILD_PLAN · TRUST_MODEL · CONTRACTS · RUNBOOK · DEMO_SCRIPT · DECISIONS
+docs/          PRD · ARCHITECTURE · TRUST_MODEL · CONTRACTS · RUNBOOK · WALKTHROUGH
+               BUILD_RECORD · BUILD_PLAN · PROGRESS · DECISIONS   <- the engineering log
 ```
 
 **Idempotency is a design constraint, not a test.** Off-chain: unique keys plus
 `SELECT … FOR UPDATE SKIP LOCKED`. On-chain: the `OnChainIntent` row is written *before* the
 broadcast, and the contract rejects a repeated `specHash` as a second line of defence that does not
-depend on my code being right. `pnpm --filter web crash-test` proves it by killing a worker
+depend on the application being right. `pnpm --filter web crash-test` proves it by killing a worker
 mid-flight and re-running it — the result is one market, not two.
 
 **Untrusted text is delimited, always.** News content reaches a model inside `<untrusted_content>`
@@ -321,17 +352,26 @@ that does not take the system down.
 **Scale, as one snapshot taken on 2026-09-29 in production** (`/trust` and `/audit` recompute these on every load): 463 articles from 194 known publishers · 382
 clustered events, 13 two-source `CONFIRMED` · 12 market specs drafted (5 approved, 1 refused by a
 human, 6 awaiting review) · 12 agent decisions (3 on chain, 8 refused by the gate) · 34 on-chain
-intents · 290 audit rows, every one carrying a reason. The pipeline has been running unattended on a
-GitHub Actions heartbeat — scheduled every five minutes, though GitHub delivers it far less often
-than that: three runs in the fourteen hours to 2026-09-29T06:10Z. Scheduled workflows are
-best-effort and free runners are dropped first, so nothing user-facing is allowed to depend on the
-cron. Market notifications are sent by `/review` itself the moment a creation is confirmed, and the
-cron is only the backstop.
+intents · 290 audit rows, every one carrying a reason.
+
+**The cron cadence, measured rather than configured.** The pipeline runs unattended on a GitHub
+Actions heartbeat whose schedule expression asks for every five minutes. **GitHub delivers roughly
+every five hours.** Runs observed across 2026-09-29/30 landed at 12:55, 18:28, 22:32, 01:29 and
+07:18 UTC — every one of them successful. Scheduled workflows are best-effort and free runners are
+dropped first, so the five-minute figure is what the file asks for and not what happens; closing that
+gap is open work, not a solved problem. Nothing user-facing is allowed to depend on the cron: market
+notifications are sent by `/review` itself the moment a creation is confirmed, and the **Run tick**
+button on the dashboard advances the pipeline on demand.
 
 Worth reading: [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the system,
 [`CONTRACTS.md`](./docs/CONTRACTS.md) for the contract design,
-[`TRUST_MODEL.md`](./docs/TRUST_MODEL.md) for where the boundaries are, and
+[`TRUST_MODEL.md`](./docs/TRUST_MODEL.md) for where the boundaries are,
+[`WALKTHROUGH.md`](./docs/WALKTHROUGH.md) for a tour of the running pages, and
 [`DECISIONS.md`](./docs/DECISIONS.md) for why each choice was made and what it cost.
+
+AuspeX was built in eight phases over four days and the log of that is kept in full rather than
+tidied away — [`BUILD_RECORD.md`](./docs/BUILD_RECORD.md) says which files those are and why keeping
+them is the honest choice for a product whose whole pitch is that its claims can be checked.
 
 ---
 
@@ -366,18 +406,17 @@ pnpm --filter web agents:register   # seed members, fund agent wallets, write ca
 pnpm --filter web verify:agents     # 41 live checks: roles, registry, the cap boundary, the kill switch
 pnpm --filter web verify:resolution # the resolution gates, by eth_call
 pnpm --filter web agents:over-cap   # THE over-cap bet: sends cap+1 wei and the chain refuses it
-pnpm --filter web judge:probe       # the same refusal, from the terminal
+pnpm --filter web probe:cap        # the same refusal, from the terminal
 pnpm --filter web lifecycle         # the whole resolution lifecycle on chain, ~5 min
 pnpm --filter web crash-test        # the idempotency proof. Creates a REAL market.
 ```
 
 The `verify:*` scripts sign nothing and write nothing — they are `eth_call` only, which is the
-cheapest possible proof and the reason they can be run in front of a judge.
+cheapest possible proof and the reason they are safe to run against production.
 
 **Secrets live only in `.env.local`, which is git-ignored.** CI fails the build if an `.env` file or a
 real-looking key is ever committed. No private key appears in any log, commit or page, and the
-recovery phrase behind the human authority wallet was never requested and is not needed by anything
-in this repository.
+recovery phrase behind the human authority wallet is not needed by anything in this repository.
 
 ---
 
@@ -393,19 +432,19 @@ list with measurements attached.
 market. The challenge window, permissionless `finalizeResolution` and permissionless
 `invalidateStale` bound what one bad or absent resolver can do. But **this is not a decentralised
 oracle**: a resolver colluding with the challenger set could still settle a market wrongly. A
-production system would use a staked dispute mechanism or an oracle network. Given the time, I chose
-a mechanism I could implement correctly and describe honestly over one I could only gesture at.
+production system would use a staked dispute mechanism or an oracle network. This is a mechanism that
+could be implemented correctly and described honestly, chosen over one that could only be gestured at.
 
 **The market creator and the resolver are the same wallet.** They should be different people. The
 code already reads them from two separate variables so that splitting them is a configuration change
-plus two `grantRole` calls — I have not made that split, and `/resolve` says so on the page.
+plus two `grantRole` calls — the split has not been made, and `/resolve` says so on the page.
 
-**The challenge window is 120 seconds**, so a full lifecycle fits inside a live demo. It is immutable,
-so it is honest rather than quietly tunable — and it had a real design cost: two minutes is far too
-short for a human to notice and veto a wrong outcome, so the human gate had to move *before* the
-proposal. That is why `proposeResolution` is browser-signed rather than optimistic. A longer window
-would permit the cleaner shape — AI proposes publicly, human vetoes inside the window — which is a
-real design I could not use here.
+**The challenge window is 120 seconds**, short enough that a whole lifecycle can be watched end to
+end. It is immutable, so it is honest rather than quietly tunable — and it had a real design cost: two
+minutes is far too short for a human to notice and veto a wrong outcome, so the human gate had to move
+*before* the proposal. That is why `proposeResolution` is browser-signed rather than optimistic. A
+longer window would permit the cleaner shape — AI proposes publicly, human vetoes inside the window —
+and that design is not available at this setting.
 
 **Agent keys are held by the server.** Agent autonomy requires a key the server can sign with. Keys
 are encrypted at rest (AES-256-GCM), but **the encryption is hygiene — the on-chain caps are what
@@ -432,17 +471,25 @@ the human gate has many more approvals on record than refusals — the refusal p
 server-verified and signature-checked, and it has been exercised far less. Both counters appear on
 `/trust` as they are, rather than dressed up.
 
+**The resolution agent has never drafted an outcome for a real market.** Markets close, and the stage
+that would read them is starved by the tick's own deadline ladder: clustering runs first with a call
+budget but no deadline, and the resolution stage has repeatedly logged *"out of time for this tick
+after examining 0 market(s)"*. The whole path is implemented and tested against real data with
+`resolution:dry-run`, and market 8's lifecycle is on chain — but on the live pipeline it has not run
+yet, and the reason is a defect rather than a shortage of candidates. It is gap #34 in
+[`PROGRESS.md`](./PROGRESS.md).
+
 **Model quality is bounded by a small model on a free tier.** Drafted specs are structurally sound and
 occasionally loose — one approved market's criteria says to check Zoo Atlanta's own website while its
 on-chain resolution source is the Guardian. That inconsistency is left visible rather than patched,
-because a reviewer catching it is the demonstration. The deterministic rules catch what is
+because a reviewer catching it is the point of having a reviewer. The deterministic rules catch what is
 *checkable*; judgement is the human's job.
 
 **Re-orgs** are handled by a confirmation depth of 3 blocks and nothing more — fine on a
 3-second-block testnet, insufficient for mainnet. **Nothing here is audited**, and tMSTC has no
 value.
 
-**Fortuna VRF is not used.** The organisers' Fortuna contract
+**Fortuna VRF is not used.** The Fortuna contract
 (`0x01C6C7EBac32eD9be3Cd8Ad84B38128124AAd380`) is a VRF coordinator with no market functions, and
 `eth_getCode` against it on chain `91562037` returns `0x` — it is a mainnet contract, unreachable from
 testnet. Randomised resolver selection was therefore **cut rather than faked.**
@@ -458,4 +505,4 @@ agent bet → resolution → payout — genuinely working end to end, rather tha
 
 ## License
 
-MIT
+MIT — see [`LICENSE`](./LICENSE).

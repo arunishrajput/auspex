@@ -26,7 +26,7 @@ Client    : Geth fork v1.7.3 build, Cancun-capable
 **Why `testnet.mstscan.com` and not `mstscan.com`:** `mstscan.com` reports a head block around
 20.8M while our RPC is around 5.78M — it indexes a different chain. `testnet.mstscan.com` matches our
 RPC exactly (same head, same 55M gas limit, same validator address). Both are Blockscout; only the
-testnet one is ours. Pointing judges at the wrong explorer would make real transactions look fake.
+testnet one is ours. Sending a reader to the wrong explorer would make real transactions look fake.
 
 **Cancun support was tested, not assumed.** `eth_call` with state overrides executed PUSH0 (`0x5f`),
 MCOPY (`0x5e`) and TSTORE/TLOAD (`0x5d`/`0x5c`) successfully, with an INVALID-opcode control proving
@@ -35,7 +35,7 @@ the override was actually applied. So `evmVersion: "cancun"` is safe.
 **Gas is effectively free** (`baseFeePerGas = 0`, 1 gwei priority, 55M block limit). This drives a
 deliberate design choice: **we store human-readable strings on-chain** — the question, the resolution
 source URL, the evidence URL. On Ethereum mainnet that would be wasteful. Here it costs nothing and
-buys the thing that actually earns points: a judge can open the contract on MSTScan and *read the
+buys the thing that actually matters here: anyone can open the contract on MSTScan and *read the
 market*. Optimising gas here would trade away legibility for no gain.
 
 ---
@@ -72,12 +72,14 @@ a solo build has no budget for operational surface that does not earn its keep.
 
 **Two drivers, one endpoint.** `POST /api/tick` is called by a GitHub Actions cron (`*/5 * * * *`,
 free on public repos) as a background heartbeat, and by a **"Run tick" button** in the dashboard for
-live demo control. GH Actions cron can be delayed under load, so the button — not the cron — is what
-gets pressed in front of judges.
+on-demand control. GH Actions cron is delayed under load, so the button — not the cron — is what
+advances the pipeline when someone is actually looking at it.
 
 **How badly delayed, measured rather than assumed.** On 2026-09-29 the `*/5` heartbeat had been
-delivered three times in fourteen hours — 20:42Z, 00:36Z, 06:10Z. Treat the cron as a backstop that
-fires *somewhere between minutes and hours*, never as a latency guarantee. Anything a member sees
+delivered three times in fourteen hours — 20:42Z, 00:36Z, 06:10Z. Measured again across 2026-09-29/30
+it landed at 12:55, 18:28, 22:32, 01:29 and 07:18Z: **roughly every five hours**, every run
+successful. The configured expression is not the cadence. Treat the cron as a backstop that fires
+*somewhere between minutes and hours*, never as a latency guarantee. Anything a member sees
 must be driven by the request that caused it. That is why market notifications now leave from
 `/review` via `POST /api/sync` (indexer → notifier, ~1s) rather than waiting for a tick, and why
 `.github/workflows/sync.yml` is documented as a repair path rather than the delivery path.
@@ -231,11 +233,12 @@ than an error, because `DEPLOYER_PRIVATE_KEY` is deliberately absent from Vercel
 registration is therefore a local command, and the deployed app holds no key that can create a
 market, resolve one, grant a role, pause the contract or change a cap.
 
-**Stated plainly in the README:** this is a hackathon custody model. The encryption is hygiene; the
-**on-chain caps are what actually bound the risk.** A production system would use per-user
-non-custodial signing or a session-key/account-abstraction scheme.
+**Stated plainly in the README:** this is a server-custody model and it is the weakest part of the
+design. The encryption is hygiene; the **on-chain caps are what actually bound the risk.** A
+production system would use per-user non-custodial signing or a session-key/account-abstraction
+scheme.
 
-**BridgeKey's real role** — connect, network switch, and contract signing, as the track recommends:
+**BridgeKey's real role** — connect, network switch, and contract signing:
 the human authority signs `createMarket`, the resolver signs `proposeResolution`, and members fund
 agent wallets and claim winnings. We target the standard **EIP-1193 / EIP-6963** injected-provider
 interface via wagmi's `injected()` connector, so there is **no BridgeKey-specific code** — it works

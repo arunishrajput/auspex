@@ -5,7 +5,7 @@
  *
  * Writes deployments/<network>.json with the address, ABI, constructor args, deploy
  * tx hash and block number. That file is COMMITTED — it contains no secrets and it is
- * what the frontend, the README and the judges read. Every value in it must be real.
+ * what the frontend, the README and anyone checking the claims read. Every value in it must be real.
  *
  * Hardhat 3 API note: `hre.network.connect()` is deprecated; we use `getOrCreate()`.
  */
@@ -20,7 +20,7 @@ const DEPLOYMENTS_DIR = join(__dirname, "..", "deployments");
 /**
  * Seconds a proposed resolution stays challengeable. Immutable once deployed.
  *
- * 120s is short on purpose — a judge has to be able to watch a market go from resolved to
+ * 120s is short on purpose — someone has to be able to watch a market go from resolved to
  * paid out inside a demo. The README states this plainly as a limitation rather than
  * pretending it is a production-grade dispute period.
  */

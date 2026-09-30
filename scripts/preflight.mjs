@@ -6,7 +6,7 @@
  *
  * Verifies every external dependency the build needs, and says plainly which phase each
  * failure blocks. Run this before a demo — discovering a dead RPC or an exhausted LLM
- * quota in front of judges is avoidable.
+ * quota while someone is watching the site is avoidable.
  *
  * Never prints a secret. Only ever reports whether one is present and whether it works.
  */
@@ -159,7 +159,7 @@ async function checkDeployer() {
  *
  * Checked here rather than taken on trust because two things can silently break it between
  * now and a demo: the balance can go to zero, and the role can be revoked. Both would surface
- * as a confusing revert in the `/review` queue with a judge watching.
+ * as a confusing revert in the `/review` queue while someone is using it.
  *
  * It also asserts the wallet does **not** hold `DEFAULT_ADMIN_ROLE`. That is not paranoia —
  * "the human can create markets and nothing else" is the project's central trust claim, and a

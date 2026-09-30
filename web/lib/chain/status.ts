@@ -12,7 +12,7 @@ import { AUSPEX_MARKET_ADDRESS, addressMismatch } from "./deployment";
  *
  * Nothing here has a fallback value. If the contract cannot be read, the UI says so — a
  * plausible-looking market count on a page that could not reach the chain is precisely the
- * fabricated chain data the buildathon rules prohibit.
+ * fabricated chain data hard rule #1 forbids.
  */
 
 export type ContractStatus =

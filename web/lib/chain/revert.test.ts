@@ -8,7 +8,7 @@ import { decodeRevertData, describeRevert, extractRevertData } from "./revert";
  *
  * MST Testnet's RPC hides custom-error data in the error *message* rather than the standard
  * `error.data` field, so ethers leaves `error.revert` null and an over-cap bet surfaces as an
- * anonymous "execution reverted". Phase 5's headline demo is a judge reading
+ * anonymous "execution reverted". The whole point of a refused transaction is someone reading
  * `AgentPerTxCapExceeded(attempted, cap)` with real numbers in it, so this decoder is load
  * bearing rather than cosmetic.
  *

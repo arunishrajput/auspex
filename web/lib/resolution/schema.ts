@@ -6,7 +6,7 @@
  * same in kind and tighter in degree:
  *
  * **It cannot emit a URL.** The evidence URL goes on-chain and is the thing a human — and later a
- * judge — clicks. A model that can type a destination can type one that does not exist, or one
+ * reader — clicks. A model that can type a destination can type one that does not exist, or one
  * that does and is hostile. It picks an `EVIDENCE_n` label from the articles we supplied and
  * deterministic code substitutes the real URL (`validate.ts`).
  *

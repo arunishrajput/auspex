@@ -1,8 +1,20 @@
 # video/ — the AuspeX demo film
 
-A 4-minute film built from the same evidence the project asks a judge to check: real captured
-pixels from the live deployment and MSTScan, and transaction hashes re-verified against the
-explorer before anything renders.
+> **This directory is part of the build record, not the product.** The film was made in September
+> 2026 for the MST Blockchain × Newrro Buildathon, and it names that event on its end card. It is
+> kept as it was rendered, along with its source, because it is evidence: every frame is a real
+> screen capture of the live deployment and every hash on screen was re-verified against the chain
+> before the render was allowed to start. Editing the source to remove the event would leave a
+> repository whose film says one thing and whose code says another, and the film is the artifact
+> that cannot be re-checked. `docs/BUILD_RECORD.md` explains why the whole record is kept.
+>
+> Two labels in here are therefore frozen at their September wording: the end card names the event,
+> and the `/trust` shot is labelled "judge mode" — the feature that is now called the **cap probe**.
+> The rename is in `docs/DECISIONS.md` as ADR-069.
+
+A 4-minute film built from the same evidence anyone is invited to check: real captured pixels from
+the live deployment and MSTScan, and transaction hashes re-verified against the explorer before
+anything renders.
 
 Not a pnpm workspace package. `pnpm-workspace.yaml` lists only `contracts` and `web`, and every
 step in `.github/workflows/ci.yml` is `--filter`-scoped, so this directory cannot affect CI.

@@ -19,7 +19,9 @@ a full visual redesign, fixing what makes a claim untrue, and a v1.0 release.
 limitation is changed to look better. The build record is kept, not erased — ADR-068 says why, and
 it is the argument to re-read if deleting something starts to feel like tidying.
 
-*(This file is itself in Phase 9's scope for the framing pass.)*
+*(Phase 9 did the framing pass, including on this file. The two references to a competition above
+are deliberate: they are history a future session needs, not framing on a product surface. Where the
+build record lives, and why it was kept, is `docs/BUILD_RECORD.md`.)*
 
 ## Session protocol — THIS IS THE IMPORTANT PART
 
@@ -168,6 +170,7 @@ pnpm --filter web crash-test # the Phase 2 idempotency proof (creates a REAL mar
 pnpm --filter web agents:register  # seed members, fund agent wallets, register caps ON CHAIN (local only)
 pnpm --filter web verify:agents    # roles + registry + the cap boundary + kill switch. Writes nothing.
 pnpm --filter web agents:over-cap  # THE over-cap bet: sends cap+1 wei and the chain refuses it
+pnpm --filter web probe:cap        # the cap probe from the terminal — same code path as the button
 ```
 
 ## Repo layout
@@ -175,7 +178,8 @@ pnpm --filter web agents:over-cap  # THE over-cap bet: sends cap+1 wei and the c
 ```
 contracts/     Hardhat 3 · Solidity · tests · deploy + verify scripts
 web/           Next.js app — dashboard, API routes, pipeline workers, agents
-docs/          PRD · ARCHITECTURE · BUILD_PLAN · TRUST_MODEL · CONTRACTS · RUNBOOK · DEMO_SCRIPT · DECISIONS
+docs/          product: PRD · ARCHITECTURE · TRUST_MODEL · CONTRACTS · RUNBOOK · WALKTHROUGH
+               record:  BUILD_RECORD · BUILD_PLAN · DECISIONS  (PROGRESS.md is in the root)
 scripts/       one-off dev utilities (wallet gen, doctor)
 PROGRESS.md    <- the file that carries state between sessions
 ```

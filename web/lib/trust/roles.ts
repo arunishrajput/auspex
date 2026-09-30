@@ -42,7 +42,7 @@ export const ROLE_NAMES = [
 export type RoleName = (typeof ROLE_NAMES)[number];
 
 /**
- * What a role lets its holder do, in the words a judge would use.
+ * What a role lets its holder do, in plain words rather than in the contract's.
  *
  * Beside the role rather than in the page, for the same reason `POLICY_RULES` lives beside
  * `policyGate` — a page cannot then describe a power the contract does not grant.

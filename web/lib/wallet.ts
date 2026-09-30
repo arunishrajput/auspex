@@ -4,7 +4,7 @@
  * `injected()` and nothing else. BridgeKey is an EIP-1193 / EIP-6963 provider, which is a
  * standard, so the connector that speaks the standard is the connector that works — no vendor
  * SDK, no WalletConnect project id, no third-party relay in the path between a human and the
- * transaction they are signing. It also means this page works with any injected wallet a judge
+ * transaction they are signing. It also means this page works with any injected wallet a visitor
  * happens to have installed, which is worth more on demo day than supporting a specific one.
  *
  * The chain is defined here from the same constants `lib/chain.ts` exports, so there is exactly

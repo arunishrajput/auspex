@@ -6,7 +6,7 @@
  *
  * The explorer is the one thing most likely to be got wrong: `mstscan.com` indexes a
  * DIFFERENT chain (head ~20.8M vs our ~5.78M). Ours is `testnet.mstscan.com`. Linking a
- * judge to the wrong explorer makes a real transaction look fabricated.
+ * reader to the wrong explorer makes a real transaction look fabricated.
  */
 
 export const MST_TESTNET = {

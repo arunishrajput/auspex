@@ -8,7 +8,7 @@ import { getProvider } from "./provider";
  * Every function here is a real `eth_call` against chain 91562037. Nothing has a fallback
  * value and nothing is cached: if the chain cannot be read, the caller gets an error and the
  * UI says so. A plausible-looking market on a page that could not reach the chain would be
- * the fabricated data the buildathon rules prohibit (hard rule #1).
+ * the fabricated data hard rule #1 forbids — the one failure this project cannot survive.
  */
 
 export const auspexInterface = new Interface(AUSPEX_MARKET_ABI);

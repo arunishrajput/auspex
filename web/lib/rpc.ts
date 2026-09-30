@@ -9,7 +9,7 @@ import { MST_TESTNET } from "./chain";
  *
  * Every function here either returns real chain data or throws. It never falls back to
  * a plausible-looking default — a fabricated block height on a status page would be
- * exactly the kind of misleading data the buildathon rules prohibit.
+ * exactly the kind of misleading data hard rule #1 forbids.
  */
 
 export class RpcError extends Error {

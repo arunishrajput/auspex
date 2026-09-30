@@ -1,29 +1,29 @@
 /**
- * Judge mode, from the terminal.  `pnpm --filter web judge:probe`
+ * The cap probe, from the terminal.  `pnpm --filter web probe:cap`
  *
  * The same `runCapProbe` the `/trust` button calls, with the same guard and the same audit row —
  * so this script is a *verification* of the button rather than a second implementation of it. That
- * matters: a CLI that reimplemented the probe could pass while the button was broken, which is the
- * failure mode a demo discovers in front of judges.
+ * matters: a CLI that reimplemented the probe could pass while the button was broken, and the only
+ * place that would show up is in front of whoever is using the site.
  *
- * Use it to confirm the feature works before a demo, and to produce a hash for `PROGRESS.md`
- * without clicking through a browser. Everything it prints is read back from the chain or from the
- * row the probe wrote; nothing here is computed for display.
+ * Use it to confirm the feature still works after a change, and to produce a hash without clicking
+ * through a browser. Everything it prints is read back from the chain or from the row the probe
+ * wrote; nothing here is computed for display.
  *
  * Safe to re-run. Each run is its own transaction and every one of them reverts — see the long
- * comment in `lib/judge/probe.ts` for why that is the point rather than a limitation.
+ * comment in `lib/probe/capProbe.ts` for why that is the point rather than a limitation.
  */
 
 import { getPool } from "../lib/db/client";
 import { explorerUrl } from "../lib/chain";
-import { runCapProbe } from "../lib/judge/probe";
+import { runCapProbe } from "../lib/probe/capProbe";
 
 function heading(text: string): void {
   console.log(`\n\x1b[1m${text}\x1b[0m`);
 }
 
 async function main(): Promise<void> {
-  console.log("AuspeX — judge mode probe");
+  console.log("AuspeX — cap probe");
   console.log("  Asks the contract to accept a bet one wei over an agent's cap. It will refuse.");
   console.log("  Identical code path to the button on /trust, including the eth_call guard.\n");
 

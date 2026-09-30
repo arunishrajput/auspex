@@ -1,7 +1,18 @@
 # DECISIONS.md — architecture decision log
 
-Append-only. One entry per decision worth defending to a judge. New entries go at the bottom.
-Format: **what was decided · why · what it costs · evidence**.
+Append-only. One entry per decision worth defending to somebody who has to maintain or trust this.
+New entries go at the bottom. Format: **what was decided · why · what it costs · evidence**.
+
+This file is part of the build record rather than the product documentation — see
+[`BUILD_RECORD.md`](./BUILD_RECORD.md) for what that means and why none of it was tidied.
+
+> **On the two ADR-066s.** Two entries were written under the number 066, hours apart, and
+> ADR-057's *"superseded by"* pointer became ambiguous as a result. They are now **ADR-066a** (the
+> late market notifications) and **ADR-066b** (the keeper invalidating a stale market), and
+> ADR-057 points at 066b, which is the one that supersedes it. Renumbering was refused: the numbers
+> are quoted in `web/lib/resolution/settle.ts`, in its tests, and in `PROGRESS.md`, and a log that
+> renumbers itself to look tidy is a log whose citations cannot be trusted. A suffix is ugly and
+> checkable; a renumber is neat and not.
 
 ---
 
@@ -1210,7 +1221,7 @@ a handful of markets, so it is a few calls on a chain where reads are free.
 
 ---
 
-### ADR-057 — `invalidateStale` is permissionless and deliberately not automated  ⟵ **superseded by ADR-066**
+### ADR-057 — `invalidateStale` is permissionless and deliberately not automated  ⟵ **superseded by ADR-066b**
 
 **Decided:** the keeper runs `closeMarket`, `finalizeResolution` and `claim` on a timer. It does
 **not** run `invalidateStale`. That call is exercised by hand in `scripts/lifecycle.ts`.
@@ -1218,14 +1229,14 @@ a handful of markets, so it is a few calls on a chain where reads are free.
 **Why:** invalidation refunds every bettor and destroys the market. Running it the instant
 `resolveDeadline` passes would mean our own resolver being ten minutes late costs everyone their
 market — a policy nobody asked for, enforced by a cron job. The contract made the call permissionless
-precisely so the decision belongs to whoever is harmed by the delay, and a judge can make it from
+precisely so the decision belongs to whoever is harmed by the delay, and anyone can make it from
 their own wallet. Automating it would quietly take that back.
 
 **Cost:** a market with a genuinely absent resolver stays unsettled until somebody acts. The UI says
 so on the market detail page — "past — anyone may call `invalidateStale` and refund every bettor" —
 rather than leaving a reader to work it out.
 
-**Superseded by ADR-066.** That cost was paid, by market #2, and it was too high: "until somebody
+**Superseded by ADR-066b.** That cost was paid, by market #2, and it was too high: "until somebody
 acts" turned out to mean "forever", with a bettor's stake locked in the contract.
 
 ---
@@ -1526,7 +1537,7 @@ will be wrong later.
 
 ---
 
-### ADR-066 — Every market notification was late, because the pass sent to fetch the log ran three blocks too early
+### ADR-066a — Every market notification was late, because the pass sent to fetch the log ran three blocks too early
 
 **Decided:** wait out the indexer's confirmation depth before indexing an approval, rather than
 lowering the depth; move the indexer-then-notifier pair into `POST /api/sync` and a
@@ -1587,7 +1598,7 @@ the horizon and the receipt depth are compared in a place where they can be seen
 
 ---
 
-### ADR-066 — The keeper invalidates a stale market after a grace period, and cannot claim for anyone else
+### ADR-066b — The keeper invalidates a stale market after a grace period, and cannot claim for anyone else
 
 **Decided:** three things, all found by one stuck market.
 
@@ -1708,3 +1719,87 @@ by gap #34 on the day this was decided.
 **Evidence:** the inventory this decision was sized against — 24 direct event references in 15 files,
 224 `judge` references in 65 files, 271 `Phase N` references in 73 files — is recorded in Phase 9 of
 `docs/BUILD_PLAN.md`, measured 2026-09-30.
+
+**A correction to this entry's own inventory**, made while executing it: ADR-068 says markets 1–3 and
+8 carry `[Phase N … test]` in their question strings. Only **3 and 8** do. Markets 1 and 2 ask *"Will
+AuspeX have a verified contract on MST Testnet before the deadline?"* — a commissioning question that
+never labels itself one. The claim was checked against the chain rather than carried forward, and
+ADR-070 is where it is fixed. Seven becomes eight.
+
+---
+
+### ADR-069 — "Judge mode" becomes the cap probe; every identifier it ever stored keeps its name
+
+**Decided:** the `/trust` feature that sends a real over-cap bet and has the contract refuse it is
+renamed from **judge mode** to the **cap probe**. Every *label* changes: the section heading, the
+module (`lib/judge/probe.ts` → `lib/probe/capProbe.ts`), the component (`JudgeButton` →
+`CapProbeButton`), the exported types, the script (`judge:probe` → `probe:cap`) and the README.
+Every *stored string* stays exactly as it was written: the `audit_log` action `judge.cap_probe`, the
+actor prefix `judge-mode:`, and the intent idempotency-key prefix `judge:cap-probe:`.
+
+**Why rename at all.** The feature is a real product capability — one click, no wallet, and the chain
+publicly refuses to let an agent exceed its limit — and it is the single most convincing thing on the
+site. Naming it after an assessor at a finished event dated the best feature in the product to a week
+in September. "Cap probe" says what it does.
+
+**Why the stored strings do not change.** `audit_log` is append-only: nothing in this codebase updates
+or deletes a row in it, which is the property that makes `/audit` worth showing at all. Five probe
+rows existed under `judge.cap_probe` before the rename. Writing new rows under a new action string
+would give one event two names in a log that cannot be migrated, and would make the five older rows
+read as a different kind of event. The alternative — mapping the id to a display label — was rejected
+because a log page that silently renders something other than what is stored is a worse failure than
+an awkward identifier, on a page whose whole claim is that it shows what is there.
+
+**Cost:** the string `judge.cap_probe` is visible on `/trust` and on `/audit`, inside a repository
+that otherwise addresses nobody as a judge. That is paid for on the page: the probe log carries one
+sentence saying the feature was built under an earlier name, that `audit_log` cannot be rewritten, and
+that the label changed while the identifier did not. A reader who notices gets an explanation instead
+of a mystery.
+
+**Evidence:** `pnpm --filter web probe:cap` still produces a real reverted transaction, and the five
+pre-existing rows still render beside the new ones because the predicate never changed.
+
+---
+
+### ADR-070 — The market-origin footer is computed from the markets on the page, because the written one was wrong about four of thirteen
+
+**Decided:** the sentence under `/markets` that distinguishes product markets from commissioning
+ones is derived by `marketOrigins()` in `lib/trust/signers.ts` from the rows rendered above it, using
+the creating address out of each indexed `MarketCreated` log. It is pure and unit-tested. No market id
+is written down anywhere in the page source.
+
+**The symptom.** The footer read: *"Markets 1–2 are Phase 1 smoke tests, market 3 is the Phase 2
+idempotency crash test, and market 8 is the Phase 6 resolution-lifecycle test — all four are labelled
+as such in their own question text … Markets 4–7 are the real pipeline."* It was written when nine
+markets existed. Thirteen exist. It was wrong in two ways at once:
+
+1. **It undercounted the product path by five.** Markets 9, 10, 11, 12 and 13 were each created by a
+   browser-wallet signature from `0xA9F68fDf…311fF1`, exactly as 4–7 were, and the footer credited
+   none of them.
+2. **It claimed all four commissioning markets label themselves, and two do not.** Markets 1 and 2
+   ask *"Will AuspeX have a verified contract on MST Testnet before the deadline?"* — obviously not a
+   product question, and it never says it is a test. The flattering half of that sentence was the
+   false half.
+
+**Why `creator` and not `proposedBy`.** `getMarket().proposedBy` is set by the contract at
+*resolution* time and is the zero address until then, so it is useless for this. The creating address
+is an indexed topic on `MarketCreated`, which the indexer already stores in `markets.creator`. It
+agrees with the transaction senders on chain for all thirteen markets, checked by hand before this
+was wired up.
+
+**What the function refuses to do.** With no `HUMAN_AUTHORITY_ADDRESS` configured it credits nothing
+to anyone — every market lands in `unknown` rather than being silently attributed to the operator. A
+market whose creating log is not indexed does the same. And the "self-labelled test" test is a
+*leading* bracketed clause containing the word "test", so a product market that happens to use the
+word later in a sentence cannot be quietly demoted to a test.
+
+**Cost:** one more column threaded through `MarketView`, and a footer with more branches than a
+sentence. In exchange the page can no longer tell a reader something the rows beneath it contradict.
+
+**This is the fourth time.** ADR-065 (the `/markets/8` caption), ADR-067 (the lifecycle table), the
+`/markets/8` provenance caption, and now this. The rule it keeps proving: **prose printed beside data
+has to be computed from that data**, and every time this project has written the sentence by hand
+instead, the sentence has eventually been the thing that was false.
+
+**Evidence:** six unit tests in `lib/trust/signers.test.ts` over the exact thirteen-market shape on
+chain, including one that asserts markets 1 and 2 are reported as *not* self-labelled.

@@ -22,7 +22,7 @@
  *     What the chain guarantees is that the damage is *bounded by a number no server can
  *     change*, not that it equals the number we would have chosen.
  *
- * Both numbers are shown side by side on `/agents` for exactly that reason. A judge should be
+ * Both numbers are shown side by side on `/agents` for exactly that reason. A reader should be
  * able to see that they are different and ask why.
  *
  * ## The caps are derived, never stored twice
@@ -78,7 +78,7 @@ export type MemberSeed = {
  *
  * These are seeded members on a testnet and the README says so. They are not pretend users with
  * invented balances: each one owns a real wallet holding real tMSTC, and every bet below is a
- * transaction a judge can open.
+ * transaction anyone can open.
  */
 export const MEMBER_SEEDS: readonly MemberSeed[] = [
   {

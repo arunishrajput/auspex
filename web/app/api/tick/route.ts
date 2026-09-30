@@ -8,7 +8,7 @@ import { optionalEnv } from "@/lib/env";
  *   POST /api/tick   — advance the state machine one bounded step. Requires `TICK_SECRET`.
  *
  * Two callers: the GitHub Actions heartbeat (every five minutes) and the dashboard's
- * "Run tick" button. The button is what gets pressed in front of judges, because GitHub's
+ * "Run tick" button. The button is what a visitor actually presses, because GitHub's
  * cron is best-effort and pauses on inactive public repositories.
  *
  * Authenticated because a tick spends real quota — RSS fetches, Gemini calls, database

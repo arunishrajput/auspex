@@ -579,7 +579,7 @@ export default async function MarketDetailPage({
  * The honest answer to a market id that does not exist.
  *
  * Reads `marketCount()` so it can say how many there are rather than only that this is not one of
- * them — the most likely reason a judge lands here is a guessed or stale URL, and the useful reply
+ * them — the most likely reason anyone lands here is a guessed or stale URL, and the useful reply
  * is the range that does exist. A failed count degrades to the panel without it; a page whose
  * error state has its own error state is not worth having.
  */

@@ -13,7 +13,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { lifecycleClaim, type ClaimRow } from "./signers";
+import { formatIds, lifecycleClaim, marketOrigins, type ClaimRow, type OriginRow } from "./signers";
 
 /** A market driven entirely through the intended path: browser wallet, then capped agents. */
 const CLEAN: ClaimRow[] = [
@@ -126,5 +126,85 @@ describe("lifecycleClaim", () => {
     ];
     const detail = lifecycleClaim(repeated).detail.join(" ");
     expect(detail.match(/placeBet/g)).toHaveLength(1);
+  });
+});
+
+/**
+ * The market-origin claim, tested against the exact shape that broke the sentence it replaced.
+ *
+ * The rows below mirror what is on chain 91562037: two unlabelled commissioning markets, two
+ * labelled ones, and the rest created by a browser wallet. The case worth protecting is the third
+ * test — the old sentence claimed every commissioning market announced itself, and two do not.
+ */
+const HUMAN = "0xa9f68fdf84388fa548a685085e2bee0e5b311ff1";
+const OPERATOR = "0xc71dc478040f7a6bcc5cb1f316a4a446f7d4ad24";
+
+const ON_CHAIN: OriginRow[] = [
+  { onchainId: 1, question: "Will AuspeX have a verified contract on MST Testnet before the deadline?", creator: OPERATOR },
+  { onchainId: 2, question: "Will AuspeX have a verified contract on MST Testnet before the deadline?", creator: OPERATOR },
+  { onchainId: 3, question: "[Phase 2 idempotency test 1790617927448] Did the crash test produce exactly one transaction?", creator: OPERATOR },
+  { onchainId: 4, question: "Will Zoo Atlanta issue an official press release…", creator: HUMAN },
+  { onchainId: 8, question: "[Phase 6 lifecycle test 1790644085477] Not a product market. Did the lifecycle complete?", creator: OPERATOR },
+  { onchainId: 9, question: "Will the European Central Bank announce a further interest rate increase…", creator: HUMAN },
+];
+
+describe("marketOrigins", () => {
+  it("splits markets by who signed for them, not by id range", () => {
+    const origin = marketOrigins(ON_CHAIN, HUMAN);
+    expect(origin.humanCreated).toEqual([4, 9]);
+    expect(origin.operatorCreated).toEqual([1, 2, 3, 8]);
+    expect(origin.unknown).toEqual([]);
+  });
+
+  it("matches the creating address case-insensitively", () => {
+    const origin = marketOrigins(ON_CHAIN, HUMAN.toUpperCase());
+    expect(origin.humanCreated).toEqual([4, 9]);
+  });
+
+  it("does NOT claim a commissioning market labels itself when it does not", () => {
+    const origin = marketOrigins(ON_CHAIN, HUMAN);
+    // The defect this function exists to prevent: markets 1 and 2 are commissioning markets whose
+    // on-chain text never says so, and the sentence must not say they do.
+    expect(origin.selfLabelled).toEqual([3, 8]);
+    expect(origin.unlabelled).toEqual([1, 2]);
+  });
+
+  it("requires the label to lead the question, so a product market cannot be demoted", () => {
+    const origin = marketOrigins(
+      [{ onchainId: 5, question: "Will the court test case be decided before Friday?", creator: OPERATOR }],
+      HUMAN,
+    );
+    expect(origin.selfLabelled).toEqual([]);
+    expect(origin.unlabelled).toEqual([5]);
+  });
+
+  it("puts an unindexed market in `unknown` rather than crediting it to anyone", () => {
+    const origin = marketOrigins([{ onchainId: 7, question: "Anything?", creator: null }], HUMAN);
+    expect(origin.unknown).toEqual([7]);
+    expect(origin.humanCreated).toEqual([]);
+    expect(origin.operatorCreated).toEqual([]);
+  });
+
+  it("claims nothing at all when no authority address is configured", () => {
+    const origin = marketOrigins(ON_CHAIN, null);
+    expect(origin.unknown).toEqual([1, 2, 3, 4, 8, 9]);
+    expect(origin.humanCreated).toEqual([]);
+    expect(origin.operatorCreated).toEqual([]);
+  });
+});
+
+describe("formatIds", () => {
+  it("collapses runs and keeps gaps", () => {
+    expect(formatIds([1, 2, 3, 5])).toBe("1–3 and 5");
+    expect(formatIds([4, 5, 6, 7, 9, 10, 11, 12, 13])).toBe("4–7 and 9–13");
+  });
+
+  it("spells out a pair rather than writing a two-wide range", () => {
+    expect(formatIds([1, 2])).toBe("1 and 2");
+  });
+
+  it("handles one id and none", () => {
+    expect(formatIds([8])).toBe("8");
+    expect(formatIds([])).toBe("none");
   });
 });

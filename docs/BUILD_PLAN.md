@@ -339,16 +339,16 @@ worked, they say so in their own on-chain text, and none is presented as a produ
 every hash still resolving.
 
 **Exit criteria**
-- [ ] `grep -riE 'hackathon|buildathon|newrro|bmsce'` over tracked files returns hits **only** inside
+- [x] `grep -riE 'hackathon|buildathon|newrro|bmsce'` over tracked files returns hits **only** inside
       the designated history set, and every one of those is in a dated, clearly-framed context.
-- [ ] No user-visible surface — page copy, page title, meta description, button label, README —
+- [x] No user-visible surface — page copy, page title, meta description, button label, README —
       addresses a "judge" or refers to a submission, a deadline or an event.
-- [ ] A `LICENSE` file exists and matches what `README.md` claims.
-- [ ] `pnpm check:links` passes: every hash, abbreviation and sender attribution still verified.
-- [ ] Full suite green — tests, lint, typecheck, build — and `pnpm check:provenance` still passes.
-- [ ] The renamed probe still produces a **real reverted transaction** on MSTScan, and the five
+- [x] A `LICENSE` file exists and matches what `README.md` claims.
+- [x] `pnpm check:links` passes: every hash, abbreviation and sender attribution still verified.
+- [x] Full suite green — tests, lint, typecheck, build — and `pnpm check:provenance` still passes.
+- [x] The renamed probe still produces a **real reverted transaction** on MSTScan, and the five
       pre-existing `audit_log` rows still render correctly beside the new ones.
-- [ ] `PROGRESS.md` records where the build history now lives and why it was kept.
+- [x] `PROGRESS.md` records where the build history now lives and why it was kept.
 
 ---
 

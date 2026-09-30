@@ -186,7 +186,7 @@ export type SettleResult = { ok: true; summary: string } | { ok: false; error: s
  *
  * **Deliberately not gated on the resolver wallet.** Every transaction it queues —
  * `closeMarket`, `finalizeResolution`, `claim` — is permissionless in the contract, so requiring
- * authority here would be theatre: anyone can make these calls from their own wallet, and a judge
+ * authority here would be theatre: anyone can make these calls from their own wallet, and a reader
  * doing exactly that is the point. The button is on the page so a demo does not have to wait three
  * minutes for a challenge window that closed thirty seconds ago.
  *

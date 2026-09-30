@@ -11,7 +11,7 @@ import { AUSPEX_MARKET_ABI } from "./deployment";
  *
  * ethers looks in `error.data`, finds nothing, and leaves `error.revert` null. So a bet that
  * exceeded an on-chain cap surfaces as an anonymous "execution reverted" — which is precisely
- * the moment the project most needs to be legible. Phase 5's headline demo is a judge seeing
+ * the moment the project most needs to be legible. The point of a refused transaction is someone seeing
  * `AgentPerTxCapExceeded(attempted, cap)` with real numbers in it.
  *
  * This module is lifted from `contracts/scripts/smoke.ts`, where the behaviour was first

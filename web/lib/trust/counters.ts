@@ -207,8 +207,8 @@ export async function trustCounters(): Promise<TrustCounters> {
   };
 }
 
-/** One judge-triggered probe, for the log on `/trust`. */
-export type JudgeProbeRow = {
+/** One visitor-triggered cap probe, for the log on `/trust`. */
+export type CapProbeRow = {
   id: string;
   createdAt: Date;
   reason: string;
@@ -217,13 +217,17 @@ export type JudgeProbeRow = {
 };
 
 /**
- * The judge-mode probes, newest first.
+ * The cap probes, newest first.
  *
  * Read from `audit_log` and not from `agent_decisions`, because a probe is not a decision an agent
  * took — no model was asked and no gate ran. See ADR-062: giving it a decision row would put a
  * visitor's button press into a member's trading record.
+ *
+ * The predicate is the string the rows were written with. The feature is now called the cap probe
+ * and the stored id still says `judge.cap_probe`, because `audit_log` is append-only and one event
+ * should have one name in it. ADR-069.
  */
-export async function judgeProbes(limit = 8): Promise<JudgeProbeRow[]> {
+export async function capProbes(limit = 8): Promise<CapProbeRow[]> {
   const rows = await db
     .select({
       id: auditLog.id,
@@ -250,7 +254,7 @@ export async function judgeProbes(limit = 8): Promise<JudgeProbeRow[]> {
  * Every transaction the chain refused, with enough context to open it on the explorer.
  *
  * The `/trust` page shows these in full rather than as a count, because a reverted transaction is
- * the single most checkable artifact this project has: a judge can open the hash and read the
+ * the single most checkable artifact this project has: anyone can open the hash and read the
  * contract's own refusal without taking our word for anything.
  */
 export async function refusedTransactions(limit = 12) {

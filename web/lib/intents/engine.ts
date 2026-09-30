@@ -57,7 +57,7 @@ const RECEIPT_WAIT_MS = 45_000;
  * A reverting estimate is not always an error to avoid — Phase 5 deliberately sends an
  * over-cap bet so the chain can refuse it *on the explorer*, which is the project's whole
  * argument made visible. Estimation cannot price a transaction that reverts, so we fall back
- * to a fixed limit and let the revert happen on chain where a judge can read it.
+ * to a fixed limit and let the revert happen on chain where anyone can read it.
  */
 const FALLBACK_GAS_LIMIT = 500_000n;
 

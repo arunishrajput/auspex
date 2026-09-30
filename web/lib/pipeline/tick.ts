@@ -264,7 +264,7 @@ export async function runTick(options: TickOptions = {}): Promise<TickReport> {
   //     resolution whose challenge window has elapsed, and claim whatever the contract says it
   //     owes an agent. Placed AFTER the indexer so it reads the freshest projection, and signed by
   //     an agent wallet holding no role — because none of these three calls needs one. That is the
-  //     claim, executed rather than asserted: a judge can finalise a market from their own wallet.
+  //     claim, executed rather than asserted: anyone can finalise a market from their own wallet.
   //
   //     Skipped past `SETTLE_STAGE_DEADLINE_MS` because it is followed by an intent worker that
   //     waits for receipts. Nothing is lost: none of these transactions expires, and the next tick

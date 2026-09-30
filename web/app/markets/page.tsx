@@ -2,6 +2,8 @@ import Link from "next/link";
 import { explorerUrl, formatMstc, shortHash, MST_TESTNET } from "@/lib/chain";
 import { AUSPEX_MARKET_ADDRESS } from "@/lib/chain/deployment";
 import { getIndexerStatus, getMarketsForDisplay, type MarketView } from "@/lib/markets";
+import { humanAuthorityAddress } from "@/lib/approval/authority";
+import { formatIds, marketOrigins } from "@/lib/trust/signers";
 import { Provenance } from "@/components/Provenance";
 import { SiteNav } from "@/components/SiteNav";
 
@@ -24,6 +26,12 @@ const STATE_STYLE: Record<string, string> = {
 
 export default async function MarketsPage() {
   const [payload, indexer] = await Promise.all([getMarketsForDisplay(), getIndexerStatus()]);
+
+  // Derived from the same rows rendered below, never written down. The sentence this replaced
+  // named id ranges, was written when nine markets existed, and was wrong about four of them by
+  // the time thirteen did — the fourth time in this project that prose beside a table
+  // contradicted it. See `marketOrigins` for the argument and the tests.
+  const origin = marketOrigins(payload.markets, humanAuthorityAddress());
 
   return (
     <main className="grid-backdrop min-h-dvh">
@@ -110,8 +118,9 @@ export default async function MarketsPage() {
           <div className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-10 text-center">
             <p className="text-ink-300">No markets exist on this contract yet.</p>
             <p className="mt-2 text-xs text-ink-400">
-              <span className="font-mono">marketCount()</span> returned 0. Phase 4 creates the
-              first market through a human approval.
+              <span className="font-mono">marketCount()</span> returned 0. The first market
+              appears when someone approves a drafted question in{" "}
+              <span className="font-mono">/review</span> and signs for it.
             </p>
           </div>
         )}
@@ -160,23 +169,62 @@ export default async function MarketsPage() {
 
         <footer className="mt-10 border-t border-ink-800 pt-6">
           <p className="text-xs leading-relaxed text-ink-400">
-            Markets 1–2 are Phase 1 smoke tests, market 3 is the Phase 2 idempotency crash test, and
-            market 8 is the Phase 6 resolution-lifecycle test — all four are labelled as such in their
-            own question text, and none is a product market. They are real transactions on chain{" "}
-            {MST_TESTNET.id}, not seeded demo data.{" "}
-            <span className="text-ink-300">Markets 4–7 are the real
-            pipeline</span>: an AI agent drafted the question from two independently-confirmed news
-            reports, a person read it as a checklist, and the market exists because they signed for
-            it. You can tell the two apart without trusting us — check the{" "}
+            <span className="text-ink-300">
+              {origin.humanCreated.length === 1 ? "Market" : "Markets"}{" "}
+              {formatIds(origin.humanCreated)}{" "}
+              {origin.humanCreated.length === 1 ? "is" : "are"} the product path
+            </span>
+            : an AI agent drafted each question from two independently-confirmed news reports, a
+            person read it as a checklist, and the market exists because they signed for it in a
+            browser wallet.{" "}
+            {origin.operatorCreated.length > 0 && (
+              <>
+                {origin.operatorCreated.length === 1 ? "Market" : "Markets"}{" "}
+                {formatIds(origin.operatorCreated)}{" "}
+                {origin.operatorCreated.length === 1 ? "was" : "were"} created while commissioning
+                the contract, by the operator key rather than through the human gate
+                {origin.selfLabelled.length > 0 && (
+                  <>
+                    {" — "}
+                    {formatIds(origin.selfLabelled)} say so inside{" "}
+                    {origin.selfLabelled.length === 1 ? "its" : "their"} own on-chain question text
+                  </>
+                )}
+                {origin.unlabelled.length > 0 && (
+                  <>
+                    , and {formatIds(origin.unlabelled)} do not: they ask whether AuspeX itself would
+                    have a verified contract, which is plainly not a product question but never
+                    labels itself a test
+                  </>
+                )}
+                .{" "}
+              </>
+            )}
+            {origin.unknown.length > 0 && (
+              <>
+                {origin.unknown.length === 1 ? "Market" : "Markets"}{" "}
+                {formatIds(origin.unknown)}{" "}
+                {origin.unknown.length === 1 ? "has" : "have"} no indexed creating log on this page
+                load, so nothing is claimed about{" "}
+                {origin.unknown.length === 1 ? "it" : "them"} either way.{" "}
+              </>
+            )}
+            Every one of them is a real transaction on chain {MST_TESTNET.id}, not seeded demo data,
+            and you can tell the two kinds apart without trusting this page: check the{" "}
             <span className="font-mono">from</span> address of each creating transaction on MSTScan.
-            Markets 1–3 and 8 came from the deployer; 4–7 came from the human authority wallet, which
-            holds every role that requires human judgement —{" "}
-            <span className="font-mono">MARKET_CREATOR</span>,{" "}
+            The wallet that signed the product markets holds every role that requires human
+            judgement — <span className="font-mono">MARKET_CREATOR</span>,{" "}
             <span className="font-mono">RESOLVER</span>,{" "}
             <span className="font-mono">CHALLENGER</span> — and{" "}
             <span className="text-ink-300">not</span>{" "}
             <span className="font-mono">DEFAULT_ADMIN_ROLE</span>, so it cannot register an agent,
             change a cap, or pause the contract.
+          </p>
+          <p className="mt-2">
+            <Provenance
+              origin="COMPUTED"
+              detail="marketOrigins() over the rows above · creator from the indexed MarketCreated log"
+            />
           </p>
         </footer>
       </div>

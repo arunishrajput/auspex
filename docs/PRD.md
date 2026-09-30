@@ -47,7 +47,7 @@ authority".**
 | **Market authority** (human) | To approve only well-formed markets, fast | A checklist queue, an untrusted-content panel, one-click approve/reject with reasons |
 | **Member** | Exposure to markets without reading 40 articles | A personal agent that researches and bets within limits they set |
 | **Resolver** | To settle outcomes defensibly | Evidence-URL-bound resolution with a challenge window |
-| **Judge / auditor** | To verify the claims are real | Verified contract, real tx hashes, a live pipeline, and a log of every rejection |
+| **A sceptic** | To verify the claims are real before relying on any of them | Verified contract, real tx hashes, a live pipeline, and a log of every rejection |
 
 ## What "done" means
 
@@ -60,20 +60,19 @@ real placeBet tx → deliberate over-cap attempt REVERTS on-chain →
 resolve with evidence → challenge window → finalize → real payout tx
 ```
 
-Plus: contract verified on MSTScan, a public dashboard a judge can use without a wallet, and a README
-that states the limitations plainly.
+Plus: contract verified on MSTScan, a public dashboard usable without a wallet, and a README that
+states the limitations plainly.
 
-## Requirements the track imposes
+## What the platform has to hold itself to
 
-| Requirement | How AuspeX satisfies it |
+| Property | How AuspeX satisfies it |
 |---|---|
-| MST as a **meaningful, integral** part | The contract is the authority layer — roles, caps, resolution and payout all live on-chain. Remove MST and the product's core claim disappears. Not a bolted-on connect button. |
-| Deployed on MST Testnet | `AuspexMarket.sol` on chain `91562037`, address + deploy tx in the README |
-| ≥1 verifiable testnet tx hash | Many: create, bet, over-cap revert, resolve, finalize, claim |
-| Working demo link | Public Vercel URL, usable with no wallet via judge mode |
-| Public GitHub repo | Contracts + frontend + backend + README with integration details and setup |
-| BridgeKey integration (recommended) | Connect, network switch, and contract signing for approvals, resolution and claims |
-| Judges prefer a working product | Everything on screen is live chain and live DB state; no mockups |
+| The chain is **the authority layer**, not a connect button | Roles, caps, resolution, the challenge window and payout all live on-chain. Remove MST and the product's core claim disappears. |
+| Deployed and verified | `AuspexMarket.sol` on chain `91562037`, address + deploy tx in the README, source verified on MSTScan |
+| Every claim has a transaction behind it | create, bet, over-cap revert, resolve, challenge, finalize, invalidate, claim — all on chain, all linked |
+| Usable with no wallet | Public URL; the cap probe produces a real transaction from a browser holding nothing |
+| Wallet-agnostic signing | EIP-1193 / EIP-6963 via a wagmi `injected()` connector — no vendor-specific code |
+| Nothing on screen is invented | Every rendered number is live chain or live DB state, badged with its origin; a mock badge fails the build |
 
 ## Non-goals
 
@@ -83,8 +82,8 @@ account abstraction · upgradeable contracts.
 
 ## Success criteria
 
-1. A judge, with no wallet and no explanation, opens the URL and understands what the system does.
-2. A judge can point at a real transaction for every claim we make.
+1. Someone with no wallet and no explanation opens the URL and understands what the system does.
+2. Every claim the product makes has a real transaction a reader can open beside it.
 3. The over-cap revert demonstrates that the on-chain limit is real and not decorative.
-4. The README's limitations section is one a security-minded judge would call honest.
-5. The builder can explain the contract, the policy gate, and the pipeline without notes.
+4. The limitations section is one a security-minded reader would call honest.
+5. The maintainer can explain the contract, the policy gate, and the pipeline without notes.

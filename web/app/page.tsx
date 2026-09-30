@@ -26,23 +26,6 @@ import { RunTickButton } from "./RunTickButton";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-/**
- * Typed explicitly rather than `as const` inferred: once every phase is `done` or `current`, an
- * inferred literal union no longer contains `"todo"` and the branch that renders an unstarted
- * phase becomes a compile error — which is a type system correctly objecting to a list that
- * happens to be complete today.
- */
-const PHASES: readonly { n: number; name: string; state: "done" | "current" | "todo" }[] = [
-  { n: 0, name: "Foundations & rails", state: "done" },
-  { n: 1, name: "Smart contract — deploy & verify", state: "done" },
-  { n: 2, name: "Data layer & idempotency engine", state: "done" },
-  { n: 3, name: "News ingestion & 2-source confirmation", state: "done" },
-  { n: 4, name: "Proposer agent & human approval gate", state: "done" },
-  { n: 5, name: "Member agents & policy gate", state: "done" },
-  { n: 6, name: "Resolution, challenge window, payout", state: "done" },
-  { n: 7, name: "Dashboard & trust surface", state: "done" },
-  { n: 8, name: "Live run, README, submission", state: "current" },
-] as const;
 
 type PipelineData = {
   counts: PipelineCounts;
@@ -59,7 +42,7 @@ type PipelineData = {
  *
  * Never throws: a sleeping database must render an honest panel, not a 500. The Neon free tier
  * scales to zero, so "the first request after a quiet hour is slow" is a normal condition, and
- * a judge opening the page cold should see an explanation rather than a stack trace.
+ * someone opening the page cold should see an explanation rather than a stack trace.
  */
 async function loadPipeline(): Promise<{ data: PipelineData | null; error: string | null }> {
   if (!hasDatabase()) {
@@ -112,7 +95,7 @@ export default async function Home() {
         <header className="mb-2">
           <div className="mb-3 flex items-center gap-3">
             <span className="rounded border border-ink-700 bg-ink-850 px-2 py-0.5 font-mono text-[11px] tracking-widest text-ink-400 uppercase">
-              MST Buildathon · AI &amp; Web3
+              MST Testnet · chain 91562037
             </span>
           </div>
           <h1 className="text-4xl font-semibold tracking-tight text-ink-100 sm:text-5xl">
@@ -275,7 +258,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* Events with their source articles — the thing a judge can actually check. */}
+        {/* Events with their source articles — the thing a reader can actually check. */}
         {pipeline.data !== null && pipeline.data.events.length > 0 && (
           <section className="mb-10">
             <SectionLabel>
@@ -660,64 +643,37 @@ export default async function Home() {
           </dl>
         </section>
 
-        {/* Build progress — honest about what exists */}
+        {/* Where this came from. Was an eight-phase build roadmap, hand-maintained, with no
+            provenance badge — the page's own copy said so. It also went stale the moment the last
+            phase finished, which is the failure mode of every hand-kept list on a live page. A
+            pointer at the log cannot go stale, and the log is the thing worth reading anyway. */}
         <section className="mb-10">
-          <SectionLabel>Build progress</SectionLabel>
-          <p className="mb-3 text-xs leading-relaxed text-ink-400">
-            The only hand-maintained list on this page — it is a statement by the builder, not a
-            reading of anything, and it carries no provenance badge for that reason.{" "}
-            <span className="text-ink-200">PROGRESS.md</span> in the repository is the version with
-            transaction hashes attached.
-          </p>
-          <ol className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
-            {PHASES.map((phase, i) => (
-              <li
-                key={phase.n}
-                className={`flex items-center gap-3 px-4 py-2.5 ${
-                  i < PHASES.length - 1 ? "border-b border-ink-800" : ""
-                }`}
-              >
-                <span
-                  className={`size-1.5 shrink-0 rounded-full ${
-                    phase.state === "done"
-                      ? "bg-ok-500"
-                      : phase.state === "current"
-                        ? "bg-warn-500"
-                        : "bg-ink-600"
-                  }`}
-                />
-                <span className="w-16 shrink-0 font-mono text-xs text-ink-400">
-                  Phase {phase.n}
-                </span>
-                <span
-                  className={`text-sm ${
-                    phase.state === "todo" ? "text-ink-400" : "text-ink-100"
-                  }`}
-                >
-                  {phase.name}
-                </span>
-                {phase.state === "done" && (
-                  <span className="ml-auto font-mono text-[11px] text-ok-500">complete</span>
-                )}
-                {phase.state === "current" && (
-                  <span className="ml-auto font-mono text-[11px] text-warn-500">
-                    in progress
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
+          <SectionLabel>Where this came from</SectionLabel>
+          <div className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-3">
+            <p className="text-xs leading-relaxed text-ink-400">
+              AuspeX was built in eight phases, and the log of that is kept in full rather than
+              tidied away — every phase, every defect it found, and an architecture decision record
+              for every choice with what it cost. It is in the repository:{" "}
+              <span className="font-mono text-ink-200">docs/BUILD_RECORD.md</span> says which files
+              those are and why keeping them is the honest choice for a system whose whole claim is
+              that it can be checked.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-ink-400">
+              Everything on this page, by contrast, is read from the chain or the database on this
+              request. Each number says which.
+            </p>
+          </div>
         </section>
 
         <footer className="border-t border-ink-800 pt-6">
           <p className="text-xs leading-relaxed text-ink-400">
             <span className="text-ink-300">Nothing here is mocked.</span> The block height,
             chain ID and gas price above are read from{" "}
-            <span className="font-mono">{MST_TESTNET.rpcUrl}</span> on every page load. When
-            contracts and markets exist, every address and transaction hash shown will
-            resolve on MSTScan. Resolution in AuspeX is a{" "}
-            <span className="text-ink-300">trusted</span> role — see the trust model in the
-            repository.
+            <span className="font-mono">{MST_TESTNET.rpcUrl}</span> on every page load, and every
+            address and transaction hash on this site resolves on MSTScan. Resolution in AuspeX is
+            a <span className="text-ink-300">trusted</span> role — see{" "}
+            <span className="font-mono">docs/TRUST_MODEL.md</span> for exactly what that means and
+            what bounds it.
           </p>
         </footer>
       </div>

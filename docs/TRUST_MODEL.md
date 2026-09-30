@@ -11,8 +11,8 @@ script for the `/trust` page and the part of the demo that earns the most credib
 >
 > **If this document and that page ever disagree, the page is right and this file is stale.** Prose can
 > describe a guarantee that was removed; a call cannot. When quoting AuspeX's trust claims anywhere —
-> the README, a demo, a submission form — take the wording from `/trust`, which cannot outlive the
-> thing it describes. ADR-061 through ADR-063 record why the page is built the way it is.
+> the README, a walkthrough, a post — take the wording from `/trust`, which cannot outlive the thing it
+> describes. ADR-061 through ADR-063 record why the page is built the way it is.
 
 ---
 
@@ -181,13 +181,14 @@ that holds regardless.
 | A claim cannot be made twice | `claimed[marketId][account]` → `AlreadyClaimed` |
 | Everything can be halted — except withdrawing what is owed | `Pausable`, and `claim` is deliberately **not** `whenNotPaused` |
 
-**The claim to make to judges, and then demonstrate:**
+**The claim, which is demonstrated rather than asserted:**
 
 > Even with our server fully compromised and the off-chain policy gate bypassed entirely, an agent
 > wallet cannot exceed its cap — because the chain refuses the transaction.
 
-Phase 5 proves it by deliberately bypassing the gate and letting the chain reject the transaction.
-The resulting **reverted transaction on MSTScan is evidence**, not a bug.
+It is proved by deliberately bypassing the gate and letting the chain reject the transaction. The
+resulting **reverted transaction on MSTScan is evidence**, not a bug. The cap probe on `/trust` lets
+anyone produce a fresh one from a browser holding no wallet.
 
 **It is proven.** `pnpm --filter web agents:over-cap` sent `cap + 1` wei — one wei, so the boundary
 is exactly where the contract says rather than merely somewhere — from a real registered agent

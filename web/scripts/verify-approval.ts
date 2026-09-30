@@ -19,7 +19,7 @@
  *
  * Step 5 is the real check: it runs the transaction against the current state of the deployed
  * contract and reports what would happen. A revert here is the same revert the wallet would
- * produce, decoded, minutes before a judge is watching instead of during.
+ * produce, decoded, before it matters instead of while someone is waiting on it.
  *
  * It writes nothing — no intent, no market row, no audit entry. `prepareApproval` performs the
  * same simulation on the live path; this is the version you can run at any time.

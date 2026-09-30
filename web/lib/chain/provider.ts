@@ -39,7 +39,7 @@ export function getProvider(): JsonRpcProvider {
  *
  * Worth its round trip: every "this address has no bytecode" mystery starts as a chain-id
  * mismatch, and a UI that silently reads the wrong chain is exactly the fabricated-data
- * failure the buildathon rules prohibit.
+ * failure hard rule #1 forbids.
  */
 export async function assertCorrectChain(): Promise<void> {
   const { chainId } = await getProvider().getNetwork();

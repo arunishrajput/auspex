@@ -5,11 +5,11 @@ import { hasDatabase } from "@/lib/db/client";
 import { DOCUMENTED_ORIGINS, ORIGIN_META, Provenance } from "@/components/Provenance";
 import { SiteNav } from "@/components/SiteNav";
 import {
-  judgeProbes,
+  capProbes,
   reasonlessActions,
   refusedTransactions,
   trustCounters,
-  type JudgeProbeRow,
+  type CapProbeRow,
   type RefusalBucket,
   type TrustCounters,
 } from "@/lib/trust/counters";
@@ -24,7 +24,7 @@ import { POLICY_RULES } from "@/lib/policy/policyGate";
 import { VALIDATION_RULES } from "@/lib/proposer/validate";
 import { RESOLUTION_RULES } from "@/lib/resolution/validate";
 import { globalKillSwitch } from "@/lib/agents/members";
-import { JudgeButton } from "./JudgeButton";
+import { CapProbeButton } from "./CapProbeButton";
 
 // Every role read and every counter is made on this request. A cached trust page is a lie with a
 // timestamp on it.
@@ -51,8 +51,8 @@ export const metadata = {
  *      `eth_call` of `pause()` from the most privileged wallet in the system, which reverts.
  *   3. **What has been refused** — four layers of refusal, counted, with the chain's own error
  *      names and every reverted transaction hash.
- *   4. **Judge mode** — a button that makes the chain refuse something, for a visitor holding no
- *      wallet and no tMSTC.
+ *   4. **The cap probe** — a button that makes the chain refuse something, for a visitor holding
+ *      no wallet and no tMSTC.
  */
 export default async function TrustPage() {
   const [roles, data] = await Promise.all([roleReport(), loadCounters()]);
@@ -222,10 +222,10 @@ export default async function TrustPage() {
           </section>
         )}
 
-        {/* ---- 5. Judge mode ------------------------------------------------------------- */}
+        {/* ---- 5. The cap probe ---------------------------------------------------------- */}
         <section className="mb-10">
           <SectionLabel>
-            Judge mode — make the chain refuse something
+            The cap probe — make the chain refuse something
             <Provenance origin="CHAIN" detail="a real placeBet, signed on request" />
           </SectionLabel>
 
@@ -250,7 +250,7 @@ export default async function TrustPage() {
             </div>
 
             <div className="px-4 py-4">
-              <JudgeButton explorerBase={MST_TESTNET.explorerUrl} />
+              <CapProbeButton explorerBase={MST_TESTNET.explorerUrl} />
             </div>
 
             {data.probes.length > 0 && (
@@ -268,6 +268,13 @@ export default async function TrustPage() {
                     <ProbeLogRow key={probe.id} probe={probe} />
                   ))}
                 </ul>
+                <p className="px-4 pt-1 pb-3 text-[11px] leading-relaxed text-ink-500">
+                  The stored action id above reads{" "}
+                  <span className="font-mono">judge.cap_probe</span>. This feature was built under
+                  an earlier name, and <span className="font-mono">audit_log</span> is append-only —
+                  so the label was changed and the identifier was not, rather than giving one event
+                  two names in a log that cannot be rewritten.
+                </p>
               </div>
             )}
           </div>
@@ -337,7 +344,7 @@ export default async function TrustPage() {
 type CountersPayload = {
   counters: TrustCounters | null;
   refused: Awaited<ReturnType<typeof refusedTransactions>>;
-  probes: JudgeProbeRow[];
+  probes: CapProbeRow[];
   reasonless: RefusalBucket[];
   error: string | null;
 };
@@ -366,7 +373,7 @@ async function loadCounters(): Promise<CountersPayload> {
     const [counters, refused, probes, reasonless] = await Promise.all([
       trustCounters(),
       refusedTransactions(12),
-      judgeProbes(6),
+      capProbes(6),
       reasonlessActions(),
     ]);
     return { counters, refused, probes, reasonless, error: null };
@@ -415,8 +422,8 @@ function RoleMatrix({ roles }: { roles: RoleReport }) {
       </div>
 
       {/* Two renderings of one array, and the reason is a defect found by looking at the page on a
-          390px viewport: as a scrollable table, every role column started off-screen, so a judge on
-          a phone saw the addresses and none of the crosses — which are the entire payload. Below
+          390px viewport: as a scrollable table, every role column started off-screen, so a reader
+          on a phone saw the addresses and none of the crosses — which are the entire payload. Below
           `sm` the roles become labelled chips that wrap; at `sm` and up the aligned column of
           crosses is worth more, so the table comes back. Both map over `roles.holders`, so they
           cannot disagree about what the contract said. */}
@@ -812,7 +819,7 @@ function Refusals({
   );
 }
 
-function ProbeLogRow({ probe }: { probe: JudgeProbeRow }) {
+function ProbeLogRow({ probe }: { probe: CapProbeRow }) {
   const cap = typeof probe.metadata.onChainPerTxCapWei === "string" ? probe.metadata.onChainPerTxCapWei : null;
   const attempted = typeof probe.metadata.attemptedWei === "string" ? probe.metadata.attemptedWei : null;
   const handle = typeof probe.metadata.handle === "string" ? probe.metadata.handle : "an agent";
