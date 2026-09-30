@@ -689,7 +689,7 @@ unmeasured and is claimed nowhere.** Vercel Cron was rejected: on the Hobby plan
 
 | # | Criterion | Result |
 |:--|:--|:--|
-| 1 | Real cadence measured over ≥6 hours, and **every** statement of it matches | ✅ **46 hours**, `gh run list`: mean 5h07m, 1.6% of requested. Every prose statement **removed**; the figure is a query on `/audit`. |
+| 1 | Real cadence measured over ≥6 hours, and **every** statement of it matches | ✅ **46 hours**, `gh run list`: mean 5h07m, ~~1.6%~~ **1.8%** of requested (arithmetic corrected at v1.0.0 — gap #33). Every prose statement **removed**; the figure is a query on `/audit`. |
 | 2 | A production tick on record examining ≥1 past-close market, and no `examining 0 market(s)` when a candidate exists | ✅ Two — 2026-09-30T19:27:23Z and 19:27:54Z, both `resolution.pending: 1`, `haltedBecause: null`, HTTP 200, zero stage errors |
 | 3 | Clustering has a deadline, not only a call budget, and the ladder is documented in one place | ✅ `deadlineMs` on clustering **and** the proposer; the ladder is the header of `lib/pipeline/tick.ts` and nowhere else |
 | 4 | `audit_log.metadata` carries `durationMs`, and `/audit` shows it | ✅ Plus `budgetMs`, `source` and the resolution report. Panel reads "24.4s median of 2, worst 27.4s against 60.0s" |
@@ -2567,7 +2567,7 @@ Eight routes serve it, every number on them labelled with where it came from by 
 | `CHANGELOG.md` | the release, and each phase in one paragraph |
 | `docs/BUILD_RECORD.md` | **read this first** if the build record's existence puzzles you — it says why none of it was tidied |
 | `docs/DECISIONS.md` | 79 ADRs: what was decided, why, what it cost, the evidence |
-| `PROGRESS.md` (this file) | per-phase detail, every real artifact, and the forty known gaps |
+| `PROGRESS.md` (this file) | per-phase detail, every real artifact, and the known gaps — numbered to 40, forty-one entries counting #2b |
 | `docs/BUILD_PLAN.md` | the twelve phases as they were planned, with exit criteria |
 
 **Part II's governing rule was: the framing goes, every fact stays.** No address, hash, measurement

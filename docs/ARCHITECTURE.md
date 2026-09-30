@@ -77,7 +77,9 @@ actually looking at it.
 
 **How badly delayed, measured rather than assumed.** Across 46 hours to 2026-09-30T18:50Z, the
 heartbeat's `*/5 * * * *` expression produced **ten scheduled runs** — a mean gap of 5h07m, a spread
-of 2h57m to 6h44m, and **1.6% of the 554 runs it asked for**. Every one succeeded: this is GitHub
+of 2h57m to 6h44m, and **1.8% of the 554 runs it asked for** (ten delivered of 554 requested; this
+was written as 1.6% until v1.0.0, which is nine — the count of the *gaps* between ten runs, and the
+right divisor for the mean gap rather than for a delivery rate). Every one succeeded: this is GitHub
 throttling scheduled workflows on a low-activity public repository, not a broken workflow. The
 sibling `sync.yml` measured 4h52m mean over 29 hours.
 
