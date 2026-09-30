@@ -296,7 +296,10 @@ function Cadence({ cadence }: { cadence: CadenceReport }) {
               {humanMs(unattended.maxGapMs ?? 0)}
             </>
           ) : (
-            <>needs 2+ ticks tagged with a trigger; {cadence.tagged} so far</>
+            <>
+              {unattended.ticks === 0 ? "no" : unattended.ticks} cron tick(s) recorded so far, of{" "}
+              {cadence.tagged} with a known trigger — needs two to measure a gap
+            </>
           )}
         </Stat>
         <Stat label="Any trigger" value={humanMs(cadence.all.meanGapMs ?? 0)}>

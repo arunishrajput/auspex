@@ -325,7 +325,13 @@ other button.
 substantive human refusal is ever wanted, that is still the one. It is **no longer on any critical
 path**, and Part II should treat it as optional.
 
-### Two defects that make current claims false — these are Phase 11's input
+### ✅ Two defects that made claims false — Phase 11's input, both now fixed
+
+*Kept as written, because the record of what was wrong is the evidence behind the fix. Gaps #33 and
+#34 below carry the closing detail, and ADR-075 / ADR-076 carry the arguments. One correction the
+session found by reading the log rather than this file: the resolution starvation was **two of
+three** ticks, not both of two — a third tick had run and succeeded in between, which made the
+defect intermittent and therefore worse.*
 
 **1. The pipeline does not run every five minutes.** `heartbeat.yml` and `sync.yml` both specify
 `*/5 * * * *`. GitHub fired the heartbeat at **07:18, 01:29, and 22:32 / 18:28 / 12:55 the previous
@@ -469,6 +475,23 @@ unmeasured and is claimed nowhere.** Vercel Cron was rejected: on the Hobby plan
   not run rather than reported as passing** — see Known gaps.
 
 ### Exit criteria
+
+| # | Criterion | Result |
+|:--|:--|:--|
+| 1 | Real cadence measured over ≥6 hours, and **every** statement of it matches | ✅ **46 hours**, `gh run list`: mean 5h07m, 1.6% of requested. Every prose statement **removed**; the figure is a query on `/audit`. |
+| 2 | A production tick on record examining ≥1 past-close market, and no `examining 0 market(s)` when a candidate exists | ✅ Two — 2026-09-30T19:27:23Z and 19:27:54Z, both `resolution.pending: 1`, `haltedBecause: null`, HTTP 200, zero stage errors |
+| 3 | Clustering has a deadline, not only a call budget, and the ladder is documented in one place | ✅ `deadlineMs` on clustering **and** the proposer; the ladder is the header of `lib/pipeline/tick.ts` and nowhere else |
+| 4 | `audit_log.metadata` carries `durationMs`, and `/audit` shows it | ✅ Plus `budgetMs`, `source` and the resolution report. Panel reads "24.4s median of 2, worst 27.4s against 60.0s" |
+| 5 | Known gaps #20 and #30 closed or restated | ✅ Both closed. #21, #33, #34 closed and #37 restated with a bound as well |
+| 6 | `pnpm check:links` passes; full suite green | ✅ links + walkthrough links + 498 tests + typecheck + lint + build + provenance + contrast |
+
+**One check could not run, and is recorded rather than skipped.** `check:render` needs a Playwright
+Chromium binary, which is not installed on this machine (`npx playwright install` has never been
+run) — the script declines with an explanation by design rather than failing. **The render check was
+done by hand instead, and found nothing:** `/audit` was read as served at 1280px and 390px,
+`document.documentElement.scrollWidth - clientWidth` is **0** at 390px, and the cadence panel stacks
+two-up with its dividers intact. The only elements extending past the viewport are the site nav's,
+which is a deliberate horizontal scroll strip and predates this phase.
 
 ## Phase 10 — what shipped
 
@@ -1896,7 +1919,20 @@ the only place in the repo that broadcasts outside the intent engine — the eng
 receipt, re-run, could overfund an agent by one top-up. The consequence is one of our own wallets
 holding slightly more testnet coin than intended. Stated rather than hidden.
 
-**20. ✅ Mostly closed in Phase 8. Tick duration, and the deadline ladder that bounds it.**
+**20. ✅ CLOSED in Phase 11. Tick duration, and the deadline ladder that bounds it.**
+
+**Every stage that can call a model now has a clock, and the ladder's arithmetic is tested.** The
+"still unbounded" caveat below was the cause of gap #34, not a footnote to it: clustering's four
+calls at the 22s timeout is 88 seconds against a 60-second function, so the call budget never
+bounded that stage in wall-clock terms. Clustering and the proposer now take a `deadlineMs`, and
+every model stage is additionally clamped to `budget − callTimeoutMs() − TAIL_RESERVE_MS` — 30s of
+60 — because a deadline is checked *before* a call starts. The old agents fraction (0.63 = 38s)
+permitted a call to begin at 37.9s and return at 59.9s with nothing left for the audit row; that is
+now arithmetically impossible and `lib/pipeline/tick.test.ts` fails if it becomes possible again.
+Measured after the change: a production tick returned **HTTP 200 in 21,361 ms**, and `durationMs` is
+stored on the row rather than read from a response nobody keeps. ADR-075.
+
+The Phase 8 text follows, and its reasoning still holds.
 
 **Measured at near-worst case.** A production tick returned **HTTP 200 in 24,277 ms with 7 of 10 LLM
 calls and zero errors**, and the cron's 05:19 tick spent **9 of 10** — full clustering, full proposer,
@@ -1930,11 +1966,21 @@ That last part was a real defect found this session: with fixed 60s-shaped const
 web tick` silently skipped its last three stages, so the tick did **less** on the machine where you
 are watching it than in the place you cannot see.
 
-**Still unbounded:** clustering and the proposer have no deadline, only a call budget. Clustering's
-four calls are the largest single allowance in the tick. Worth doing if a tick is ever seen to be
-killed; not done, and not claimed.
+**~~Still unbounded:~~ closed in Phase 11.** This paragraph named the exact defect that starved the
+resolution stage two ticks later — clustering and the proposer having no deadline, only a call
+budget — and deferred it as "worth doing if a tick is ever seen to be killed". No tick was ever
+killed; a *different* stage was starved instead, which is the failure mode this note did not
+anticipate. Both now have deadlines. Kept rather than deleted, because a gap that was written down,
+correctly, and then cost something is worth more as a record than as a tidy absence.
 
-**21. ⚠️ Superseded on 2026-09-30, and the truth is worse — see gap #34.** A market past close
+**21. ✅ CLOSED in Phase 11 by way of #34.** Two production ticks on 2026-09-30 (19:27:23Z and
+19:27:54Z) examined market #11 in their resolution stage — `pending: 1`, `haltedBecause: null` —
+where the stage had previously reported `examining 0 market(s)`. It still has not *drafted* an
+outcome: market #11 has no candidate article above the coverage floor, so the honest report is
+`1 with no evidence to read`. That is gap #22, not gap #21, and it is the stage working. The
+original text follows.
+
+**~~Superseded on 2026-09-30, and the truth is worse — see gap #34.~~** A market past close
 now exists (#11), and the stage still has not examined it: it is cut off by its own deadline before
 it reads the chain. The original text, which was accurate when written, follows.
 
@@ -2021,7 +2067,16 @@ ever feels slow the clean fix is a multicall, which this contract does not have,
 is dropping the agent rows to a single representative wallet. Not done, and not needed at four
 addresses.
 
-**30. `audit_log` does not record how long a tick took.** `metadata` on a `pipeline.tick` row carries
+**30. ✅ CLOSED in Phase 11. `audit_log` records how long a tick took.**
+
+`metadata` on a `pipeline.tick` row now carries `durationMs`, `budgetMs`, the `source` that triggered
+the tick, and the full resolution report. `/audit` renders the median duration against the budget,
+over serverless ticks only — a CLI tick is given 300s and is round-trip-bound at ~70s, so folding one
+into that median would describe neither kind of tick, and a row with no recorded source could be
+either, so it is excluded rather than assumed. First rows: 2026-09-30T19:27Z, **21,361 ms and
+27,447 ms of a 60,000 ms budget**. ADR-077. The original text follows.
+
+**~~`audit_log` does not record how long a tick took.~~** `metadata` on a `pipeline.tick` row carries
 `errors`, `ingest`, `cluster` and `llmCalls` — and not `durationMs`, nor the per-stage timings the
 report returns. So the only record of a tick's duration is the HTTP response nobody keeps, which is
 why every duration in this file came from a hand-made `curl`. Twenty-two ticks have run and not one of
@@ -2041,7 +2096,26 @@ role, and #2 holds 0.01 tMSTC that would be refunded. It was skipped because `in
 already on chain once (`0xefe33de2…20f3ca6b`, with its refund claim), so a second one proves nothing new
 and spends a real market. Say that if asked why the button was not pressed.
 
-**33. The pipeline runs roughly every five hours, not every five minutes.** `heartbeat.yml` and
+**33. ✅ RESTATED AND CLOSED in Phase 11. The cadence is no longer written down anywhere.**
+
+Measured with `gh run list` over the 46 hours to 2026-09-30T18:50Z: the heartbeat's `*/5` expression
+produced **ten scheduled runs, mean gap 5h07m, range 2h57m–6h44m, 1.6% of the 554 runs requested,
+zero failures**. `sync.yml`: seven runs over 29h15m, mean 4h52m, 1.7%. This is GitHub throttling
+scheduled workflows on a low-activity public repository.
+
+**The repair is not a better sentence — it is not having a sentence.** `/audit` computes the cadence
+from `audit_log` on every request and separates cron ticks from prompted ones. Every prose claim was
+removed from `README.md`, `ARCHITECTURE.md`, `RUNBOOK.md`, both workflow files, `app/api/tick/route.ts`,
+`app/resolve/SettleButton.tsx`, `lib/pipeline/tick.ts` and `lib/resolution/propose.ts` — including
+four comments that reasoned from a three-minute tick.
+
+**The expressions changed and that change is claimed nowhere.** `7,37 * * * *` and `19,49 * * * *`:
+48 requests a day rather than 288, off the top of the hour that GitHub's documentation names as a
+high-load window, sync twelve minutes behind the heartbeat so it indexes rather than races it. **What
+that delivers is unmeasured as of this commit and must not be quoted until it has several hours
+behind it.** Vercel Cron was rejected: once a day on the Hobby plan. ADR-076. Original text follows.
+
+**~~The pipeline runs roughly every five hours, not every five minutes.~~** `heartbeat.yml` and
 `sync.yml` both specify `*/5 * * * *`. GitHub fired the heartbeat at 07:18 and 01:29 on 2026-09-30
 and at 22:32 / 18:28 / 12:55 the day before. Every run **succeeded** — this is GitHub throttling
 scheduled workflows on a low-activity repository, a documented behaviour of the hosted cron, not a
@@ -2050,7 +2124,20 @@ configuration implies, and **any sentence claiming a five-minute cadence is curr
 Phase 11 either moves the schedule somewhere that honours it or restates the claim. Until then,
 prefer "runs unattended on a schedule" over any specific number.
 
-**34. The resolution stage is starved by the deadline ladder, and never reads the market at all.**
+**34. ✅ CLOSED in Phase 11 — and it was intermittent, which was worse than recorded.**
+
+This gap said both ticks with a resolvable candidate halted at `examining 0 market(s)`. That was true
+when written. A third tick ran at 18:51Z and **succeeded**, so counted from `audit_log` the real
+figure is **two of three**. The stage's behaviour depended on how quickly clustering's four model
+calls happened to answer — so it looked fine whenever anyone checked it and failed when nobody did.
+
+Fixed by reordering (resolution runs first among the model stages, after ingest so its evidence is
+current) and by bounding clustering and the proposer. The ordering argument is the cron, not the
+stages: "the next tick picks it up" is worth the cadence, and the cadence is five hours, against a
+resolve deadline four hours after close. Verified on production ticks at 19:27:23Z and 19:27:54Z.
+ADR-075. Original text follows.
+
+**~~The resolution stage is starved by the deadline ladder, and never reads the market at all.~~**
 This is the correction to gap #21 and it is a worse finding than #21 was. `lib/pipeline/tick.ts:111`
 gives the resolution stage a deadline at **40% of `maxDuration`** — 24s of 60 — measured absolutely
 from the start of the tick. Clustering runs before it and has **no** deadline, only a call budget
@@ -2075,7 +2162,26 @@ late market notifications) and **ADR-066b** (the keeper invalidating a stale mar
 the refusal is stated in `DECISIONS.md`'s header: a log that renumbers itself to look tidy is a log
 whose citations cannot be trusted.
 
-**37. The indexer projection lags the chain visibly.** `/markets` renders *"indexed as OPEN, chain
+**37. ⚠️ DOCUMENTED WITH A BOUND in Phase 11, deliberately not tightened. The indexer projection
+lags the chain visibly.**
+
+**The bound is one tick**, and the mechanism is structural rather than accidental: `runIndexer` is
+step 8 of the tick and settlement — which broadcasts `closeMarket` — is step 9, so a state change
+this pipeline causes is indexed on the *following* tick by construction. Reversing the order buys
+nothing (the indexer reads only to `head − 3`, and a just-broadcast transaction has one
+confirmation) and costs something real (settlement is placed after the indexer precisely so it reads
+the freshest projection). Waiting out the confirmation depth inside the tick — the
+`runIndexer({ confirmBlock })` path `/api/sync` uses, measured at 7,557 ms — would consume the whole
+8-second tail reserve.
+
+**It is a display lag and never a correctness one.** Every figure on a market card comes from
+`getMarket()` at the current block (ADR-028); the projection contributes the creating transaction,
+the creator and the bet count, and nothing that decides money. The badge names the chain as
+authoritative. The bound is now written at the drift computation in `web/lib/markets.ts`. Since the
+cron cadence is the bound, `/audit` is where a reader finds out how wide it currently is. ADR-077.
+Original text follows.
+
+**~~The indexer projection lags the chain visibly.~~** `/markets` renders *"indexed as OPEN, chain
 says CLOSED"* on market #11 and names the chain as authoritative. This is the page behaving correctly
 — it reads `getMarket()` per request and only the badge comes from the projection — but a user sees a
 disagreement between two of our own numbers. Either tighten the sync or document the expected bound.
@@ -2113,21 +2219,58 @@ from the Actions tab — RUNBOOK §"Notifications are not delivered by the cron"
 
 ## What the next session needs to know
 
-**You are starting Phase 11 — operational truth.** Phase 10 is done: the site is redesigned, and
-nothing about the system's behaviour changed while doing it. Phase 11 is the opposite kind of work
-— it fixes three claims this repository makes that are currently false or unearned. They are listed
-under "Two defects that make current claims false" above and in `docs/BUILD_PLAN.md`.
+**You are starting Phase 12 — v1.0.0.** Nothing new is built. Everything is verified once, together,
+and labelled: version bump, annotated tag, `CHANGELOG.md` from the real commit history, one
+verification sweep with its numbers recorded, a final deploy read as rendered pages, and a closing
+summary in this file. `docs/BUILD_PLAN.md` → Phase 12 has the list.
 
 ### Start here, in this order
 
-1. **`docs/BUILD_PLAN.md` → Phase 11.** The three claims, and what "earned" means for each.
-2. **Verify the chain before trusting anything written here.** This file has gone stale between
-   sessions four times. `pnpm --filter web verify:resolution` prints every market's state in about
-   forty seconds and writes nothing. Diff it against the numbers below before quoting them.
-3. **Market #11 was past its resolve deadline on 2026-10-01 02:18 UTC.** By the time you read this
-   the keeper has probably invalidated it. Check, do not assume.
+1. **`docs/BUILD_PLAN.md` → Phase 12.** The sweep, and what "recorded" means for each command.
+2. **Read the chain before trusting this file.** `pnpm --filter web verify:resolution` prints every
+   market's state in about forty seconds and writes nothing. Five sessions running, the live system
+   moved while nobody was looking.
+3. **Look at `/audit`'s cadence panel first.** It now answers, from data, the question this file kept
+   getting wrong by hand: how often the pipeline actually runs, and how long a tick takes. If the
+   "Unattended" figure is still a dash, not enough cron ticks have been recorded since Phase 11 —
+   the number is not missing, it is honestly withheld.
 
-### What Phase 10 changed that Phase 11 will touch
+### What Phase 11 changed that Phase 12 will touch
+
+- **The cron expressions changed and their effect is UNMEASURED.** `7,37 * * * *` and
+  `19,49 * * * *`. Phase 11 deliberately claimed nothing about what they deliver. By the time you
+  read this there should be several hours of data: run
+  `gh run list --workflow=heartbeat.yml --limit 100` and compare against `/audit`'s unattended
+  figure. **If it improved, that is a fact worth recording — but only after measuring it.** If it did
+  not, nothing in the repository needs changing, because nothing claims it did.
+- **The tick's stage order changed.** Resolution now runs before clustering and the proposer. If a
+  Phase 12 sweep sees clustering doing less on some ticks, that is the ladder working, not a
+  regression — the report says `out of time for this tick` and names how much it left.
+- **`stageDeadlines` is exported and pure, and its tests are load-bearing.** Six of the seven fail
+  if the old fractions come back. Do not "simplify" the clamp away: it is what stops a 22s model
+  call starting at 37.9s of a 60s budget and killing the tick before its audit row is written.
+- **A new metadata shape on `pipeline.tick` rows.** `durationMs`, `budgetMs`, `source`, `resolution`.
+  Rows before 2026-09-30T19:27Z have none of them, and `cadenceReport` counts them separately rather
+  than assuming — keep that property if you touch it.
+- **`TickSource` is mapped through an allowlist in the route.** A caller cannot write its own label
+  onto the page. If you add a caller, add it to `triggerSource` and to `TickSource`, and remember
+  that anything unrecognised is `api` on purpose.
+
+### The trap this phase added to the list
+
+**A count on a live page must say *which* things it counted.** The cadence panel's first version
+averaged every tick row and reported **84 minutes** for a system whose unattended cadence is five
+hours — because `audit_log` holds button presses and CLI runs alongside cron ticks. It was correct
+arithmetic over the wrong population, it was invisible in the source, and it was obvious in one look
+at the served page. That is the **ninth** defect in this project with exactly that shape. The fix
+needed a column that did not exist, and the data to populate it had been arriving in the workflows'
+request bodies since Phase 3 with nothing reading it.
+
+**`*/5` inside a `/** */` block comment terminates the comment.** Cost ten minutes and four
+nonsensical TypeScript errors (`TS1443: Module declaration names may only use ' or " quoted
+strings`). Write it as prose or in single-line comments.
+
+### What Phase 10 changed — still true, still worth knowing
 
 - **There is a component layer now: `web/components/ui/`.** 27 exports, 883 lines, one barrel.
   Before adding markup to a page, look there — `Card`, `CardHead`, `CardBody`, `CardFoot`, `Badge`,
@@ -2144,13 +2287,39 @@ under "Two defects that make current claims false" above and in `docs/BUILD_PLAN
 
 ### Nothing is waiting on the user
 
-Phase 11 needs no wallet and no signature for its first two tasks. Whether the third needs a
-human-signed transaction depends on which fix is chosen — `docs/BUILD_PLAN.md` has the options.
+Phase 11 needed no wallet and no signature, and used none. Phase 12 needs none either until the
+final deploy — the only human-signed action still available is the optional second refusal in
+`/review` (gap #26), which is **not** on any critical path.
 
-### Measured state, 2026-09-30 after Phase 10
+**One optional item, if `check:render` is wanted in Phase 12:** run `npx playwright install
+chromium` once. The script is written to decline rather than fail without it, and Phase 11 verified
+the same properties by hand instead.
 
-**Unchanged by this phase** — Phase 10 wrote nothing to the chain or the database. These are the
-Phase 9 numbers, re-confirmed against the rendered pages this session.
+### Measured state, 2026-09-30T19:30Z after Phase 11
+
+**Read against the chain and the database this session**, not carried forward. Phase 11 wrote
+nothing to the chain: no market, no bet, no resolution, no transaction of any kind. It wrote three
+`pipeline.tick` rows (one local, two production) and whatever those ticks' own stages queued, which
+was one proposal for the review queue and nothing on chain.
+
+| | Live |
+|:--|:--|
+| Markets on chain | **13**, unchanged |
+| States | #1–3 `INVALIDATED` · #4–7, 9, 10, 12, 13 `OPEN` · #8 `FINALIZED`/`NO` · #11 `CLOSED`/`UNRESOLVED` |
+| Past close, awaiting an outcome | **#11** — `proposeResolution(#11)` as the resolver *would succeed*, verified by `eth_call` |
+| Block at verification | 5,846,492 |
+| `audit_log` rows | **442**, every one carrying a reason |
+| Tests | **498** (441 web · 57 contracts) |
+| Cron cadence, heartbeat | mean **5h07m** over 46h07m, 10 runs, 0 failures, 1.6% of requested |
+| Last production tick | 21,361 ms of a 60,000 ms budget, 0 stage errors, 4 of 10 LLM calls |
+
+**Market #11 is examined but undraftable, and that is gap #22, not a bug.** Both production ticks
+read it from the chain and reported `1 with no evidence to read` — no ingested article clears
+`MIN_QUESTION_COVERAGE`. The resolution stage is working; the coverage floor was calibrated on
+articles about the same *story*, never on articles reporting an *outcome*, and this is the first
+market to test that distinction.
+
+### Superseded — the Phase 10 snapshot, kept for the record
 
 | | Live |
 |:--|:--|

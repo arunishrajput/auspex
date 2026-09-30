@@ -227,7 +227,12 @@ export type CadenceReport = {
    * `unattended` says how live it is when no one presses anything.
    */
   unattended: CadenceWindow;
-  /** Ticks carrying a `source` at all. The honest denominator for `unattended`. */
+  /**
+   * Ticks carrying a recorded trigger at all — the honest denominator for everything above.
+   *
+   * Only rows written from Phase 11 onward have one, so early on this is much smaller than the
+   * total and the page says so rather than implying the window is fully classified.
+   */
   tagged: number;
   /** When the most recent tick of any kind ran. */
   lastTickAt: Date | null;
@@ -330,6 +335,15 @@ export async function cadenceReport(limit = 50): Promise<CadenceReport> {
     }
 
     durations.sort((a, b) => a - b);
+    // A true median: for an even count, the mean of the two middle values. Taking the upper one is
+    // the common shortcut and it read wrong on the first two rows — a median of 21.4s and 27.4s is
+    // 24.4s, and the page said 27.4s, which is the maximum wearing the median's label.
+    const median =
+      durations.length === 0
+        ? null
+        : durations.length % 2 === 1
+          ? durations[(durations.length - 1) / 2]
+          : Math.round((durations[durations.length / 2 - 1] + durations[durations.length / 2]) / 2);
 
     return {
       all: window(allTimes),
@@ -337,7 +351,7 @@ export async function cadenceReport(limit = 50): Promise<CadenceReport> {
       tagged,
       lastTickAt: new Date(Math.max(...allTimes)),
       measuredDurations: durations.length,
-      medianDurationMs: durations.length === 0 ? null : durations[Math.floor(durations.length / 2)],
+      medianDurationMs: median,
       maxDurationMs: durations.length === 0 ? null : durations[durations.length - 1],
       budgetMs,
       error: null,
