@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runTick } from "@/lib/pipeline/tick";
+import { runTick, type TickSource } from "@/lib/pipeline/tick";
 import { optionalEnv } from "@/lib/env";
 
 /**
@@ -7,9 +7,12 @@ import { optionalEnv } from "@/lib/env";
  *
  *   POST /api/tick   — advance the state machine one bounded step. Requires `TICK_SECRET`.
  *
- * Two callers: the GitHub Actions heartbeat (every five minutes) and the dashboard's
- * "Run tick" button. The button is what a visitor actually presses, because GitHub's
- * cron is best-effort and pauses on inactive public repositories.
+ * Two callers: the GitHub Actions heartbeat and the dashboard's "Run tick" button. The
+ * button is what a visitor actually presses, because GitHub's cron is best-effort — measured
+ * over 46 hours it delivered 1.6% of the runs its expression asked for, a mean gap of about
+ * five hours — and it pauses altogether on inactive public repositories. The delivered cadence
+ * is computed from `audit_log` and shown on `/audit`; no comment here states one, because a
+ * cadence written into a comment is a number that goes wrong without anyone noticing.
  *
  * Authenticated because a tick spends real quota — RSS fetches, Gemini calls, database
  * writes — and an open endpoint that spends quota is a free denial-of-service against our own
@@ -51,14 +54,40 @@ function authorize(request: NextRequest): NextResponse | null {
   return null;
 }
 
+/**
+ * Who asked, from the body the caller sent.
+ *
+ * The GitHub workflows have posted `{"source":"github-actions"}` since Phase 3 and nothing read it
+ * until Phase 11, when `/audit` started reporting the pipeline's real cadence and an unattended
+ * tick stopped being interchangeable with a button press.
+ *
+ * **Mapped through an allowlist, never stored as sent.** This is an authenticated endpoint, but a
+ * string from a request body that reaches a page is a string a reader will believe, and a caller
+ * that could write its own label could make the cron look busier than it is. Anything unrecognised
+ * — including a malformed body, which is why this never throws — is `api`: an authenticated caller
+ * we decline to classify.
+ */
+async function triggerSource(request: NextRequest): Promise<TickSource> {
+  try {
+    const body: unknown = await request.json();
+    const claimed = (body as { source?: unknown } | null)?.source;
+    if (claimed === "github-actions" || claimed === "cron") return "cron";
+    if (claimed === "dashboard" || claimed === "button") return "button";
+  } catch {
+    // No body, or not JSON. The button posts nothing.
+  }
+  return "api";
+}
+
 export async function POST(request: NextRequest) {
   const rejection = authorize(request);
   if (rejection !== null) return rejection;
 
   const skipIndex = request.nextUrl.searchParams.get("skipIndex") === "true";
+  const source = await triggerSource(request);
 
   try {
-    const report = await runTick({ skipIndex, maxDurationMs: TICK_BUDGET_MS });
+    const report = await runTick({ skipIndex, source, maxDurationMs: TICK_BUDGET_MS });
     // 207 when some stage failed: the body is a real report, but calling it 200 would let the
     // heartbeat's `--fail-with-body` treat a half-broken pipeline as healthy.
     const status = report.errors.length === 0 ? 200 : 207;

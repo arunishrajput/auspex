@@ -165,6 +165,20 @@ async function eligibleSources(eventId: string): Promise<ProposalInput["articles
   });
 }
 
+export type ProposerPassOptions = DraftOptions & {
+  limit?: number;
+  /**
+   * Epoch ms after which the pass stops taking new work and reports why. Absolute from the
+   * start of the tick.
+   *
+   * The same reasoning as the other three model stages: a call budget bounds how many models
+   * are asked, not how long they take, and an over-running tick is killed before it can return
+   * a report or write its audit row. Checked before the draft call, so a yield here writes
+   * nothing — the event stays in the queue and the next tick picks it up.
+   */
+  deadlineMs?: number;
+};
+
 /**
  * Runs one proposer pass.
  *
@@ -174,9 +188,10 @@ async function eligibleSources(eventId: string): Promise<ProposalInput["articles
  */
 export async function runProposerPass(
   budget: LlmBudget,
-  options: DraftOptions & { limit?: number } = {},
+  options: ProposerPassOptions = {},
 ): Promise<ProposeReport> {
   const limit = options.limit ?? MAX_EVENTS_PER_PASS;
+  const deadlineMs = options.deadlineMs ?? Number.POSITIVE_INFINITY;
   const candidates = await pendingProposalEvents(MAX_EVENTS_SCANNED);
 
   const report: ProposeReport = {
@@ -193,6 +208,12 @@ export async function runProposerPass(
     if (report.attempted >= limit) break;
     if (budget.remaining === 0) {
       report.haltedBecause = `LLM budget spent after ${report.attempted} of ${candidates.length} events`;
+      break;
+    }
+    if (Date.now() > deadlineMs) {
+      report.haltedBecause =
+        `out of time for this tick after ${report.attempted} of ${candidates.length} events — ` +
+        `nothing was written and the queue is unchanged`;
       break;
     }
 

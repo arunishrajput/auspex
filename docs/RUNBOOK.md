@@ -358,9 +358,9 @@ from `TICK_URL`, so the workflow runs as-is.
 
 **Notifications are not delivered by the cron.** Approving a market on `/review` fires
 `syncAfterApproval`, which waits out the indexer's three-block confirmation depth (~7.5s) and then
-indexes and announces. The cron is a backstop only: GitHub delivered the `*/5` heartbeat three times
-in the fourteen hours to 2026-09-29T06:10Z, so it repairs a missed announcement in hours, not
-minutes. To repair one by hand, run the `Chain sync` workflow from the Actions tab, or:
+indexes and announces. The cron is a backstop only: measured over the 46 hours to
+2026-09-30T18:50Z, GitHub delivered the heartbeat ten times — a mean gap of 5h07m — so it repairs a
+missed announcement in hours, not minutes. The live figure is the cadence panel on `/audit`. To repair one by hand, run the `Chain sync` workflow from the Actions tab, or:
 
 ```bash
 curl -fsS -X POST "$SYNC_URL" -H "Authorization: Bearer $CRON_SECRET"

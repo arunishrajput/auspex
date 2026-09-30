@@ -1919,3 +1919,157 @@ confirm the glyphs carry the claim where the colour no longer does.
 **What it costs.** `ok` is a deep emerald rather than a bright green and `warn` is a bronze rather
 than a vivid amber, because both sit high on the ladder. The tint grounds (`bg-{tone}-500/10`) keep
 the hue legible at a glance; the text is darker than a designer would pick by eye.
+
+---
+
+### ADR-075 — The resolution stage runs before the news stages, and every model stage gets a clock
+
+**Decided:** reorder the tick so outcome drafting happens before clustering and proposing, give
+clustering and the proposer the deadline they never had, and derive every model stage's deadline
+from `budget − callTimeoutMs() − TAIL_RESERVE_MS` rather than from a fraction alone.
+
+**Why.** The tick's ladder gave the resolution stage a deadline at 40% of the budget, measured
+absolutely from the tick's start. Clustering ran before it with **no deadline at all** — only a
+four-call budget, which bounds how many models are asked and not how long they take. Four calls at
+the 22-second per-call timeout is 88 seconds against a function killed at 60.
+
+So whether resolution ran at all depended on how quickly clustering's models happened to answer.
+Measured over the production ticks that had a genuinely resolvable market (market #11, `CLOSED`,
+holding 0.004 tMSTC):
+
+| Tick (UTC) | Clustering | Resolution stage |
+|:--|:--|:--|
+| 2026-09-30 07:18 | 15/15 pairs adjudicated | `out of time … after examining 0 market(s)` |
+| 2026-09-30 13:55 | — | `out of time … after examining 0 market(s)` |
+| 2026-09-30 18:51 | 11/11 pairs adjudicated | examined 1 closed market |
+
+**Two of three.** The stage was not failing to draft — it never called `readMarket`, so the chain
+was never consulted about a market that was holding a stake. And the third tick succeeding is the
+worse fact, not the better one: it means the behaviour was intermittent and looked fine whenever
+anyone checked.
+
+**The ordering argument is about the cron, not about the stages.** "The next tick picks it up" is a
+promise whose value is the cron's cadence, and the cadence is measured at a mean of 5h07m (ADR-076).
+Market #11's resolve deadline was roughly four hours after its close. So a starved resolution stage
+is not deferred work; it is a market that goes stale and gets refunded, which is what happened. A
+closed market is holding someone's stake against a deadline. An unclustered story is holding
+nothing. Settling outranks discovering, and the ladder now says so.
+
+Resolution runs **after** ingest rather than before it, so its evidence includes this tick's
+articles — at a five-hour cadence, drafting from the previous tick's news would be drafting from
+five-hour-old evidence.
+
+**The cutoff is arithmetic, and it fixed a latent bug nobody had hit.** A deadline is checked
+*before* a call starts, so a stage whose deadline is 38s can begin a 22s call at 37.9s and return
+at 59.9s — inside `maxDuration` by 100ms, with nothing left for the intent worker, the indexer, the
+notifier or the tick's own audit row. That was exactly the old agents fraction (0.63 of 60s). No
+tick ever hit it, because production ticks measure 15–24s, but the ladder permitted it. Every model
+stage is now clamped to `budget − timeout − tail` = 30s of 60s, so the worst case returns at 52s.
+
+**What it costs.** On a tick that actually drafts an outcome, clustering and the proposer get less
+of the budget and may yield having done less — correctly, and they say so in the report. The agents
+stage's effective deadline moves earlier, from 38s to 30s, so a busy tick asks fewer agents than it
+used to. Both are the right trade at a cadence measured in hours: a market that settles today beats
+a story that clusters today. On the common tick — no closed market — `runResolutionPass` returns
+after one query and nothing downstream notices.
+
+**Evidence.** `lib/pipeline/tick.ts` exports `stageDeadlines` as a pure function so the ladder is
+checkable rather than argued; `lib/pipeline/tick.test.ts` holds down the ordering and the arithmetic,
+and **six of its seven tests fail** when the old fractions are pasted back in. `lib/news/adjudicate.test.ts`
+proves the clustering bound yields without spending a call. The first tick under the new ladder
+examined market #11 and reported `1 closed market(s)` where its two predecessors reported nothing.
+
+---
+
+### ADR-076 — The pipeline's cadence is a query on `/audit`, not a sentence anywhere
+
+**Decided:** delete every written statement of how often the pipeline runs, compute the real
+cadence from `audit_log` on each request, and render it on `/audit` beside the median tick
+duration. Change the cron expressions, and **claim nothing about what the new ones deliver.**
+
+**Why.** `heartbeat.yml` and `sync.yml` both asked for `*/5 * * * *`. Measured with `gh run list`
+over the 46 hours to 2026-09-30T18:50Z:
+
+| | heartbeat | sync |
+|:--|:--|:--|
+| Scheduled runs delivered | 10 | 7 |
+| Window | 46h07m | 29h15m |
+| Mean gap | **5h07m** | 4h52m |
+| Range | 2h57m – 6h44m | 2h53m – 6h29m |
+| Share of runs requested | **1.6%** | 1.7% |
+| Failures | 0 | 0 |
+
+Every run succeeded. This is GitHub throttling scheduled workflows on a low-activity public
+repository — a documented behaviour, not a broken workflow — and nothing in this repository can
+make it honour an expression.
+
+**The fix is not a better sentence; it is not having a sentence.** Phase 9 had already corrected
+the README from "five minutes" to "roughly five hours", which was honest and still wrong in the way
+that matters: it is a constant printed beside a system that will change underneath it. This project
+has learned the same lesson five times already (ADR-065, ADR-067, ADR-070, the `/markets/8` caption,
+the landing page's roadmap) — **prose beside data has to be derived from that data.** A cadence is
+data. `cadenceReport()` counts the gaps between `pipeline.tick` rows, and the page states what the
+log supports, so it is right about whatever GitHub does next.
+
+**Why Vercel Cron was not the answer.** On the Hobby plan a Vercel cron job is invoked once per
+day at an unguaranteed hour, which is worse than what GitHub already delivers. An external pinger
+(cron-job.org and similar) would honour a minute-level schedule, but it adds a third-party account
+to a project whose whole claim is that you can check it yourself, and it needs the user to hold
+another credential. Neither was worth it against a fix that makes the number honest for free.
+
+**The expressions still changed, and that change is separate from any claim.** They now ask for
+twice an hour at minutes 7 and 37 (heartbeat) and 19 and 49 (sync). Two reasons, both modest:
+asking for 554 runs and receiving 9 is a configuration that misdescribes the system to anyone who
+opens the file, and GitHub's own documentation names the start of every hour as a high-load window,
+so the offset minutes follow its guidance rather than a hunch. The sync sits twelve minutes behind
+the heartbeat so that when both are delivered, it indexes what the tick broadcast instead of racing
+it. **Whether any of this improves delivery is unmeasured, and is asserted nowhere.**
+
+**What it costs.** The cadence is now only visible where the database is reachable, so a reader
+with no network sees no figure rather than a stale one. That is the correct trade for this project.
+The `/audit` page gains one query (a 50-row select) and one panel.
+
+**Evidence.** `gh run list --workflow=heartbeat.yml`, reproduced in `PROGRESS.md`; `cadenceReport()`
+in `web/lib/audit.ts`; the panel on `/audit`.
+
+---
+
+### ADR-077 — `audit_log` records how long a tick took, and the indexer's lag is documented rather than chased
+
+**Decided:** add `durationMs`, `budgetMs` and the resolution report to the `pipeline.tick` audit
+row. Leave the indexer's projection lag alone, and write down its bound.
+
+**Why the duration.** Twenty-two ticks ran before this and not one of their durations was stored, so
+every duration quoted in `PROGRESS.md` through Phase 10 came from a hand-made `curl` against a
+response nobody kept (gap #30). `budgetMs` sits beside it because a duration without the budget it
+ran against is not a measurement of anything, and the resolution report sits beside both because it
+is the stage whose starvation was invisible for exactly this reason — the evidence for ADR-075 had
+to be reconstructed from summary strings.
+
+**A missing row is itself a signal.** A tick that over-runs is killed before it reaches the insert,
+so the absence of a row means the failure the ladder exists to prevent. That is why the duration is
+sampled at the moment of the write rather than reused from `report.durationMs`, which was taken one
+round trip earlier.
+
+**Why the indexer lag is documented and not fixed.** `/markets` rendered *"indexed as OPEN, chain
+says CLOSED"* on market #11. The mechanism is structural: `runIndexer` is step 8 of the tick and
+settlement — which broadcasts `closeMarket` — is step 9, so a state change this pipeline causes is
+indexed on the *following* tick by construction. Reversing the order buys nothing, because the
+indexer only reads to `head − 3` and a just-broadcast transaction has one confirmation; and it
+would cost something real, since settlement is placed after the indexer precisely so it decides
+what to settle from the freshest projection. Waiting out the confirmation depth inside the tick
+(the `runIndexer({ confirmBlock })` path that `/api/sync` uses, measured at 7,557ms) would consume
+the entire 8-second tail reserve.
+
+So the bound is **one tick**, which is the cron interval, which `/audit` now measures. And it is a
+display lag and never a correctness one: every figure on a market card comes from `getMarket()` at
+the current block (ADR-028), the projection contributes only the creating transaction, the creator
+and the bet count, and the badge names the chain as authoritative. The page was already behaving
+correctly; what was missing was the sentence saying how far behind it is allowed to be.
+
+**What it costs.** Two extra keys on every tick row, and a documented lag a reader may still find
+untidy. Both are cheaper than a projection that hides a disagreement, and far cheaper than a tick
+that spends its tail reserve catching up a badge.
+
+**Evidence.** The metadata on `pipeline.tick` rows from 2026-09-30T19:16Z onward; the comment at the
+drift computation in `web/lib/markets.ts`.

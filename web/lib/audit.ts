@@ -185,3 +185,164 @@ export async function reasonlessEntries(): Promise<number> {
   );
   return Number(result.rows[0]?.count ?? 0);
 }
+
+/**
+ * What the pipeline's cadence and tick duration actually are, measured from the log.
+ *
+ * **This exists so that no sentence anywhere has to state a cadence.** `heartbeat.yml` asks for a
+ * run every half hour; across 46 hours of 2026-09-28/30 GitHub delivered the previous every-five-
+ * minutes expression 9 times — 1.6% of what was requested, a mean gap of 5h07m and a spread of
+ * 2h57m to 6h44m. Scheduled workflows on a public repository are explicitly best-effort: GitHub
+ * delays them under load and drops free runners first. Nothing makes it honour an expression.
+ *
+ * Writing "runs every five minutes" beside that was the defect Phase 11 existed to fix, and the
+ * repair is not a better sentence — it is not having a sentence. A number on a live page comes
+ * from a query or it does not go on the page. This is that query: the page states the interval the
+ * log actually shows, so whatever GitHub does next, the page is right about it.
+ *
+ * `durationMs` is read from `metadata`, which only rows written after Phase 11 carry (gap #30), so
+ * `measuredDurations` is reported separately from `ticks` rather than quietly averaging over a
+ * denominator that includes rows where the column did not exist.
+ */
+export type CadenceWindow = {
+  /** Ticks in this window. */
+  ticks: number;
+  /** Hours from the oldest to the newest of them. */
+  spanHours: number | null;
+  /** Mean, shortest and longest gap between consecutive ticks, in ms. */
+  meanGapMs: number | null;
+  minGapMs: number | null;
+  maxGapMs: number | null;
+};
+
+export type CadenceReport = {
+  /** Every tick in the window, whatever triggered it. The system's observed liveness. */
+  all: CadenceWindow;
+  /**
+   * Only the ticks the cron delivered — the cadence with nobody watching.
+   *
+   * Empty until enough rows carry a `source`, which only rows written from Phase 11 onward do.
+   * Reported separately rather than folded into `all` because the two answer different questions
+   * and the difference between them is the whole point: `all` says how live the system has been,
+   * `unattended` says how live it is when no one presses anything.
+   */
+  unattended: CadenceWindow;
+  /** Ticks carrying a `source` at all. The honest denominator for `unattended`. */
+  tagged: number;
+  /** When the most recent tick of any kind ran. */
+  lastTickAt: Date | null;
+  /**
+   * Duration statistics over **serverless** ticks only — those that ran against the route's 60s
+   * budget and say so. A CLI tick is given 300s and is round-trip-bound at ~70s, so averaging the
+   * two would produce a figure describing neither; a row with no recorded source could be either,
+   * so it is excluded rather than assumed. Empty until such a tick has run.
+   */
+  measuredDurations: number;
+  medianDurationMs: number | null;
+  maxDurationMs: number | null;
+  budgetMs: number | null;
+  error: string | null;
+};
+
+const EMPTY_WINDOW: CadenceWindow = {
+  ticks: 0,
+  spanHours: null,
+  meanGapMs: null,
+  minGapMs: null,
+  maxGapMs: null,
+};
+
+/** Gap statistics over a set of tick timestamps. Expects epoch ms, any order. */
+function window(timesMs: readonly number[]): CadenceWindow {
+  if (timesMs.length === 0) return EMPTY_WINDOW;
+  const times = [...timesMs].sort((a, b) => a - b);
+  if (times.length === 1) return { ...EMPTY_WINDOW, ticks: 1 };
+
+  const gaps: number[] = [];
+  for (let i = 1; i < times.length; i += 1) gaps.push(times[i] - times[i - 1]);
+  const spanMs = times[times.length - 1] - times[0];
+
+  return {
+    ticks: times.length,
+    spanHours: spanMs / 3_600_000,
+    meanGapMs: Math.round(spanMs / gaps.length),
+    minGapMs: Math.min(...gaps),
+    maxGapMs: Math.max(...gaps),
+  };
+}
+
+function emptyCadence(error: string | null): CadenceReport {
+  return {
+    all: EMPTY_WINDOW,
+    unattended: EMPTY_WINDOW,
+    tagged: 0,
+    lastTickAt: null,
+    measuredDurations: 0,
+    medianDurationMs: null,
+    maxDurationMs: null,
+    budgetMs: null,
+    error,
+  };
+}
+
+/**
+ * Reads the last `limit` ticks and derives the cadence from their timestamps.
+ *
+ * Never throws: it feeds a page, and a database that is asleep must not blank the audit trail.
+ */
+export async function cadenceReport(limit = 50): Promise<CadenceReport> {
+  try {
+    const rows = await db
+      .select({ createdAt: auditLog.createdAt, metadata: auditLog.metadata })
+      .from(auditLog)
+      .where(eq(auditLog.action, "pipeline.tick"))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit);
+
+    if (rows.length === 0) return emptyCadence(null);
+
+    const allTimes: number[] = [];
+    const cronTimes: number[] = [];
+    const durations: number[] = [];
+    let tagged = 0;
+    let budgetMs: number | null = null;
+
+    for (const row of rows) {
+      const metadata = row.metadata as
+        | { durationMs?: unknown; budgetMs?: unknown; source?: unknown }
+        | null;
+      const at = row.createdAt.getTime();
+      allTimes.push(at);
+
+      const source = typeof metadata?.source === "string" ? metadata.source : null;
+      if (source !== null) tagged += 1;
+      if (source === "cron") cronTimes.push(at);
+
+      // Durations only from ticks that ran against the serverless budget, which means a tick that
+      // **says** it did. A CLI tick is given 300s and is round-trip-bound at ~70s, so folding one
+      // into this median would describe neither kind of tick — and a row with no source at all is
+      // a row from before Phase 11, which could be either. Excluded rather than assumed: an
+      // unknown trigger is not evidence of a known one.
+      if (source !== null && source !== "cli" && typeof metadata?.durationMs === "number") {
+        durations.push(metadata.durationMs);
+        if (budgetMs === null && typeof metadata.budgetMs === "number") budgetMs = metadata.budgetMs;
+      }
+    }
+
+    durations.sort((a, b) => a - b);
+
+    return {
+      all: window(allTimes),
+      unattended: window(cronTimes),
+      tagged,
+      lastTickAt: new Date(Math.max(...allTimes)),
+      measuredDurations: durations.length,
+      medianDurationMs: durations.length === 0 ? null : durations[Math.floor(durations.length / 2)],
+      maxDurationMs: durations.length === 0 ? null : durations[durations.length - 1],
+      budgetMs,
+      error: null,
+    };
+  } catch (error) {
+    return emptyCadence(error instanceof Error ? error.message : String(error));
+  }
+}

@@ -8,8 +8,10 @@
  * theatre. Anyone can make these calls from any address; the server signs them with an agent
  * wallet that holds no role, because that is the only kind of key the deployed application has.
  *
- * It exists because the challenge window is 120 seconds and the cron tick is three minutes. A demo
- * should not have to wait out the difference.
+ * It exists because the challenge window is 120 seconds and the cron that would otherwise run this
+ * arrives, measured, about every five hours. A demo should not have to wait out the difference —
+ * and at that cadence the button is not a convenience, it is the difference between a market
+ * settling today and a market going stale. The live figure is on `/audit`.
  */
 
 import { useState, useTransition } from "react";

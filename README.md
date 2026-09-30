@@ -354,14 +354,19 @@ clustered events, 13 two-source `CONFIRMED` · 12 market specs drafted (5 approv
 human, 6 awaiting review) · 12 agent decisions (3 on chain, 8 refused by the gate) · 34 on-chain
 intents · 290 audit rows, every one carrying a reason.
 
-**The cron cadence, measured rather than configured.** The pipeline runs unattended on a GitHub
-Actions heartbeat whose schedule expression asks for every five minutes. **GitHub delivers roughly
-every five hours.** Runs observed across 2026-09-29/30 landed at 12:55, 18:28, 22:32, 01:29 and
-07:18 UTC — every one of them successful. Scheduled workflows are best-effort and free runners are
-dropped first, so the five-minute figure is what the file asks for and not what happens; closing that
-gap is open work, not a solved problem. Nothing user-facing is allowed to depend on the cron: market
-notifications are sent by `/review` itself the moment a creation is confirmed, and the **Run tick**
-button on the dashboard advances the pipeline on demand.
+**The cron cadence is measured on the page, not asserted here.** The pipeline runs unattended on a
+GitHub Actions heartbeat, and a schedule expression is a *request*: scheduled workflows on a public
+repository are best-effort, delayed under load, with free runners dropped first. Measured across 46
+hours to 2026-09-30T18:50Z, the previous every-five-minutes expression was delivered **9 times — 1.6%
+of what it asked for**, a mean gap of 5h07m and a spread of 2h57m to 6h44m, every run successful.
+
+So this README states no cadence. [`/audit`](https://auspex-web-mu.vercel.app/audit) computes the
+real one from `audit_log` on every request, alongside the median tick duration, and that panel is
+right about whatever GitHub does next. The workflow now asks for twice an hour at off-peak minutes,
+following GitHub's own guidance that the top of every hour is a high-load window — what *that*
+delivers is not yet measured and is not claimed. Nothing user-facing is allowed to depend on the
+cron: market notifications are sent by `/review` itself the moment a creation is confirmed, and the
+**Run tick** button on the dashboard advances the pipeline on demand.
 
 Worth reading: [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the system,
 [`CONTRACTS.md`](./docs/CONTRACTS.md) for the contract design,

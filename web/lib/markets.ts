@@ -174,6 +174,24 @@ export async function getMarketsForDisplay(): Promise<MarketsPayload> {
       const extra = extras.get(m.onchainId);
       // A disagreement between chain and projection is shown, not smoothed over. It means the
       // indexer is behind (benign, common) or wrong (a bug worth finding immediately).
+      //
+      // ## The expected bound is ONE TICK, and here is why it is a tick and not a block
+      //
+      // The projection is fed by `runIndexer`, which is step 8 of the tick, and settlement —
+      // the stage that broadcasts `closeMarket`, `finalizeResolution` and `claim` — is step 9.
+      // So a state change this pipeline causes is, by construction, indexed on the *following*
+      // tick: the log does not exist yet when the indexer for that tick has already run. The
+      // ordering is deliberate and worth keeping (settlement reads the freshest projection to
+      // decide what to settle), and reversing it would buy nothing, because the indexer only
+      // reads to `head - 3` and a just-broadcast transaction has one confirmation.
+      //
+      // That makes the bound the cron interval, which `/audit` measures and which has run to
+      // hours. Market #11 spent that window rendering "indexed as OPEN, chain says CLOSED".
+      //
+      // **This is a display lag and never a correctness one.** Every number on the card comes
+      // from `getMarket()` at the current block (ADR-028); the projection contributes the
+      // creating transaction, the creator and the bet count, and nothing that decides money.
+      // The badge below names the chain as authoritative for exactly that reason.
       let drift: string | null = null;
       if (extra !== undefined) {
         if (extra.state !== m.state) drift = `indexed as ${extra.state}, chain says ${m.state}`;

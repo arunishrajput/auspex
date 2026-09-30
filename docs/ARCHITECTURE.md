@@ -70,19 +70,29 @@ a solo build has no budget for operational surface that does not earn its keep.
      (pipeline state)     (notifications)         (human signing)
 ```
 
-**Two drivers, one endpoint.** `POST /api/tick` is called by a GitHub Actions cron (`*/5 * * * *`,
-free on public repos) as a background heartbeat, and by a **"Run tick" button** in the dashboard for
-on-demand control. GH Actions cron is delayed under load, so the button — not the cron — is what
-advances the pipeline when someone is actually looking at it.
+**Two drivers, one endpoint.** `POST /api/tick` is called by a GitHub Actions cron as a background
+heartbeat, and by a **"Run tick" button** in the dashboard for on-demand control. GH Actions cron is
+delayed under load, so the button — not the cron — is what advances the pipeline when someone is
+actually looking at it.
 
-**How badly delayed, measured rather than assumed.** On 2026-09-29 the `*/5` heartbeat had been
-delivered three times in fourteen hours — 20:42Z, 00:36Z, 06:10Z. Measured again across 2026-09-29/30
-it landed at 12:55, 18:28, 22:32, 01:29 and 07:18Z: **roughly every five hours**, every run
-successful. The configured expression is not the cadence. Treat the cron as a backstop that fires
-*somewhere between minutes and hours*, never as a latency guarantee. Anything a member sees
-must be driven by the request that caused it. That is why market notifications now leave from
-`/review` via `POST /api/sync` (indexer → notifier, ~1s) rather than waiting for a tick, and why
-`.github/workflows/sync.yml` is documented as a repair path rather than the delivery path.
+**How badly delayed, measured rather than assumed.** Across 46 hours to 2026-09-30T18:50Z, the
+heartbeat's `*/5 * * * *` expression produced **ten scheduled runs** — a mean gap of 5h07m, a spread
+of 2h57m to 6h44m, and **1.6% of the 554 runs it asked for**. Every one succeeded: this is GitHub
+throttling scheduled workflows on a low-activity public repository, not a broken workflow. The
+sibling `sync.yml` measured 4h52m mean over 29 hours.
+
+**A configured expression is not a cadence, so this project stopped writing one down.** The
+workflows now ask for twice an hour at minutes 7 and 37 (heartbeat) and 19 and 49 (sync) — 48
+requests a day instead of 288, offset from the top of the hour, which GitHub's own documentation
+names as a high-load window. What that change delivers is **unmeasured** and is claimed nowhere.
+Instead `/audit` derives the real cadence from `audit_log` on every request and renders it beside
+the median tick duration. A number on a live page comes from a query or it does not go on the page.
+
+Treat the cron as a backstop that fires *somewhere between minutes and hours*, never as a latency
+guarantee. Anything a member sees must be driven by the request that caused it. That is why market
+notifications leave from `/review` via `POST /api/sync` (indexer → notifier, ~1s) rather than
+waiting for a tick, and why `.github/workflows/sync.yml` is documented as a repair path rather than
+the delivery path.
 
 ---
 

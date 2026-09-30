@@ -49,8 +49,14 @@ function parseChain(raw: string): string[] {
  * other stage combined, and a tick has to finish inside a 60-second function.
  *
  * 22s clears the observed successes with headroom and caps the damage from a hung model.
+ *
+ * **Exported because the tick's deadline ladder is arithmetic on this number, not a guess.** A
+ * stage deadline is checked *before* a call starts, so the latest moment a call may begin is
+ * `budget - timeoutMs() - tail`. Phase 11 made that explicit; before it, the agents stage could
+ * start a call at 38s of a 60s budget and finish at 60s exactly, leaving nothing for the audit
+ * row. See `STAGE_DEADLINE_FRACTION` in `lib/pipeline/tick.ts`.
  */
-function timeoutMs(): number {
+export function callTimeoutMs(): number {
   const raw = Number(optionalEnv("GEMINI_TIMEOUT_MS") ?? 22_000);
   return Number.isFinite(raw) && raw > 0 ? raw : 22_000;
 }
@@ -177,7 +183,7 @@ export async function generateJson(
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs()),
+        signal: AbortSignal.timeout(callTimeoutMs()),
       },
     );
   } catch (error) {

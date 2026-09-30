@@ -50,7 +50,7 @@ export async function runTickAction(): Promise<RunTickResult> {
   lastRunAt = now;
 
   try {
-    const report = await runTick();
+    const report = await runTick({ source: "button" });
 
     const parts: string[] = [];
     if (report.ingest !== null) {

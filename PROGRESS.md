@@ -7,9 +7,26 @@
 > Session protocol and hard rules live in `CLAUDE.md`. Phase tasks and exit criteria live in
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
-**Last updated:** 2026-09-30 (Phase 10)
-**Current status:** ✅ **Phase 10 complete.** The site is light, typographic and redesigned on all eight routes. A shared component layer was extracted first (3 shared components → 27 exports; 24 duplicated helper definitions → 0), then the palette was replaced by changing token *values* and keeping every name. The semantic five survive, measured rather than asserted: `pnpm --filter web check:contrast` proves AA on every real surface pair plus greyscale and three kinds of colour blindness, and `check:render` proves no horizontal scroll at 390px, a visible focus ring everywhere, and reduced-motion honoured. No chain data, address or hash changed.
-**Next phase:** **Phase 11 — Operational truth.** Fix the three claims this repository makes that are currently false or unearned. They are listed under "Two defects that make current claims false" and in `docs/BUILD_PLAN.md`.
+**Last updated:** 2026-09-30 (Phase 11)
+**Current status:** ✅ **Phase 11 complete.** The three false or unearned claims are fixed. The
+resolution stage no longer starves — it ran fourth in the ladder behind an *unbounded* clustering
+stage, and **two of the three production ticks that had a resolvable market never read the chain for
+it**. Resolution now runs before the news stages, clustering and the proposer have the deadline they
+never had, and every model stage is clamped to `budget − callTimeoutMs − tail` so no call can start
+too late to finish. The cadence claim is gone from prose entirely: `/audit` computes it from
+`audit_log` per request, separating cron ticks from prompted ones, because the first version of that
+panel averaged both and reported 84 minutes for a system whose unattended mean is 5h07m. `audit_log`
+now records `durationMs`, `budgetMs` and the resolution report. No chain data, address or hash
+changed.
+**Next phase:** **Phase 12 — v1.0.0.** Nothing new is built; everything is verified once, together,
+and labelled. `docs/BUILD_PLAN.md` has the sweep.
+
+---
+
+### Phase 10's closing status, for the record
+
+✅ **Phase 10 complete.** The site is light, typographic and redesigned on all eight routes. A shared component layer was extracted first (3 shared components → 27 exports; 24 duplicated helper definitions → 0), then the palette was replaced by changing token *values* and keeping every name. The semantic five survive, measured rather than asserted: `pnpm --filter web check:contrast` proves AA on every real surface pair plus greyscale and three kinds of colour blindness, and `check:render` proves no horizontal scroll at 390px, a visible focus ring everywhere, and reduced-motion honoured. No chain data, address or hash changed.
+
 
 ---
 
@@ -35,8 +52,8 @@
 |:--|:--|:--|
 | 9 | Reframe: from submission to product | ✅ Complete |
 | 10 | The new look — light, modern, funky, professional | ✅ Complete |
-| 11 | Operational truth — fix what makes a claim false | ⬜ **NEXT** |
-| 12 | v1.0.0 — verify everything once, tag, release | ⬜ not started |
+| 11 | Operational truth — fix what makes a claim false | ✅ Complete |
+| 12 | v1.0.0 — verify everything once, tag, release | ⬜ **NEXT** |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete with known gaps
 
@@ -339,6 +356,119 @@ different and worse gap than the one #21 describes, and it is the correction to 
 - Repo clean, in sync with `origin/main`, CI green on the last commit.
 
 ---
+
+## Phase 11 — what shipped
+
+### The shape of it
+
+Three claims were false or unearned. Two were fixed in the system; one was fixed by deleting the
+claim and replacing it with a query. Nothing was written to the chain, no address or hash changed,
+and no existing check was relaxed.
+
+| Claim | Was | Is |
+|:--|:--|:--|
+| "the pipeline runs every five minutes" | stated in prose, false by a factor of ~60 | stated nowhere; computed from `audit_log` on `/audit` per request |
+| the resolution stage examines closed markets | starved by an unbounded clustering stage on 2 of 3 real chances | runs first among the model stages, with every stage clocked |
+| a tick's duration is knowable | not stored anywhere; 22 ticks left no record | `durationMs` + `budgetMs` + the resolution report on every row |
+
+### The defect was intermittent, which made it worse
+
+Gap #34 said the resolution stage halted at `examining 0 market(s)` on both ticks that had a
+resolvable market. By the time this session read the log there had been a third, and it had
+**succeeded**. Counted from `audit_log` rather than from the notes:
+
+| Tick (UTC) | Resolution stage |
+|:--|:--|
+| 2026-09-30 07:18 | `out of time … after examining 0 market(s)` |
+| 2026-09-30 13:55 | `out of time … after examining 0 market(s)` |
+| 2026-09-30 18:51 | examined 1 closed market |
+
+Two of three. The stage's behaviour depended on how quickly clustering's four model calls happened
+to answer — clustering had a **call budget and no clock**, and four calls at the 22s timeout is 88
+seconds against a 60-second function. So the bug looked fine whenever it was checked and failed when
+it was not, which is the worst shape a defect can have. ADR-075.
+
+### What the ladder is now, and why the order changed
+
+```
+stage        fraction   at 60s   bounded by             was
+resolution      0.30      18s    ladder + 1 call        0.40, and ran FOURTH
+cluster         0.40      24s    ladder + 4 calls       no deadline at all
+propose         0.45      27s    ladder + 2 calls       no deadline at all
+agents          0.50      30s    ladder + 3 calls       0.63
+settle          0.85      51s    ladder (no model)      0.80
+```
+
+**Resolution runs before the news stages.** The argument is the cron, not the stages: "the next tick
+picks it up" is a promise whose value is the cadence, and the cadence is 5h07m. Market #11's resolve
+deadline was about four hours after its close. A starved resolution stage is therefore not deferred
+work — it is a market that goes stale and gets refunded, which is what happened. It runs *after*
+ingest so its evidence includes this tick's articles.
+
+**Every model stage is clamped to `budget − callTimeoutMs() − TAIL_RESERVE_MS`** — 30s of 60. A
+deadline is checked *before* a call starts, so the old agents fraction (0.63 = 38s) permitted a 22s
+call to begin at 37.9s and return at 59.9s, leaving nothing for the intent worker, the indexer, the
+notifier or the tick's own audit row. No tick had hit it, because production ticks measure 15–24s,
+but the ladder allowed it. That is a latent bug this phase closed on the way past.
+
+`stageDeadlines` is exported as a pure function so the arithmetic is checkable rather than argued.
+**Six of `tick.test.ts`'s seven tests fail when the old fractions are pasted back in** — verified by
+doing exactly that.
+
+### The defect only the rendered page could show — a ninth time
+
+The cadence panel was built, the build passed, and the served page read:
+
+> **Mean gap 84m** between the last 35 ticks
+
+Eighty-four minutes, for a system whose unattended cadence is five hours. `audit_log` holds every
+tick — cron, the Run tick button, and local `pnpm tick` runs — and averaging them made the pipeline
+look four times more live than it is when nobody is watching. **That is the exact impression this
+phase existed to remove**, and it would have shipped as the phase's headline number.
+
+The fix needed a column that did not exist. The GitHub workflows have posted
+`{"source":"github-actions"}` since Phase 3 and **nothing ever read it**. The route now maps that
+body through an allowlist onto a `TickSource`, the button and the CLI identify themselves, and the
+panel reports *unattended* separately from *any trigger* — showing "needs 2+ ticks tagged with a
+trigger; N so far" until it has the rows to support a number, rather than borrowing the other one.
+
+Ninth time in this project that a defect was invisible in source and obvious in the served output.
+
+### The cron measurement, which is what the claim was checked against
+
+`gh run list`, over the 46 hours to 2026-09-30T18:50Z:
+
+| | heartbeat | sync |
+|:--|:--|:--|
+| Scheduled runs delivered | 10 | 7 |
+| Window | 46h07m | 29h15m |
+| Mean gap | **5h07m** | 4h52m |
+| Range | 2h57m – 6h44m | 2h53m – 6h29m |
+| Share of runs requested | **1.6%** | 1.7% |
+| Failures | **0** | **0** |
+
+Every run succeeded: GitHub throttles scheduled workflows on a low-activity public repository. The
+expressions changed to `7,37 * * * *` and `19,49 * * * *` — 48 requests a day instead of 288, offset
+from the top of the hour, which GitHub's own documentation names as a high-load window, and the sync
+twelve minutes behind the heartbeat so it indexes rather than races it. **What that delivers is
+unmeasured and is claimed nowhere.** Vercel Cron was rejected: on the Hobby plan it runs once a day.
+
+### Live results
+
+- `pnpm -r test` — **498 passing** (441 web · 57 contracts), up from 486. Twelve new: seven on the
+  ladder's arithmetic and ordering, five on the clustering clock.
+- `pnpm typecheck`, `pnpm lint`, `pnpm --filter web build` — clean.
+- `pnpm check:links` · `node scripts/check-links.mjs docs/WALKTHROUGH.md` — every hash, abbreviation
+  and URL still resolves after the prose changes.
+- `pnpm --filter web check:contrast` — passes; no token changed.
+- `pnpm --filter web check:provenance` — 152 files, runtime guard intact.
+- `pnpm --filter web verify:resolution` — all checks pass, 4 skipped for want of a market in that
+  state. Market #11 `CLOSED`/`UNRESOLVED`, `proposeResolution(#11)` as the resolver *would succeed*.
+- `check:render` could not run: the Playwright installs on this machine have no Chromium binary
+  (`npx playwright install` not run). The script skips with an explanation by design. **Recorded as
+  not run rather than reported as passing** — see Known gaps.
+
+### Exit criteria
 
 ## Phase 10 — what shipped
 

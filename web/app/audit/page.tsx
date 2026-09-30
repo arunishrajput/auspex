@@ -9,6 +9,8 @@ import {
   PageHeader,
   PageShell,
   SectionLabel,
+  Stat,
+  StatGrid,
   TONE,
   TxLink,
   type Tone,
@@ -18,10 +20,12 @@ import {
   AUDIT_GROUPS,
   auditActionCounts,
   auditPage,
+  cadenceReport,
   isAuditGroup,
   lastTickSummary,
   reasonlessEntries,
   type AuditGroup,
+  type CadenceReport,
 } from "@/lib/audit";
 
 /**
@@ -106,7 +110,7 @@ export default async function AuditPage({
 
   if (!hasDatabase()) {
     return (
-      <Shell group={group} total={0} matching={0} reasonless={0} tick={null}>
+      <Shell group={group} total={0} matching={0} reasonless={0} tick={null} cadence={null}>
         <div className="rounded-xl border border-warn-500/40 bg-warn-500/5 px-4 py-3">
           <p className="font-mono text-sm text-warn-500">
             DATABASE_URL is not configured on this deployment.
@@ -122,10 +126,11 @@ export default async function AuditPage({
   }
 
   const page = await auditPage(group, 80);
-  const [counts, tick, reasonless] = await Promise.all([
+  const [counts, tick, reasonless, cadence] = await Promise.all([
     auditActionCounts().catch(() => []),
     lastTickSummary().catch(() => null),
     reasonlessEntries().catch(() => 0),
+    cadenceReport(50),
   ]);
 
   return (
@@ -135,6 +140,7 @@ export default async function AuditPage({
       matching={page.matching}
       reasonless={reasonless}
       tick={tick}
+      cadence={cadence}
     >
       {page.error !== null ? (
         <Callout tone="warn" title="audit log unavailable">
@@ -236,12 +242,110 @@ export default async function AuditPage({
   );
 }
 
+/** A gap or a duration as something a person reads at a glance. */
+function humanMs(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 90_000) return `${(ms / 1000).toFixed(1)}s`;
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 90) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h${String(minutes % 60).padStart(2, "0")}m`;
+}
+
+/**
+ * What the pipeline's cadence actually is, read off the log rather than off the cron expression.
+ *
+ * **This panel is here instead of a sentence.** `heartbeat.yml` asks GitHub for a run twice an
+ * hour; GitHub delivered the previous expression 1.6% of the time. Scheduled workflows on a public
+ * repository are best-effort — delayed under load, free runners dropped first — so the expression
+ * is a request and this is the delivery. Writing a cadence into prose beside that is how a
+ * repository ends up making a claim its own logs contradict, which is what Phase 11 was for.
+ *
+ * **Two numbers, because one of them lies.** The first version of this averaged every tick row and
+ * reported 84 minutes — mixing the cron with button presses and local CLI runs, which made the
+ * system look four times more live than it is when nobody is watching. That is exactly the
+ * impression this panel exists to remove. So "unattended" counts only the ticks the cron delivered,
+ * and it appears only once enough rows carry a source to support it.
+ */
+function Cadence({ cadence }: { cadence: CadenceReport }) {
+  if (cadence.error !== null || cadence.all.ticks < 2) return null;
+
+  const unattended = cadence.unattended;
+  const haveUnattended = unattended.ticks >= 2 && unattended.meanGapMs !== null;
+
+  return (
+    <div className="mt-2 rounded-xl border border-ink-700 bg-ink-900">
+      <div className="border-b border-ink-800 px-4 pt-3 pb-2">
+        <SectionLabel>Measured cadence — counted from this log, not from the cron expression</SectionLabel>
+      </div>
+      <StatGrid cols={4}>
+        <Stat
+          label="Unattended"
+          value={haveUnattended ? humanMs(unattended.meanGapMs ?? 0) : "—"}
+          tone={
+            !haveUnattended
+              ? "quiet"
+              : (unattended.meanGapMs ?? 0) > 3_600_000
+                ? "warn"
+                : "ok"
+          }
+        >
+          {haveUnattended ? (
+            <>
+              mean gap over {unattended.ticks} cron tick(s), {humanMs(unattended.minGapMs ?? 0)}–
+              {humanMs(unattended.maxGapMs ?? 0)}
+            </>
+          ) : (
+            <>needs 2+ ticks tagged with a trigger; {cadence.tagged} so far</>
+          )}
+        </Stat>
+        <Stat label="Any trigger" value={humanMs(cadence.all.meanGapMs ?? 0)}>
+          mean gap over {cadence.all.ticks} tick(s), cron and prompted alike
+        </Stat>
+        <Stat label="Window" value={`${(cadence.all.spanHours ?? 0).toFixed(1)}h`}>
+          oldest to newest tick in view
+        </Stat>
+        {cadence.medianDurationMs === null ? (
+          <Stat label="Tick duration" value="—">
+            recorded from Phase 11 onward
+          </Stat>
+        ) : (
+          <Stat
+            label="Tick duration"
+            value={humanMs(cadence.medianDurationMs)}
+            tone={
+              cadence.budgetMs !== null &&
+              cadence.maxDurationMs !== null &&
+              cadence.maxDurationMs > cadence.budgetMs * 0.8
+                ? "warn"
+                : "ok"
+            }
+          >
+            median of {cadence.measuredDurations}
+            {cadence.maxDurationMs !== null && <>, worst {humanMs(cadence.maxDurationMs)}</>}
+            {cadence.budgetMs !== null && <> against {humanMs(cadence.budgetMs)}</>}
+          </Stat>
+        )}
+      </StatGrid>
+      <p className="border-t border-ink-800 px-4 py-2.5 text-[11px] leading-relaxed text-ink-400">
+        The schedule in <Mono>heartbeat.yml</Mono> is a <em>request</em>. GitHub delays scheduled
+        workflows under load and drops free runners first, so the figures above are what was
+        delivered, counted from this log on every request. <strong>Unattended</strong> is the one
+        that describes the system with nobody watching; <strong>any trigger</strong> includes the
+        Run tick button and local runs. Nothing in this repository states a cadence in prose — if it
+        did, it would be wrong by now.
+      </p>
+    </div>
+  );
+}
+
 function Shell({
   group,
   total,
   matching,
   reasonless,
   tick,
+  cadence,
   children,
 }: {
   group: AuditGroup;
@@ -249,6 +353,7 @@ function Shell({
   matching: number;
   reasonless: number;
   tick: { reason: string; createdAt: Date } | null;
+  cadence: CadenceReport | null;
   children: React.ReactNode;
 }) {
   return (
@@ -318,6 +423,8 @@ function Shell({
             <p className="mt-1 text-xs leading-relaxed break-words text-ink-400">{tick.reason}</p>
           </div>
         )}
+
+        {cadence !== null && <Cadence cadence={cadence} />}
       </div>
 
       {children}

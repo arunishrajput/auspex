@@ -2,22 +2,37 @@ name: Pipeline heartbeat
 
 # Advances the AuspeX pipeline state machine on a schedule.
 #
-# This is the BACKGROUND driver, and it is a backstop rather than a clock. The
-# dashboard's "Run tick" button is what actually advances the pipeline when someone
-# is looking at it, because GitHub's cron is best-effort: it is delayed under load,
-# free runners are dropped first, and GitHub pauses scheduled workflows on public
-# repos after ~60 days of inactivity. Nothing user-facing may depend on this firing
-# on time.
+# This is the BACKGROUND driver, and it is a backstop rather than a clock. GitHub
+# also pauses scheduled workflows on public repos after ~60 days of inactivity.
 #
-# MEASURED, not configured: the expression below asks for every five minutes and
-# GitHub delivers roughly every five hours on this repository. Runs observed on
-# 2026-09-29/30 landed at 12:55, 18:28, 22:32, 01:29 and 07:18 UTC — every one of
-# them successful. Do not quote the expression as the cadence anywhere; quote the
-# measurement. Closing the gap between the two is Phase 11's job.
+# ## The expression is a REQUEST. The cadence is on /audit, and it is measured.
+#
+# Phase 11 measured 46 hours of this workflow under the previous `*/5 * * * *`:
+# ten scheduled runs, 2026-09-28T20:42Z to 2026-09-30T18:50Z, mean gap 5h07m,
+# range 2h57m-6h44m, every one of them successful. That is **1.6% of the 554 runs
+# the expression asked for**. GitHub throttles scheduled workflows on public
+# repositories: they are delayed under load and free runners are dropped first.
+#
+# Two things changed as a result, and only one of them is a claim.
+#
+# 1. The expression now asks for twice an hour at minutes 7 and 37, not 288 times
+#    a day. GitHub's own documentation names "the start of every hour" as a
+#    high-load window, so the offset minutes follow its guidance rather than a
+#    hunch. Asking for 48 runs and receiving 5 is a defensible request; asking for
+#    554 and receiving 9 is a configuration that misdescribes the system to anyone
+#    reading it.
+#
+# 2. **Nothing anywhere claims what this delivers.** `/audit` computes the real
+#    cadence from `audit_log` on every request, so the figure a reader sees is the
+#    one the log supports. The effect of the change above is UNMEASURED as of this
+#    commit, and must not be quoted until it has several hours behind it.
+#
+# Nothing user-facing may depend on this firing on time. The dashboard's "Run tick"
+# button is what advances the pipeline when someone is watching.
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "7,37 * * * *"
   workflow_dispatch: # lets you trigger a tick by hand from the Actions tab
 
 concurrency:

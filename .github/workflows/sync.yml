@@ -9,18 +9,22 @@ name: Chain sync
 #
 # ## Read this before trusting the schedule
 #
-# The cron below says five minutes. GitHub does not honour it. Measured on this repository
-# 2026-09-29, the sibling `heartbeat.yml` — same `*/5` schedule — was delivered three times in
-# fourteen hours: 20:42Z, 00:36Z, 06:10Z. Scheduled workflows are explicitly best-effort and are
-# dropped under load, and free runners are the first to be dropped.
+# The expression is a request and GitHub does not honour it. Measured over 29 hours of
+# 2026-09-29/30: seven scheduled runs, mean gap 4h52m, range 2h53m-6h29m — 1.7% of what the
+# previous `*/5` asked for. Scheduled workflows are explicitly best-effort, delayed under load,
+# and free runners are dropped first. The sibling `heartbeat.yml` measured the same way.
 #
 # So this is a backstop measured in hours, not minutes, and nothing user-facing may depend on
-# it. It is cheap to leave running (a sync is well under a second, versus ~19s for a full tick),
+# it. It is cheap to leave running (a sync is well under a second, versus ~15s for a full tick),
 # and `workflow_dispatch` makes it a one-click repair when something has been missed.
+#
+# Minutes 19 and 49 rather than 7 and 37: this runs twelve minutes BEHIND the heartbeat, so on
+# the occasions GitHub delivers both, the sync indexes what the tick just broadcast rather than
+# racing it. Twelve minutes clears the three-block confirmation depth many times over.
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "19,49 * * * *"
   workflow_dispatch:
 
 concurrency:

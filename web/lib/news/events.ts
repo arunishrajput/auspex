@@ -95,6 +95,19 @@ export type ClusterReport = {
   deferredMerges: number;
 };
 
+export type ClusterPassOptions = {
+  /**
+   * Epoch ms after which adjudication stops asking. Absolute from the start of the tick.
+   *
+   * Passed straight through to `adjudicateBorderlinePairs`, which is where the only model calls
+   * in this stage are made. The deterministic half of the pass — loading candidates, all-pairs
+   * similarity, planning and writing the clusters — is not bounded by it, and does not need to
+   * be: 19,900 comparisons measure under 20ms (ADR-033), so the clock in this stage is spent
+   * entirely on the model.
+   */
+  deadlineMs?: number;
+};
+
 /**
  * Runs one clustering + confirmation pass.
  *
@@ -106,6 +119,7 @@ export type ClusterReport = {
 export async function runClusteringPass(
   now: Date,
   budget: LlmBudget,
+  options: ClusterPassOptions = {},
 ): Promise<ClusterReport> {
   const candidates = await loadCandidates(now);
 
@@ -140,7 +154,9 @@ export async function runClusteringPass(
       { title: item.title, summary: item.summary, independenceGroup: item.independenceGroup },
     ]),
   );
-  const adjudication = await adjudicateBorderlinePairs(firstPass.undecided, texts, budget);
+  const adjudication = await adjudicateBorderlinePairs(firstPass.undecided, texts, budget, {
+    deadlineMs: options.deadlineMs,
+  });
 
   const finalPass =
     adjudication.verdicts.size === 0

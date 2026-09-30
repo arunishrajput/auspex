@@ -132,17 +132,35 @@ function describe(item: ItemText): string {
   return `${item.title}${summary}`.slice(0, 900);
 }
 
+export type AdjudicationOptions = {
+  /**
+   * Epoch ms after which no further batch may be *started*. Absolute from the start of the tick.
+   *
+   * A call budget bounds how many models are asked; it does not bound how long they take. Four
+   * calls at the 22s per-call timeout is 88 seconds, against a function that is killed at 60 —
+   * so before Phase 11 this stage could consume a whole tick on its own and every stage after it
+   * yielded having done nothing. That is not hypothetical: it is what starved the resolution
+   * stage on both ticks that had a market to resolve (ADR-075).
+   *
+   * Omitted, it is infinite, which is what the tests and the calibration script want.
+   */
+  deadlineMs?: number;
+};
+
 /**
- * Adjudicates as many borderline pairs as the budget allows.
+ * Adjudicates as many borderline pairs as the budget **and the clock** allow.
  *
- * Pairs are ranked by `rankPairs`, so when the budget runs out the questions that went unasked
- * are the ones least able to change a confirmation. Anything not adjudicated stays unmerged.
+ * Pairs are ranked by `rankPairs`, so when either bound runs out the questions that went unasked
+ * are the ones least able to change a confirmation. Anything not adjudicated stays unmerged —
+ * the same safe direction as an unavailable model (ADR-030).
  */
 export async function adjudicateBorderlinePairs(
   pairs: readonly BorderlinePair[],
   texts: ReadonlyMap<string, ItemText>,
   budget: LlmBudget,
+  options: AdjudicationOptions = {},
 ): Promise<AdjudicationOutcome> {
+  const deadlineMs = options.deadlineMs ?? Number.POSITIVE_INFINITY;
   const outcome: AdjudicationOutcome = {
     verdicts: new Map(),
     notes: [],
@@ -157,6 +175,15 @@ export async function adjudicateBorderlinePairs(
   for (let offset = 0; offset < ordered.length; offset += PAIRS_PER_CALL) {
     if (budget.remaining === 0) {
       outcome.haltedBecause = `LLM budget spent after ${offset} of ${ordered.length} pairs`;
+      break;
+    }
+    // Checked before the call, never between a verdict and its application: this loop writes
+    // nothing to the database, so yielding here can only mean fewer merges — never a half-applied
+    // one. Fewer merges is the direction ADR-030 already chose for an unavailable model.
+    if (Date.now() > deadlineMs) {
+      outcome.haltedBecause =
+        `out of time for this tick after ${offset} of ${ordered.length} pairs — the rest stay ` +
+        `unmerged and the next tick re-ranks them`;
       break;
     }
 

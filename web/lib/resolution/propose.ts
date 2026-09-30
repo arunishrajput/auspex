@@ -24,8 +24,8 @@
  *
  * The draft is re-validated against the **chain**, not against the projection: the market's state
  * and its `challengeCount` are read with `getMarket()` at the current block, because a draft
- * queued three minutes ago may since have been challenged into a new round or finalised by
- * someone else. Then the call is simulated as the resolver. A revert that is *evidence* is
+ * queued on an earlier tick — hours ago, at the cadence the cron actually delivers — may since
+ * have been challenged into a new round or finalised by someone else. Then the call is simulated as the resolver. A revert that is *evidence* is
  * welcome in this project; a revert in front of an audience that means "we forgot to check" is
  * not.
  *

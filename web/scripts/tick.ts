@@ -23,7 +23,7 @@ async function main(): Promise<void> {
   console.log(`AuspeX tick — ${new Date().toISOString()}${skipIndex ? "  (news only)" : ""}`);
   console.log(`  time budget ${LOCAL_BUDGET_MS}ms (production uses 60,000 — see the header)\n`);
 
-  const report = await runTick({ skipIndex, maxDurationMs: LOCAL_BUDGET_MS });
+  const report = await runTick({ skipIndex, source: "cli", maxDurationMs: LOCAL_BUDGET_MS });
 
   if (report.ingest !== null) {
     const ingest = report.ingest;
