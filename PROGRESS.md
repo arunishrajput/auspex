@@ -531,33 +531,42 @@ available from the source, or from the tests, or from this file — it was on a 
 page had assembled out of the database, sitting next to a number that made the old explanation look
 sufficient.
 
-### The release, and the one tag that was moved
+### The release, and the tag that was moved twice
 
-**`v1.0.0` is an annotated tag at `c48a10f`**, tag object `7f97f2a`, pushed to
-`github.com/arunishrajput/auspex`. There is no GitHub Release object; it is a tag ref.
+**`v1.0.0` is an annotated tag at `e4d2aa5`**, pushed to `github.com/arunishrajput/auspex`. There is
+no GitHub Release object; it is a tag ref.
 
-**It was first pushed at `9ec7a35` and then moved, deliberately and with the owner's decision.** The
-deployed read-through happened after the tag, found the fifth drifted claim, and the fix landed in
-`c48a10f`. A tag whose own message says *"every claim in the repository was verified once"* pointing
-at a tree with a known-incomplete claim in its README would be the same species of untruth this
-release exists to remove. The tag was twelve minutes old, carried no GitHub Release and had no
-consumers, so moving it cost nothing real. **Written down rather than quietly done**, because a
-force-updated public ref is exactly the kind of thing a reader is entitled to know about, and because
-"the tag was moved" is a cheaper sentence than a reader discovering it from a reflog.
+**It was pushed three times, at `9ec7a35`, then `c48a10f`, then `e4d2aa5`, and both moves were
+force-updates of a public ref.** That is worth more than a footnote, so here is each one:
 
-**Main is ahead of the tag**, carrying this note and one correction after it — a commit cannot record
-the act of tagging itself.
+| Push | Why it moved | What the previous tree got wrong |
+|:--|:--|:--|
+| `9ec7a35` | first tag | — |
+| `c48a10f` | the deployed-page read-through found the fifth drifted claim | README blamed the retrieval floor alone for market #11's undrafted outcome |
+| `e4d2aa5` | a residual-number scan found the corrected percentage had not reached every file | `docs/ARCHITECTURE.md` still read **1.6%**, a number known to be wrong |
 
-⚠️ **One number in the tag message is imprecise, and it is not being retouched.** It says *"Fifteen
-commands, all passing"*. The exact figure is **sixteen command runs across thirteen distinct
-checks** — `test`, `build` and `check-links` each ran twice, on different inputs, and the first count
-folded two of those and missed one. Every other figure in the tag message (498 tests, 11/11
-preflight, 41 agent checks, 8 routes) is exact. The tag was moved once, for a claim that was
-materially incomplete; it is not being moved again for a count of commands, because a second
-force-update would cost a reader more confidence than the word "fifteen" costs them. The repository's
-prose carries the exact figure and this note says where the two disagree — which is the same trade
-this project made on `judge.cap_probe` and on the human refusal whose signed reason is the literal
-string `test`: **disclose the discrepancy, do not edit the artifact.**
+**The reasoning both times was the same.** A tag whose own message says *"every claim in the
+repository was verified once"* must not point at a tree containing a claim known to be false. The
+alternative — an immutable `v1.0.0` shipping a wrong number, with a note on `main` explaining it — is
+the thing this product exists not to do.
+
+⚠️ **An earlier version of this section said the tag would not be moved again**, and reasoned that a
+second force-update would cost a reader more confidence than an imprecise *count of commands* was
+worth. **That reasoning was sound and its premise was wrong**: it was written before the residual scan
+found `1.6%` still in `ARCHITECTURE.md`, which is not a count nuance but a wrong measurement of the
+same kind that caused the first move. The sentence is replaced rather than deleted, and this paragraph
+is why — a note that pre-commits to an action, and is then overtaken by a fact, should say so.
+
+**One number in the tag message stays imprecise, and this one genuinely is not worth a fourth push.**
+It says *"Fifteen commands, all passing"*; the exact figure is **sixteen command runs across thirteen
+distinct checks** — `test`, `build` and `check-links` each ran twice on different inputs. Every other
+figure in the tag message is exact: 498 tests, 11/11 preflight, 41 agent checks, 8 routes. The
+repository's prose carries the precise count and this note says where the two disagree, which is the
+same trade this project already made on the stored `judge.cap_probe` identifier and on the human
+refusal whose signed reason is the literal string `test`: **disclose the discrepancy, do not edit the
+artifact** — and where the artifact *was* edited, say how many times and why.
+
+**Main is at the tag.**
 
 ### Exit criteria
 
