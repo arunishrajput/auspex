@@ -7,9 +7,9 @@
 > Session protocol and hard rules live in `CLAUDE.md`. Phase tasks and exit criteria live in
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
-**Last updated:** 2026-09-30 (Phase 9)
-**Current status:** ✅ **Phase 9 complete.** The repository reads as a product: no surface addresses an assessor, "judge mode" is now the **cap probe**, there is a `LICENSE`, and the build record is kept and framed in `docs/BUILD_RECORD.md`. No address, hash or measurement changed; two sentences that had become false were corrected against the chain.
-**Next phase:** **Phase 10 — The new look.** A full visual redesign, light-first. Its one non-obvious prerequisite is to **extract the shared component layer before changing any colour** — see "What the next session needs to know".
+**Last updated:** 2026-09-30 (Phase 10)
+**Current status:** ✅ **Phase 10 complete.** The site is light, typographic and redesigned on all eight routes. A shared component layer was extracted first (3 shared components → 27 exports; 24 duplicated helper definitions → 0), then the palette was replaced by changing token *values* and keeping every name. The semantic five survive, measured rather than asserted: `pnpm --filter web check:contrast` proves AA on every real surface pair plus greyscale and three kinds of colour blindness, and `check:render` proves no horizontal scroll at 390px, a visible focus ring everywhere, and reduced-motion honoured. No chain data, address or hash changed.
+**Next phase:** **Phase 11 — Operational truth.** Fix the three claims this repository makes that are currently false or unearned. They are listed under "Two defects that make current claims false" and in `docs/BUILD_PLAN.md`.
 
 ---
 
@@ -34,8 +34,8 @@
 | Phase | Name | Status |
 |:--|:--|:--|
 | 9 | Reframe: from submission to product | ✅ Complete |
-| 10 | The new look — light, modern, funky, professional | ⬜ **NEXT** |
-| 11 | Operational truth — fix what makes a claim false | ⬜ not started |
+| 10 | The new look — light, modern, funky, professional | ✅ Complete |
+| 11 | Operational truth — fix what makes a claim false | ⬜ **NEXT** |
 | 12 | v1.0.0 — verify everything once, tag, release | ⬜ not started |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete with known gaps
@@ -337,6 +337,139 @@ different and worse gap than the one #21 describes, and it is the correction to 
 - **Two ADRs are both numbered 066**, and ADR-057 says *"superseded by ADR-066"* — now ambiguous.
 - **There is no `LICENSE` file**, though `README.md` says MIT.
 - Repo clean, in sync with `origin/main`, CI green on the last commit.
+
+---
+
+## Phase 10 — what shipped
+
+### The shape of it
+
+A complete visual redesign: light, papery, typographic. The old theme was dark mission-control,
+which suited a projector and worked against what this product actually asks of a visitor, which is
+to sit and read evidence.
+
+The phase was done in the order the plan insisted on, and the order was the whole trick.
+
+| | Before | After |
+|:--|--:|--:|
+| Shared components | **3** | **27** exports in 10 files (883 lines) |
+| Duplicated helper definitions across pages | **24** (9 names) | **0** |
+| Page code (`app/**/page.tsx`) | 4,989 lines | **4,689** |
+| Inline colour-token references in `app/` | 1,228 | **1,054** |
+| Places the semantic tones were re-derived as class strings | **6** | **1** |
+| Tests | 420 | **429** |
+
+### Why the token names did not change, and why that is the whole redesign
+
+A census of how the ramp was actually used found unusual discipline: `ink-950/900/850` appear only
+as surfaces, `ink-800/700` only as borders and dividers, `ink-500` through `ink-100` only as text.
+**Nothing crosses over.** That meant the entire theme could be inverted by changing values and
+keeping every name — `bg-ink-950` was the darkest ground and is now the lightest, `text-ink-100`
+was the brightest text and is now the darkest, and both still mean the same thing: *furthest from
+the eye* and *the thing being read*. The number keeps its role, not its brightness.
+
+The same applies to the five semantic tones. 237 places render one of them as text directly through
+`text-{tone}-500`, so each tone is **one value** retuned to work as small text, as a hairline
+border, as a 12% tint and as an 8px status dot. Every one of those call sites became correct in a
+single edit. Adding a separate darker step for text would have meant two shades of the same claim
+on one page, which is the drift this phase existed to remove.
+
+### The measurement that changed the design — ADR-074
+
+Five colours cannot all clear AA on a white ground **and** stay far apart in greyscale. A search
+over hue and lightness (250k samples) could not push the worst pair past **1.13** in luminance
+ratio. That is a property of the colour space, not a failure of effort.
+
+Worse, the pairs that collapse under colour blindness form a **five-cycle** —
+bad–ok–signal–human–warn–bad — and every edge needs a lightness gap, because hue is what dichromacy
+removes. A cycle cannot be laid on a line with all its edges long. The intuitive ordering was tried
+first and measured: `signal`/`human` came out at **ΔE 3.1** under deuteranopia, which is one colour.
+Assigning the tones *alternately* around the cycle (bad, signal, warn, ok, human — lightest to
+darkest) puts every colliding pair at least two rungs apart.
+
+Final, measured: worst greyscale **1.19:1**, worst colour-blind separation **ΔE 11** (`ok`/`bad`
+under protanopia), every text token **≥4.5:1** on all four surfaces.
+
+**So the glyph is load-bearing.** `✓ ▲ ✕ ◆ ✍` live in the tone registry, not at call sites, so a
+tone cannot be used without one being available — and the Phase 10 exit criteria say this is the
+right answer: *"because they are never the only signal, verify each is paired with text or an
+icon."* A greyscale and a deuteranopia render of `/audit`'s action chips were read by eye to
+confirm the marks carry the claim where the colour no longer does.
+
+### The defect only the rendered page could show — an eighth time
+
+The first light-theme screenshot of `/markets` showed **crimson on every card**. `Pool NO` was
+`text-bad-500` — and on that same page `bad` is the `INVALIDATED` badge. The colour that means
+*refused, reverted or invalid*, the single most important signal this product has, was also being
+used to mean "the NO side of a bet". It had been that way since Phase 2 and nobody had questioned
+it; the dark theme hid it because crimson-on-near-black is quiet, and white made it shout.
+
+Fixed in four places — `/markets`, `/markets/[id]`, `/resolve`'s `SIDE_STYLE`, `/agents`'s decision
+row — by rendering sides in neutral ink and letting the label do the work. ADR-073.
+
+Two smaller ones from the same screenshots: the word *human* in the landing page's pipeline arrow
+was tinted `warn` while a `human` tone existed, and five action buttons were `signal`, which means
+"read from or linked to the chain" — a button is not a chain fact. Buttons are now the accent.
+
+### The accent is chrome and never data
+
+`accent` is a teal that appears in the nav, the eyebrows, the taglines, the grid wash, the empty
+states and the buttons — and nowhere a number lives. `check-contrast.mjs` asserts it stays ΔE ≥ 18
+from all five tones, so a reader never has to wonder whether the chrome is making a claim.
+
+### Typography
+
+Three faces, each with a job: **Bricolage Grotesque** for display (character at headline sizes),
+**Inter** for prose (most of this site is argument), **JetBrains Mono** for every hash, address, wei
+value and column name. The old theme set mono as the default for everything, which made the prose
+harder to read for no benefit. Self-hosted through `next/font`, so no runtime request to Google and
+no layout shift.
+
+### Two new verification commands — the phase added to the checks, it did not relax any
+
+```bash
+pnpm --filter web check:contrast    # AA on every real pair, greyscale, 3× colour blindness, glyphs
+pnpm --filter web check:render      # 390px overflow · focus rings · reduced motion, over all 8 routes
+```
+
+`check:contrast` reads `@theme` out of `globals.css` and needs nothing running. `check:render` needs
+a built server and Playwright, which is deliberately **not** a project dependency — it skips with an
+explanation rather than failing a build that cannot run it:
+
+```bash
+PLAYWRIGHT=/path/to/playwright/index.mjs BASE=http://localhost:3210 node scripts/check-render.mjs
+```
+
+### Live results
+
+| | |
+|:--|:--|
+| Routes redesigned and served | **8 / 8**, all 200 |
+| Horizontal scroll at 390px | none, on any route (Phase 7 checked three; this checked eight) |
+| Focus ring | visible on every focusable element — 430 checked across the eight routes |
+| `prefers-reduced-motion` | zero running animations on every route |
+| Contrast | every text token ≥4.5:1 on page, card, card-head and sunken surfaces |
+| `check:provenance` | passed — 148 files, every route still declares its origin |
+| `check:links` | passed — every hash, abbreviation and URL in the README still resolves |
+| Tests | **429** (420 web + 9 new for the tone registry, 57 contracts) |
+
+### Exit criteria
+
+- [x] All 8 routes redesigned and served — none left on the old theme.
+- [x] Light is the default and `color-scheme` matches; no route renders dark-on-dark or
+      light-on-light. Dark mode **dropped**, not half-shipped — ADR-072.
+- [x] **Contrast:** AA on all body and UI text, measured on real pairs by `check:contrast`.
+- [x] **The semantic five survive** — mutually distinguishable, and each paired with a glyph that
+      carries the claim into greyscale and dichromacy. Measured, and confirmed by eye on rendered
+      greyscale and deuteranopia captures. ADR-074.
+- [x] `<Provenance>`'s six origins remain distinct and `MOCK` is still the loudest possible badge
+      (it is the only tone using a solid `bg-bad-500/20` with a full-strength border).
+- [x] No horizontal scroll at 390px on all eight routes.
+- [x] `prefers-reduced-motion` honoured by every animation, verified in a browser with the
+      preference set.
+- [x] Keyboard focus visible on every interactive element against the new backgrounds.
+- [x] Full suite green; `check:provenance` and `check:links` pass; every route read top-to-bottom
+      in the browser, not assumed from the build.
 
 ---
 
@@ -1850,39 +1983,44 @@ from the Actions tab — RUNBOOK §"Notifications are not delivered by the cron"
 
 ## What the next session needs to know
 
-**You are starting Phase 10 — the visual redesign.** Phase 9 is done: the repository reads as a
-product, and nothing about the system's behaviour changed while doing it.
+**You are starting Phase 11 — operational truth.** Phase 10 is done: the site is redesigned, and
+nothing about the system's behaviour changed while doing it. Phase 11 is the opposite kind of work
+— it fixes three claims this repository makes that are currently false or unearned. They are listed
+under "Two defects that make current claims false" above and in `docs/BUILD_PLAN.md`.
 
 ### Start here, in this order
 
-1. **`docs/BUILD_PLAN.md` → Phase 10.** Read the whole phase before touching a colour. Its first task
-   is the one that makes the rest cheap, and skipping it is how the pages drift apart.
-2. **`docs/BUILD_RECORD.md`** — new in Phase 9, one page. It says which files are the engineering log
-   and which are product documentation, so you do not reframe something that is deliberately dated.
-3. **Verify the chain before trusting anything written here.** This file has gone stale between
+1. **`docs/BUILD_PLAN.md` → Phase 11.** The three claims, and what "earned" means for each.
+2. **Verify the chain before trusting anything written here.** This file has gone stale between
    sessions four times. `pnpm --filter web verify:resolution` prints every market's state in about
    forty seconds and writes nothing. Diff it against the numbers below before quoting them.
+3. **Market #11 was past its resolve deadline on 2026-10-01 02:18 UTC.** By the time you read this
+   the keeper has probably invalidated it. Check, do not assume.
 
-### What Phase 9 changed that Phase 10 will touch
+### What Phase 10 changed that Phase 11 will touch
 
-- **`/markets`'s footer is now computed** by `marketOrigins()` and rendered through `formatIds()`.
-  Phase 10 redesigns that page. **The sentence must stay derived** — that was the fourth time a
-  hand-written caption contradicted its own table, and ADR-070 is the record.
-- **The landing page's build-progress roadmap is gone**, replaced by a short pointer at
-  `docs/BUILD_RECORD.md`. Do not reintroduce a hand-maintained list on a live page.
-- **`lib/judge/` no longer exists.** It is `lib/probe/capProbe.ts`, the component is
-  `app/trust/CapProbeButton.tsx`, and the script is `pnpm --filter web probe:cap`.
-- **The `/trust` probe log and the `/audit` histogram each carry one explanatory sentence** about the
-  stored id `judge.cap_probe`. Both are load-bearing — ADR-069 — and neither may be dropped in the
-  redesign, because without them the string is a mystery on a page whose job is not to have any.
+- **There is a component layer now: `web/components/ui/`.** 27 exports, 883 lines, one barrel.
+  Before adding markup to a page, look there — `Card`, `CardHead`, `CardBody`, `CardFoot`, `Badge`,
+  `Callout`, `Stat`, `StatGrid`, `Counter`, `Field`, `Row`, `SpecRow`, `FieldBlock`, `EmptyState`,
+  `PageShell`, `PageHeader`, `SectionLabel`, `Section`, `ExtLink`, `TxLink`, `AddressLink`, `Mono`.
+  Twenty-four copy-pasted helpers were removed to build it; do not start a twenty-fifth.
+- **`components/ui/tone.ts` is the only place that decides what a trust claim looks like.** It was
+  six places. If you need a colour for a state, map it to a `Tone` and let the registry draw it.
+  **Never write `text-bad-500` at a call site for something that is not a refusal** — ADR-073 is
+  what that mistake cost last time.
+- **`TxLink` and `AddressLink` take the full value and shorten it themselves.** Do not hand-write an
+  abbreviation; four of the first twenty-seven in the README were wrong.
+- **Two new checks exist and both must keep passing:** `check:contrast` and `check:render`.
 
 ### Nothing is waiting on the user
 
-Phase 10 needs no wallet, no signature and no chain write. So did Phase 9.
+Phase 11 needs no wallet and no signature for its first two tasks. Whether the third needs a
+human-signed transaction depends on which fix is chosen — `docs/BUILD_PLAN.md` has the options.
 
-### Measured state, 2026-09-30 after Phase 9
+### Measured state, 2026-09-30 after Phase 10
 
-Verified by `verify:resolution`, `readAllMarkets()` and a DB read this session — not carried forward.
+**Unchanged by this phase** — Phase 10 wrote nothing to the chain or the database. These are the
+Phase 9 numbers, re-confirmed against the rendered pages this session.
 
 | | Live |
 |:--|:--|
@@ -1891,23 +2029,28 @@ Verified by `verify:resolution`, `readAllMarkets()` and a DB read this session �
 | Created by the operator `0xc71dC478…4ad24` | **4** — #1, 2 (Phase 1 smoke, **not** self-labelled), #3 and #8 (self-labelled) |
 | States | #1–3 `INVALIDATED` · #4–7, 9, 10, 12, 13 `OPEN` · #8 `FINALIZED`/`NO` · #11 `CLOSED`/`UNRESOLVED` |
 | Past close, awaiting an outcome | **#11** — resolve deadline 2026-10-01 02:18 UTC |
-| Confirmed `createMarket` intents | 9 `EXTERNAL` + 2 `SERVER` (markets 1 and 2 predate the intent engine and have no row) |
-| Reverted intents | 7 `placeBet` · 2 `claim` · 1 `finalizeResolution` |
+| Indexer cursor | block **5,840,427**, 47 logs stored |
+| `audit_log` rows | **424**, every one carrying a reason |
 | Cap probes in `audit_log` | **6** |
-| Tests | **477** (420 web · 57 contracts) |
+| Tests | **486** (429 web · 57 contracts) |
 
-### Phase 10 has one non-obvious prerequisite, and it is the whole phase
+### The palette, and the two things about it that are not obvious
 
-There are **three** shared components and **~1,200 inline colour-token references** across **5,191
-lines** of page code. A redesign attempted directly is a find-and-replace across all of it, and the
-pages will drift apart. **Extract the component layer first**, with behaviour unchanged and the suite
-green, and the redesign becomes cheap. The phase is written in that order for that reason.
+**Token names were kept and values inverted.** `bg-ink-950` is now the *lightest* surface and
+`text-ink-100` the *darkest* text. The number means "distance from the reader's eye", not
+brightness. This is why 1,054 call sites needed no edit. Read the header comment in
+`app/globals.css` before changing any of it.
 
-Colour in this app is semantic — `ok` / `warn` / `bad` / `human` / `signal` are trust claims, not
-decoration. Keep the token *names* and change their values.
+**The five tones sit on a deliberate luminance ladder and the order is not arbitrary.** bad (5.6:1)
+→ signal (6.7) → warn (8.1) → ok (9.7) → human (11.6), lightest to darkest. That sequence is an
+*alternating walk around the five-cycle of pairs that collapse under colour blindness*. Re-ordering
+them to something more intuitive will silently reintroduce a ΔE-3 collision. `check:contrast` will
+catch it; the header comment in `scripts/check-contrast.mjs` explains why.
 
-**A Tailwind v4 token that is not in `@theme` produces no CSS and no warning.** Two were used sixty
-times and did nothing (ADR-064). Check the *built* stylesheet, not the source.
+**A Tailwind v4 token that is not in `@theme` produces no CSS and no warning** (ADR-064). This bit
+again this phase in advance: `signal-400` was dropped from the theme, and its four call sites had to
+be found and changed or they would have rendered at their inherited colour. Check the *built*
+stylesheet: `grep -o "color-ink-500" .next/static/chunks/*.css`.
 
 ### The traps, carried forward because they keep firing
 
@@ -1916,10 +2059,12 @@ nobody was looking — the cron runs unattended and the owner clicks things. Pha
 transactions and a human refusal this file did not record; Phase 8's successor found four more
 markets; Phase 9 found that a sentence about which markets self-label had been wrong the whole time.
 
-**Read the rendered page, not the JSX.** Seven defects in this project have been invisible in source
-and obvious in one look at the served output — the latest being `Market s 4–7`, a conditional plural
-that compiled, typechecked and linted clean. `curl` the built page and read the prose. **Phase 10
-redesigns eight pages; this trap is waiting for it specifically.**
+**Read the rendered page, not the JSX.** **Eight** defects in this project have been invisible in
+source and obvious in one look at the served output. The latest was Phase 10's: `Pool NO` rendered
+in the refusal colour on every market card, three feet from an `INVALIDATED` badge meaning something
+else entirely. It had been in the code since Phase 2 and the dark theme hid it. `curl` the built
+page and read the prose — and now also *look* at it, because two of the eight were only visible as
+colour.
 
 **Prose beside data has to be derived from that data.** Five times now: ADR-065, ADR-067, the
 `/markets/8` caption, `/markets`'s id-range footer (ADR-070), and the landing page's build roadmap.

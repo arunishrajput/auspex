@@ -145,7 +145,8 @@ Faucet    : https://faucet.masterstroke.academy
 |---|---|---|
 | Contracts | Solidity 0.8.28, Hardhat 3, OpenZeppelin 5 | HH3 is the only one that runs on Node 26 |
 | DB | Neon Postgres + Drizzle ORM | SQL-first, fast cold starts, easy to explain |
-| App | Next.js 16 (App Router) + TypeScript + Tailwind | one deployable, API routes double as workers |
+| App | Next.js 16 (App Router) + TypeScript + Tailwind v4 | one deployable, API routes double as workers |
+| Design | light-first tokens in `app/globals.css`; components in `components/ui/` | colour is semantic here — read ADR-071/074 before changing a token |
 | Chain client | ethers v6 | the MST SDK is too thin to trust on the critical path |
 | Wallet | wagmi + viem, `injected()` connector | EIP-1193/6963 standard — works with BridgeKey, no vendor code |
 | LLM | `@google/genai`, Gemini free tier | user's choice; free |
@@ -171,7 +172,14 @@ pnpm --filter web agents:register  # seed members, fund agent wallets, register 
 pnpm --filter web verify:agents    # roles + registry + the cap boundary + kill switch. Writes nothing.
 pnpm --filter web agents:over-cap  # THE over-cap bet: sends cap+1 wei and the chain refuses it
 pnpm --filter web probe:cap        # the cap probe from the terminal — same code path as the button
+
+pnpm --filter web check:contrast   # AA on every real surface pair · greyscale · 3x colour blindness
+pnpm --filter web check:render     # 390px overflow · focus rings · reduced motion, over all 8 routes
 ```
+
+`check:render` needs a built server and Playwright, which is deliberately not a dependency of this
+project; it skips with an explanation rather than failing. To actually run it:
+`PLAYWRIGHT=/path/to/playwright/index.mjs BASE=http://localhost:3210 node scripts/check-render.mjs`.
 
 ## Repo layout
 

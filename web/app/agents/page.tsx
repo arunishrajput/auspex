@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { explorerUrl, formatMstc, shortHash } from "@/lib/chain";
 import { AUSPEX_MARKET_ADDRESS } from "@/lib/chain/deployment";
 import { agentSystemInstruction } from "@/lib/agents/analyst";
@@ -10,6 +9,14 @@ import {
 import { POLICY_RULES } from "@/lib/policy/policyGate";
 import { Provenance } from "@/components/Provenance";
 import { SiteNav } from "@/components/SiteNav";
+import {
+  Counter,
+  Field,
+  PageHeader,
+  PageShell,
+  Row,
+  SectionLabel,
+} from "@/components/ui";
 
 // Every on-chain figure here is an eth_call made on this request. Never cache it.
 export const dynamic = "force-dynamic";
@@ -44,198 +51,192 @@ export default async function AgentsPage() {
   ).length;
 
   return (
-    <main className="grid-backdrop min-h-dvh">
-      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
-        <header className="mb-8">
-          <Link
-            href="/"
-            className="font-mono text-xs text-ink-400 underline-offset-2 hover:text-ink-200 hover:underline"
-          >
-            ← AuspeX
-          </Link>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink-100 sm:text-4xl">
-            Member agents
-          </h1>
-          <p className="mt-3 max-w-2xl text-ink-300">
+    <PageShell>
+      <SiteNav current="/agents" />
+
+      <PageHeader
+        eyebrow="Bounded twice"
+        title="Member agents"
+        lede={
+          <>
             Each member has an AI agent that proposes a side, a confidence and a stake. It never
             decides any of those things. A{" "}
-            <span className="text-ink-100">pure, deterministic policy gate</span> clamps the stake
-            against six limits and records its reasons, and then the{" "}
-            <span className="text-ink-100">contract caps it again</span> — so the numbers below are
-            bounded twice, by code that does not trust the model and by a chain that does not trust
-            us.
-          </p>
-          {/* Two badges, because this page genuinely mixes two sources and conflating them is
-              exactly the mistake the component exists to prevent: the caps and balances are the
-              chain's, the decisions and reasons are ours. */}
-          <p className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-            <Provenance origin="CHAIN" detail="agents() caps · balances · agentRemainingOnMarket()" />
-            <Provenance origin="DB" detail="agent_decisions · agent_policies" />
-          </p>
-        </header>
-
-        <SiteNav current="/agents" />
-
-        {/* The counters that matter. All zero would mean the gates have never been exercised.
-         *
-         * When the database is unreachable these read `—`, not `0`. A zero beside "could not read
-         * the database" is a measurement claim the page is in no position to make, and it claims
-         * the flattering direction: "nothing was ever refused" reads as "nothing ever went wrong".
-         * Found by running the built app against an unreachable Postgres. */
+            <span className="text-ink-100">pure, deterministic policy gate</span> clamps the
+            stake against six limits and records its reasons, and then the{" "}
+            <span className="text-ink-100">contract caps it again</span> — so the numbers below
+            are bounded twice, by code that does not trust the model and by a chain that does
+            not trust us.
+          </>
         }
-        <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Counter
-            label="staked on chain"
-            value={payload.dbError !== null ? "—" : `${formatMstc(staked)} tMSTC`}
-            tone={payload.dbError !== null ? "dim" : "ok"}
-          />
-          <Counter
-            label="rejected by the gate"
-            value={payload.dbError !== null ? "—" : String(rejectedByGate)}
-            tone={payload.dbError !== null ? "dim" : rejectedByGate > 0 ? "warn" : "dim"}
-          />
-          <Counter
-            label="refused by the chain"
-            value={payload.dbError !== null ? "—" : String(refusedOnChain)}
-            tone={payload.dbError !== null ? "dim" : refusedOnChain > 0 ? "bad" : "dim"}
-          />
-          <Counter
-            label="agents"
-            value={payload.dbError !== null ? "—" : String(payload.panels.length)}
-            tone="dim"
-          />
-        </section>
+      >
+        {/* Two badges, because this page genuinely mixes two sources and conflating them is
+            exactly the mistake the component exists to prevent: the caps and balances are the
+            chain's, the decisions and reasons are ours. */}
+        <span className="flex flex-wrap gap-x-4 gap-y-2">
+          <Provenance origin="CHAIN" detail="agents() caps · balances · agentRemainingOnMarket()" />
+          <Provenance origin="DB" detail="agent_decisions · agent_policies" />
+        </span>
+      </PageHeader>
 
-        {payload.globalKillSwitch && (
-          <div className="mb-8 rounded-lg border border-bad-500/40 bg-bad-500/5 px-4 py-3">
-            <p className="font-mono text-sm text-bad-500">
-              AGENTS_KILL_SWITCH is on — every agent is halted
-            </p>
-            <p className="mt-2 text-xs leading-relaxed text-ink-400">
-              No agent is being screened, no model is being asked, and no transaction is being
-              prepared. This is an <span className="text-ink-300">off-chain</span> halt: the
-              contract was not involved and its caps are unchanged. Turning it off is an
-              environment variable, not a transaction.
-            </p>
-          </div>
-        )}
+      {/* The counters that matter. All zero would mean the gates have never been exercised.
+       *
+       * When the database is unreachable these read `—`, not `0`. A zero beside "could not read
+       * the database" is a measurement claim the page is in no position to make, and it claims
+       * the flattering direction: "nothing was ever refused" reads as "nothing ever went wrong".
+       * Found by running the built app against an unreachable Postgres. */
+      }
+      <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Counter
+          label="staked on chain"
+          value={payload.dbError !== null ? "—" : `${formatMstc(staked)} tMSTC`}
+          tone={payload.dbError !== null ? "quiet" : "ok"}
+        />
+        <Counter
+          label="rejected by the gate"
+          value={payload.dbError !== null ? "—" : String(rejectedByGate)}
+          tone={payload.dbError !== null || rejectedByGate === 0 ? "quiet" : "warn"}
+        />
+        <Counter
+          label="refused by the chain"
+          value={payload.dbError !== null ? "—" : String(refusedOnChain)}
+          tone={payload.dbError !== null || refusedOnChain === 0 ? "quiet" : "bad"}
+        />
+        <Counter
+          label="agents"
+          value={payload.dbError !== null ? "—" : String(payload.panels.length)}
+          tone="quiet"
+        />
+      </section>
 
-        {payload.dbError !== null && (
-          <div className="mb-8 rounded-lg border border-bad-500/40 bg-bad-500/5 px-4 py-3">
-            <p className="font-mono text-sm text-bad-500">could not read the database</p>
-            <p className="mt-2 font-mono text-xs text-ink-400">{payload.dbError}</p>
-          </div>
-        )}
+      {payload.globalKillSwitch && (
+        <div className="mb-8 rounded-xl border border-bad-500/40 bg-bad-500/5 px-4 py-3">
+          <p className="font-mono text-sm text-bad-500">
+            AGENTS_KILL_SWITCH is on — every agent is halted
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-ink-400">
+            No agent is being screened, no model is being asked, and no transaction is being
+            prepared. This is an <span className="text-ink-300">off-chain</span> halt: the
+            contract was not involved and its caps are unchanged. Turning it off is an
+            environment variable, not a transaction.
+          </p>
+        </div>
+      )}
 
-        {payload.chainError !== null && (
-          <div className="mb-8 rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3">
-            <p className="font-mono text-xs text-warn-500">
-              on-chain caps unavailable — {payload.chainError}
-            </p>
-            <p className="mt-1 text-xs text-ink-400">
-              The on-chain column below is left empty rather than filled with our own numbers. The
-              whole point of showing both is that they come from different places.
-            </p>
-          </div>
-        )}
+      {payload.dbError !== null && (
+        <div className="mb-8 rounded-xl border border-bad-500/40 bg-bad-500/5 px-4 py-3">
+          <p className="font-mono text-sm text-bad-500">could not read the database</p>
+          <p className="mt-2 font-mono text-xs text-ink-400">{payload.dbError}</p>
+        </div>
+      )}
 
-        {payload.panels.length === 0 && payload.dbError === null && (
-          <div className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-10 text-center">
-            <p className="text-ink-300">No member has an agent wallet yet.</p>
-            <p className="mt-2 font-mono text-xs text-ink-400">
-              pnpm --filter web agents:register
-            </p>
-          </div>
-        )}
+      {payload.chainError !== null && (
+        <div className="mb-8 rounded-xl border border-warn-500/40 bg-warn-500/5 px-4 py-3">
+          <p className="font-mono text-xs text-warn-500">
+            on-chain caps unavailable — {payload.chainError}
+          </p>
+          <p className="mt-1 text-xs text-ink-400">
+            The on-chain column below is left empty rather than filled with our own numbers. The
+            whole point of showing both is that they come from different places.
+          </p>
+        </div>
+      )}
 
-        <div className="space-y-4">
-          {payload.panels.map((panel) => (
-            <AgentCard key={panel.memberId} panel={panel} />
+      {payload.panels.length === 0 && payload.dbError === null && (
+        <div className="rounded-xl border border-ink-700 bg-ink-900 px-4 py-10 text-center">
+          <p className="text-ink-300">No member has an agent wallet yet.</p>
+          <p className="mt-2 font-mono text-xs text-ink-400">
+            pnpm --filter web agents:register
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {payload.panels.map((panel) => (
+          <AgentCard key={panel.memberId} panel={panel} />
+        ))}
+      </div>
+
+      {/* ---- The gate's rules, from the same module that enforces them ---- */}
+      <section className="mt-10">
+        <SectionLabel>What the gate checks, in order</SectionLabel>
+        <ol className="mt-3 space-y-1.5 rounded-xl border border-ink-700 bg-ink-900 px-4 py-4">
+          {POLICY_RULES.map((rule, index) => (
+            <li key={rule} className="flex gap-3 text-sm text-ink-300">
+              <span className="font-mono text-xs text-ink-500">{index + 1}</span>
+              <span>{rule}</span>
+            </li>
           ))}
+        </ol>
+        <p className="mt-3 text-xs leading-relaxed text-ink-400">
+          This list is exported from{" "}
+          <span className="font-mono text-ink-300">lib/policy/policyGate.ts</span> — the same
+          module that enforces it — so the page cannot describe a rule that is not applied. The
+          gate is a pure function: no network, no database, no clock. Time, balances and on-chain
+          caps are all passed in, which is why every branch above is covered by a unit test that
+          needs no infrastructure.
+        </p>
+      </section>
+
+      {/* ---- The decision log. The refusals are the point. ---- */}
+      <section className="mt-10">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <SectionLabel>Every decision, approved and refused</SectionLabel>
+          <span className="font-mono text-[11px] text-ink-400">
+            {payload.decisions.length} recorded
+          </span>
         </div>
 
-        {/* ---- The gate's rules, from the same module that enforces them ---- */}
-        <section className="mt-10">
-          <SectionLabel>What the gate checks, in order</SectionLabel>
-          <ol className="mt-3 space-y-1.5 rounded-lg border border-ink-700 bg-ink-900 px-4 py-4">
-            {POLICY_RULES.map((rule, index) => (
-              <li key={rule} className="flex gap-3 text-sm text-ink-300">
-                <span className="font-mono text-xs text-ink-500">{index + 1}</span>
-                <span>{rule}</span>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-3 text-xs leading-relaxed text-ink-400">
-            This list is exported from{" "}
-            <span className="font-mono text-ink-300">lib/policy/policyGate.ts</span> — the same
-            module that enforces it — so the page cannot describe a rule that is not applied. The
-            gate is a pure function: no network, no database, no clock. Time, balances and on-chain
-            caps are all passed in, which is why every branch above is covered by a unit test that
-            needs no infrastructure.
-          </p>
-        </section>
-
-        {/* ---- The decision log. The refusals are the point. ---- */}
-        <section className="mt-10">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <SectionLabel>Every decision, approved and refused</SectionLabel>
-            <span className="font-mono text-[11px] text-ink-400">
-              {payload.decisions.length} recorded
-            </span>
+        {payload.decisions.length === 0 ? (
+          <div className="rounded-xl border border-ink-700 bg-ink-900 px-4 py-10 text-center">
+            <p className="text-ink-300">No decision has been taken yet.</p>
+            <p className="mt-2 font-mono text-xs text-ink-400">pnpm --filter web tick</p>
           </div>
+        ) : (
+          <ul className="space-y-3">
+            {payload.decisions.map((decision) => (
+              <DecisionCard key={decision.id} decision={decision} />
+            ))}
+          </ul>
+        )}
+      </section>
 
-          {payload.decisions.length === 0 ? (
-            <div className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-10 text-center">
-              <p className="text-ink-300">No decision has been taken yet.</p>
-              <p className="mt-2 font-mono text-xs text-ink-400">pnpm --filter web tick</p>
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {payload.decisions.map((decision) => (
-                <DecisionCard key={decision.id} decision={decision} />
-              ))}
-            </ul>
-          )}
-        </section>
+      {/* ---- The prompt, verbatim ---- */}
+      <section className="mt-10">
+        <SectionLabel>The instruction every agent is given</SectionLabel>
+        <p className="mt-2 mb-3 text-xs leading-relaxed text-ink-400">
+          Trusted operator text. No article content ever reaches it — news goes into a user-role
+          message inside <span className="font-mono text-ink-300">&lt;untrusted_content&gt;</span>{" "}
+          tags. Note what the agent is <span className="text-ink-300">not</span> told: its
+          confidence threshold, and its caps in any unit. An agent that knew the threshold would
+          report it, and an agent that could name an amount could name the wrong one.
+        </p>
+        <pre className="overflow-x-auto rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-ink-300">
+          {agentSystemInstruction()}
+        </pre>
+      </section>
 
-        {/* ---- The prompt, verbatim ---- */}
-        <section className="mt-10">
-          <SectionLabel>The instruction every agent is given</SectionLabel>
-          <p className="mt-2 mb-3 text-xs leading-relaxed text-ink-400">
-            Trusted operator text. No article content ever reaches it — news goes into a user-role
-            message inside <span className="font-mono text-ink-300">&lt;untrusted_content&gt;</span>{" "}
-            tags. Note what the agent is <span className="text-ink-300">not</span> told: its
-            confidence threshold, and its caps in any unit. An agent that knew the threshold would
-            report it, and an agent that could name an amount could name the wrong one.
-          </p>
-          <pre className="overflow-x-auto rounded-lg border border-ink-700 bg-ink-950 px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-ink-300">
-            {agentSystemInstruction()}
-          </pre>
-        </section>
-
-        <footer className="mt-10 border-t border-ink-800 pt-6">
-          <p className="text-xs leading-relaxed text-ink-400">
-            Every agent wallet above holds <span className="text-ink-300">no role</span> on{" "}
-            <a
-              href={explorerUrl("address", AUSPEX_MARKET_ADDRESS)}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-signal-500 underline-offset-2 hover:underline"
-            >
-              {shortHash(AUSPEX_MARKET_ADDRESS, 8, 6)}
-            </a>
-            . It can place a capped bet and claim — it cannot create a market, propose a resolution,
-            grant a role or pause anything, and its winnings are paid to the registered owner
-            address rather than to itself. Those are contract rules, so they hold even with this
-            server fully compromised.{" "}
-            <span className="text-ink-300">
-              The honest limitation: agent keys are server-held and encrypted at rest, which is
-              hygiene. The on-chain caps are what actually bound the risk.
-            </span>
-          </p>
-        </footer>
-      </div>
-    </main>
+      <footer className="mt-10 border-t border-ink-800 pt-6">
+        <p className="text-xs leading-relaxed text-ink-400">
+          Every agent wallet above holds <span className="text-ink-300">no role</span> on{" "}
+          <a
+            href={explorerUrl("address", AUSPEX_MARKET_ADDRESS)}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-signal-500 underline-offset-2 hover:underline"
+          >
+            {shortHash(AUSPEX_MARKET_ADDRESS, 8, 6)}
+          </a>
+          . It can place a capped bet and claim — it cannot create a market, propose a resolution,
+          grant a role or pause anything, and its winnings are paid to the registered owner
+          address rather than to itself. Those are contract rules, so they hold even with this
+          server fully compromised.{" "}
+          <span className="text-ink-300">
+            The honest limitation: agent keys are server-held and encrypted at rest, which is
+            hygiene. The on-chain caps are what actually bound the risk.
+          </span>
+        </p>
+      </footer>
+    </PageShell>
   );
 }
 
@@ -254,7 +255,7 @@ function AgentCard({ panel }: { panel: AgentPanel }) {
       : panel.policy.perTxCapWei;
 
   return (
-    <section className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
+    <section className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
         <span className="font-mono text-sm text-ink-100">{panel.handle}</span>
         {halted ? (
@@ -408,7 +409,7 @@ function DecisionCard({ decision }: { decision: DecisionView }) {
 
   return (
     <li
-      className={`overflow-hidden rounded-lg border bg-ink-900 ${
+      className={`overflow-hidden rounded-xl border bg-ink-900 ${
         bypassed ? "border-bad-500/40" : "border-ink-700"
       }`}
     >
@@ -427,12 +428,9 @@ function DecisionCard({ decision }: { decision: DecisionView }) {
         >
           {effective.replace(/_/g, " ")}
         </span>
+        {/* The side is spelled out rather than coloured. It is a position, not a verdict. ADR-073. */}
         {decision.side !== null && (
-          <span
-            className={`font-mono text-[10px] tracking-wide uppercase ${
-              decision.side === "YES" ? "text-ok-500" : "text-bad-500"
-            }`}
-          >
+          <span className="font-mono text-[10px] tracking-wide text-ink-100 uppercase">
             {decision.side}
           </span>
         )}
@@ -569,52 +567,3 @@ function CapBar({
   );
 }
 
-function Counter({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "ok" | "warn" | "bad" | "dim";
-}) {
-  const colour =
-    tone === "ok"
-      ? "text-ok-500"
-      : tone === "warn"
-        ? "text-warn-500"
-        : tone === "bad"
-          ? "text-bad-500"
-          : "text-ink-200";
-
-  return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5">
-      <p className="font-mono text-[10px] tracking-wide text-ink-400 uppercase">{label}</p>
-      <p className={`mt-1 font-mono text-lg tabular-nums ${colour}`}>{value}</p>
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="font-mono text-[11px] tracking-widest text-ink-400 uppercase">{children}</h2>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="font-mono text-[10px] tracking-wide text-ink-400 uppercase">{label}</dt>
-      <dd className="mt-0.5 font-mono text-sm tabular-nums">{children}</dd>
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-      <dt className="w-24 shrink-0 text-ink-400">{label}</dt>
-      <dd className="min-w-0 text-ink-200">{children}</dd>
-    </div>
-  );
-}

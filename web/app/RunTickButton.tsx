@@ -28,11 +28,11 @@ export function RunTickButton() {
         type="button"
         onClick={onClick}
         disabled={isPending}
-        className="inline-flex shrink-0 items-center gap-2 rounded border border-signal-500/40 bg-signal-500/10 px-3 py-1.5 font-mono text-xs text-signal-500 transition-colors hover:border-signal-500/70 hover:bg-signal-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-accent-500/40 bg-accent-500/10 px-3 py-1.5 font-mono text-xs text-accent-600 transition-colors hover:border-accent-500/70 hover:bg-accent-500/20 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? (
           <>
-            <span className="size-2 animate-pulse rounded-full bg-signal-500" />
+            <span className="size-2 animate-pulse rounded-full bg-accent-500" />
             running tick…
           </>
         ) : (

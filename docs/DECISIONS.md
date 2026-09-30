@@ -1803,3 +1803,119 @@ instead, the sentence has eventually been the thing that was false.
 
 **Evidence:** six unit tests in `lib/trust/signers.test.ts` over the exact thirteen-market shape on
 chain, including one that asserts markets 1 and 2 are reported as *not* self-labelled.
+
+---
+
+### ADR-071 — Extract the shared component layer before changing a single colour
+
+**Decided:** Phase 10 spent its first pass moving repeated markup into `web/components/ui/` with
+behaviour unchanged and the suite green, and only then touched the palette.
+
+**Why.** The measurement made the argument. Eight routes shared **three** components between them
+and carried **1,228** inline colour-token references across **4,989** lines of page code. Nine
+helper components had been copy-pasted into five or six files each — twenty-four definitions of
+nine names — and they had already drifted: four different `SectionLabel`s, a `Field` that was three
+different shapes, `Stat` disagreeing with itself on type size and where the divider lived, and the
+semantic tones re-derived as class strings in **six** places (`TONE_CLASS` on `/trust`, ternaries in
+`/agents`, `/resolve` and `/review`, `STATE_STYLE` on `/markets` *and* `/markets/[id]`, two `tone()`
+functions on `/audit`). A palette change made directly on top of that is a find-and-replace across
+5,000 lines of JSX, and the pages end up disagreeing with each other in ways nobody notices until a
+screenshot.
+
+**What it cost.** A pass that produced no visible change, which is the least satisfying kind of
+work to do under a deadline. Two behaviours had to be preserved deliberately rather than
+normalised: `SectionLabel`'s margin is *not* baked into the shared component, because two of the
+six copies had `mb-3` and four did not, and the `mb-3` was restored at the ten call sites that used
+to get it for free. `Row`'s `break-words` was present in two copies and absent in two, and was
+unified on — it changes nothing for content that already fits.
+
+**What it bought.** 27 exports in 883 lines; page code down to **4,689** lines and inline colour
+references to **1,054**; zero duplicated helper definitions. The redesign that followed was then
+mostly one file. `Shell` still appears three times, and deliberately: those are page-specific
+headers that share a name and no implementation.
+
+**Evidence:** 420 tests green before the extraction and 420 after it, then 429 with the tone
+registry's own tests added.
+
+---
+
+### ADR-072 — Light is the only theme; dark mode is dropped rather than half-tuned
+
+**Decided:** `color-scheme: light`, one palette, no `prefers-color-scheme` branch. The Phase 10
+plan permitted keeping dark "if it falls out cheaply from the token layer". It did not.
+
+**Why.** The five semantic tones are not decoration — they are trust claims — and they are tuned to
+a white ground on a measured luminance ladder (ADR-074). A dark theme needs a second set of five
+tuned against a dark ground, with its own contrast measurements, its own greyscale separation and
+its own colour-blindness check. That is a second palette to keep honest, not a media query. On a
+product whose entire pitch is "check my numbers", shipping an unverified second theme would put the
+least legible version of the evidence one system setting away from every reader.
+
+**What it costs.** People who prefer dark interfaces get a light one. That is a real cost and it is
+not dismissed; it is simply smaller than the cost of two palettes where only one has been measured.
+
+**What would change the decision:** `scripts/check-contrast.mjs` learning to check a second set of
+tokens. The check is the gate, not the taste — if a dark palette can pass it, it can ship.
+
+---
+
+### ADR-073 — A market's two sides are not trust claims, so they stop using `ok` and `bad`
+
+**Decided:** `Pool YES` / `Pool NO`, a resolved outcome, and an agent's chosen side all render in
+neutral ink. The label carries the distinction. Four call sites changed: `/markets`,
+`/markets/[id]`, `/resolve`'s `SIDE_STYLE`, and `/agents`'s decision row.
+
+**Why — and it took the rendered page to see it.** Green-for-yes and red-for-no is a market
+convention, and it had been in this codebase since Phase 2 without anyone questioning it. The first
+light-theme screenshot of `/markets` made the problem obvious: **every card** carried crimson, and
+on that same page crimson is the `INVALIDATED` badge. The colour that means *refused, reverted or
+invalid* — the single most important signal this product has, the one the `/trust` page exists to
+display — was also being used to mean "the NO side of a bet". A reader scanning for refusals was
+being shown a refusal colour on every row, and a larger NO pool is not bad news in any case.
+
+**What it costs.** A reader loses an at-a-glance YES/NO cue and has to read a four-character label.
+In exchange `bad` means one thing on every page of the site.
+
+**The general rule this is an instance of:** a semantic tone is spent when it is used, and using it
+for something that is not a claim devalues it everywhere else. `components/ui/tone.ts` now documents
+what each of the five asserts, so the next person deciding whether something is `bad` has a sentence
+to check it against rather than an intuition.
+
+---
+
+### ADR-074 — The five tones climb a measured luminance ladder, and the glyph is what actually guarantees legibility
+
+**Decided:** each semantic tone is one value — used as small text, as a hairline border, as a 12%
+tint and as an 8px status dot — and the five are spread deliberately up a contrast ladder rather
+than clustered. Every tone carries a non-colour mark (`✓ ▲ ✕ ◆ ✍`) held in the registry, and
+`scripts/check-contrast.mjs` fails if one is missing.
+
+**The finding, which was not obvious going in.** Requiring five colours to clear AA on a white
+ground confines them to a narrow band of lightness — and lightness is the only thing greyscale
+preserves. A search over hue and lightness (250k samples, all five between 4.6:1 and 9.4:1) could
+not push the worst pair past **1.13** in luminance ratio. Five distinguishable-by-colour trust
+claims at AA on light is not achievable; it is a property of the colour space, not a failure of
+effort.
+
+**The ordering is load-bearing too.** The pairs that collapse under colour blindness —
+`ok`/`bad` and `warn`/`bad` (red against green), `ok`/`signal` (green against blue under
+tritanopia), `signal`/`human` and `warn`/`human` — form a five-cycle: bad–ok–signal–human–warn–bad.
+Every edge needs a lightness gap, because hue is what dichromacy removes, and a cycle cannot be laid
+on a line with all its edges long. Assigning the tones *alternately* around that cycle (bad, signal,
+warn, ok, human — lightest to darkest) puts every colliding pair at least two rungs apart. The
+intuitive ordering was tried first and measured: it left `signal`/`human` at **ΔE 3.1** under
+deuteranopia, which is one colour.
+
+**So the glyph is not ornament.** It is the thing that discharges the criterion, and the Phase 10
+exit criteria say so themselves — *"because they are never the only signal, verify each is paired
+with text or an icon"*. Keeping the mark in the registry rather than at the call site is what makes
+it mechanical: a tone cannot be used without one being available.
+
+**Measured, after:** worst greyscale separation **1.19:1**, worst colour-blind separation **ΔE 11**
+(`ok`/`bad` under protanopia — the classic red/green pair), every text token ≥4.5:1 on all four
+surfaces. A greyscale and a deuteranopia render of `/audit`'s action chips were read by eye to
+confirm the glyphs carry the claim where the colour no longer does.
+
+**What it costs.** `ok` is a deep emerald rather than a bright green and `warn` is a bronze rather
+than a vivid amber, because both sit high on the ladder. The tint grounds (`bg-{tone}-500/10`) keep
+the hue legible at a glance; the text is darker than a designer would pick by eye.

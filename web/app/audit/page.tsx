@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { Provenance } from "@/components/Provenance";
 import { SiteNav } from "@/components/SiteNav";
-import { explorerUrl, shortHash } from "@/lib/chain";
+import {
+  Badge,
+  Callout,
+  EmptyState,
+  Mono,
+  PageHeader,
+  PageShell,
+  SectionLabel,
+  TONE,
+  TxLink,
+  type Tone,
+} from "@/components/ui";
 import { hasDatabase } from "@/lib/db/client";
 import {
   AUDIT_GROUPS,
@@ -35,8 +46,15 @@ export const metadata = {
     "Every decision the pipeline made, approved and refused alike, with the reason recorded at the time.",
 };
 
-/** Colour by what the row means, so a reader can scan for refusals without reading every line. */
-function tone(action: string): string {
+/**
+ * What a row *means*, as one of the six semantic tones rather than a class string.
+ *
+ * This used to return `"text-bad-500"` directly, which made it the seventh place in the app that
+ * decided what a refusal looks like. It now returns a claim and `TONE` decides how the claim is
+ * drawn — so a refusal on this page and a refusal on `/trust` cannot drift apart, and each one
+ * picks up the glyph that keeps it legible in greyscale.
+ */
+function tone(action: string): Tone {
   if (
     action.endsWith("rejected") ||
     action.endsWith("refused") ||
@@ -45,7 +63,7 @@ function tone(action: string): string {
     action === "resolution.challenged" ||
     action === "resolution.propose_failed"
   ) {
-    return "text-bad-500";
+    return "bad";
   }
   if (
     action.endsWith("deferred") ||
@@ -53,20 +71,26 @@ function tone(action: string): string {
     action === "resolution.unsettled" ||
     action === "intent.retry"
   ) {
-    return "text-warn-500";
+    return "warn";
   }
   if (
     action.endsWith("approved") ||
     action.endsWith("confirmed") ||
     action === "resolution.proposed"
   ) {
-    return "text-ok-500";
+    return "ok";
   }
-  return "text-ink-300";
+  return "quiet";
 }
 
+/**
+ * Who acted. `human:` is the only one that gets a tone, because a person signing is the one fact
+ * on this page that a reader should be able to find by scanning. The rest are neutral: an agent,
+ * a keeper and deterministic code are all "the system did this", and tinting them three shades
+ * would imply a hierarchy of trust between them that does not exist.
+ */
 function actorTone(actor: string): string {
-  if (actor.startsWith("human:")) return "text-signal-500";
+  if (actor.startsWith("human:")) return "text-human-500";
   if (actor.startsWith("agent:")) return "text-ink-200";
   if (actor.startsWith("keeper:")) return "text-ink-300";
   return "text-ink-400";
@@ -83,7 +107,7 @@ export default async function AuditPage({
   if (!hasDatabase()) {
     return (
       <Shell group={group} total={0} matching={0} reasonless={0} tick={null}>
-        <div className="rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3">
+        <div className="rounded-xl border border-warn-500/40 bg-warn-500/5 px-4 py-3">
           <p className="font-mono text-sm text-warn-500">
             DATABASE_URL is not configured on this deployment.
           </p>
@@ -113,30 +137,24 @@ export default async function AuditPage({
       tick={tick}
     >
       {page.error !== null ? (
-        <div className="rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3">
-          <p className="font-mono text-sm text-warn-500">audit log unavailable</p>
-          <p className="mt-2 font-mono text-xs break-words text-ink-400">{page.error}</p>
-          <p className="mt-2 text-xs text-ink-400">
+        <Callout tone="warn" title="audit log unavailable">
+          <p className="font-mono break-words">{page.error}</p>
+          <p className="mt-2">
             The Neon free tier scales to zero, so the first request after a quiet period can take
             10–25 seconds. Slow is not broken.
           </p>
-        </div>
+        </Callout>
       ) : (
         <>
           {counts.length > 0 && (
             <section className="mb-8">
-              <h2 className="font-mono text-[11px] tracking-widest text-ink-400 uppercase">
-                Every action ever recorded, and how often
-              </h2>
+              <SectionLabel>Every action ever recorded, and how often</SectionLabel>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {counts.map((row) => (
-                  <span
-                    key={row.action}
-                    className="rounded border border-ink-700 bg-ink-900 px-2 py-1 font-mono text-[10px]"
-                  >
-                    <span className={tone(row.action)}>{row.action}</span>
-                    <span className="ml-1.5 text-ink-500 tabular-nums">{row.count}</span>
-                  </span>
+                  <Badge key={row.action} tone={tone(row.action)} className="py-1 text-[10px]">
+                    <span className="normal-case">{row.action}</span>
+                    <span className="ml-1 tabular-nums opacity-70">{row.count}</span>
+                  </Badge>
                 ))}
               </div>
               {/* The one action id that does not match the name of the feature that writes it.
@@ -144,8 +162,8 @@ export default async function AuditPage({
                   something other than what is stored can hide anything. ADR-069. */}
               {counts.some((row) => row.action === "judge.cap_probe") && (
                 <p className="mt-3 text-xs leading-relaxed text-ink-500">
-                  <span className="font-mono">judge.cap_probe</span> is the cap probe on{" "}
-                  <span className="font-mono">/trust</span>, which was built under an earlier name.
+                  <Mono>judge.cap_probe</Mono> is the cap probe on <Mono>/trust</Mono>, which was
+                  built under an earlier name.
                   This table is append-only and is never migrated, so the label changed and the
                   stored identifier did not — one event keeps one name in a log that cannot be
                   rewritten.
@@ -155,40 +173,37 @@ export default async function AuditPage({
           )}
 
           <section>
-            <h2 className="font-mono text-[11px] tracking-widest text-ink-400 uppercase">
-              {AUDIT_GROUPS[group].label} — newest first
-            </h2>
+            <SectionLabel>{AUDIT_GROUPS[group].label} — newest first</SectionLabel>
 
             {page.entries.length === 0 ? (
-              <p className="mt-3 rounded-lg border border-ink-700 bg-ink-900 px-4 py-8 text-center text-xs text-ink-400">
-                No entries match this view yet.
-              </p>
+              <div className="mt-3">
+                <EmptyState title="No entries match this view yet.">
+                  The log is append-only, so this view being empty means nothing of this kind has
+                  happened — not that anything was removed.
+                </EmptyState>
+              </div>
             ) : (
               <ol className="mt-3 space-y-2">
                 {page.entries.map((entry) => (
                   <li
                     key={entry.id}
-                    className="rounded-lg border border-ink-800 bg-ink-900 px-4 py-2.5"
+                    className="rounded-xl border border-ink-800 bg-ink-900 px-4 py-2.5"
                   >
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <span className="font-mono text-[10px] text-ink-500 tabular-nums">
                         {entry.createdAt.toISOString().replace("T", " ").slice(0, 19)}
                       </span>
-                      <span className={`font-mono text-[11px] ${tone(entry.action)}`}>
+                      <span
+                        className={`font-mono text-[11px] font-medium ${TONE[tone(entry.action)].text}`}
+                      >
+                        <span aria-hidden="true">{TONE[tone(entry.action)].glyph} </span>
                         {entry.action}
                       </span>
                       <span className={`font-mono text-[10px] ${actorTone(entry.actor)}`}>
                         {entry.actor}
                       </span>
                       {entry.txHash !== null && (
-                        <a
-                          href={explorerUrl("tx", entry.txHash)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="ml-auto font-mono text-[10px] text-signal-500 underline-offset-2 hover:underline"
-                        >
-                          {shortHash(entry.txHash, 8, 6)} ↗
-                        </a>
+                        <TxLink hash={entry.txHash} className="ml-auto text-[10px]" />
                       )}
                     </div>
                     <p className="mt-1 text-xs leading-relaxed break-words text-ink-300">
@@ -199,7 +214,7 @@ export default async function AuditPage({
                         <summary className="cursor-pointer font-mono text-[10px] text-ink-500 hover:text-ink-300">
                           metadata
                         </summary>
-                        <pre className="mt-1 overflow-x-auto rounded border border-ink-800 bg-ink-950 px-2.5 py-1.5 font-mono text-[10px] leading-relaxed break-all whitespace-pre-wrap text-ink-400">
+                        <pre className="mt-1 overflow-x-auto rounded-lg border border-ink-800 bg-ink-850 px-2.5 py-1.5 font-mono text-[10px] leading-relaxed break-all whitespace-pre-wrap text-ink-400">
                           {JSON.stringify(entry.metadata, null, 2)}
                         </pre>
                       </details>
@@ -237,19 +252,14 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="grid-backdrop min-h-dvh">
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
-        <header className="mb-8">
-          <Link
-            href="/"
-            className="font-mono text-xs text-ink-400 underline-offset-2 hover:text-ink-200 hover:underline"
-          >
-            ← AuspeX
-          </Link>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink-100 sm:text-4xl">
-            Audit
-          </h1>
-          <p className="mt-3 max-w-2xl text-ink-300">
+    <PageShell width="text">
+      <SiteNav current="/audit" />
+
+      <PageHeader
+        eyebrow="Append-only"
+        title="Audit"
+        lede={
+          <>
             Every decision this pipeline made, approved and refused alike, with the reason it
             recorded at the time. The table is append-only — nothing in the codebase updates or
             deletes a row.{" "}
@@ -261,69 +271,66 @@ function Shell({
             </Link>{" "}
             are the half worth reading: a log of successes alone would be indistinguishable from a
             system with no gates at all.
-          </p>
-          <p className="mt-3">
-            <Provenance origin="DB" detail="audit_log, append-only, ordered by created_at" />
-          </p>
+          </>
+        }
+      >
+        <Provenance origin="DB" detail="audit_log, append-only, ordered by created_at" />
+      </PageHeader>
 
-          <nav className="mt-5 flex flex-wrap gap-2">
-            {(Object.keys(AUDIT_GROUPS) as AuditGroup[]).map((key) => (
-              <Link
-                key={key}
-                href={key === "all" ? "/audit" : `/audit?view=${key}`}
-                className={`rounded border px-2.5 py-1 font-mono text-[11px] transition-colors ${
-                  key === group
-                    ? "border-signal-500/50 bg-signal-500/10 text-signal-500"
-                    : "border-ink-700 bg-ink-850 text-ink-300 hover:border-ink-600 hover:text-ink-100"
-                }`}
-              >
-                {AUDIT_GROUPS[key].label}
-              </Link>
-            ))}
-          </nav>
+      <div className="mb-10">
+        <nav className="flex flex-wrap gap-2">
+          {(Object.keys(AUDIT_GROUPS) as AuditGroup[]).map((key) => (
+            <Link
+              key={key}
+              href={key === "all" ? "/audit" : `/audit?view=${key}`}
+              className={`rounded-lg border px-2.5 py-1 font-mono text-[11px] transition-colors ${
+                key === group
+                  ? "border-accent-500/40 bg-accent-500/10 text-accent-600"
+                  : "border-ink-700 bg-ink-900 text-ink-400 hover:border-ink-600 hover:text-ink-100"
+              }`}
+            >
+              {AUDIT_GROUPS[key].label}
+            </Link>
+          ))}
+        </nav>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-ink-700 bg-ink-900 px-4 py-2.5 font-mono text-[11px]">
-            <span className="text-ink-400">
-              <span className="text-ink-100 tabular-nums">{total.toLocaleString("en-US")}</span>{" "}
-              entries total
-            </span>
-            <span className="text-ink-400">
-              <span className="text-ink-100 tabular-nums">{matching.toLocaleString("en-US")}</span>{" "}
-              in this view
-            </span>
-            <span className={reasonless === 0 ? "text-ok-500" : "text-bad-500"}>
-              {reasonless === 0
-                ? "every entry carries a reason"
-                : `${reasonless} entr(ies) with a blank reason`}
-            </span>
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 font-mono text-[11px]">
+          <span className="text-ink-400">
+            <span className="text-ink-100 tabular-nums">{total.toLocaleString("en-US")}</span>{" "}
+            entries total
+          </span>
+          <span className="text-ink-400">
+            <span className="text-ink-100 tabular-nums">{matching.toLocaleString("en-US")}</span>{" "}
+            in this view
+          </span>
+          <span className={reasonless === 0 ? "text-ok-500" : "text-bad-500"}>
+            {reasonless === 0
+              ? "every entry carries a reason"
+              : `${reasonless} entr(ies) with a blank reason`}
+          </span>
+        </div>
+
+        {tick !== null && (
+          <div className="mt-2 rounded-xl border border-ink-800 bg-ink-850 px-4 py-2.5">
+            <p className="font-mono text-[10px] tracking-wide text-ink-500 uppercase">
+              last pipeline tick — {tick.createdAt.toISOString()}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed break-words text-ink-400">{tick.reason}</p>
           </div>
-
-          {tick !== null && (
-            <div className="mt-2 rounded-lg border border-ink-800 bg-ink-950 px-4 py-2.5">
-              <p className="font-mono text-[10px] tracking-wide text-ink-500 uppercase">
-                last pipeline tick — {tick.createdAt.toISOString()}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed break-words text-ink-400">{tick.reason}</p>
-            </div>
-          )}
-        </header>
-
-        <SiteNav current="/audit" />
-
-        {children}
-
-        <footer className="mt-10 border-t border-ink-800 pt-6">
-          <p className="text-xs leading-relaxed text-ink-400">
-            Rows written by <span className="font-mono text-signal-500">human:0x…</span> are
-            decisions a person signed for with a key no server holds.{" "}
-            <span className="font-mono">agent:0x…</span> rows are proposals from a capped AI wallet —
-            most of them refused, by design. <span className="font-mono">keeper:0x…</span> rows are
-            the permissionless calls that finish a market, signed by a wallet holding no role at all.
-            The <span className="font-mono">system:*</span> rows are deterministic code with no
-            discretion.
-          </p>
-        </footer>
+        )}
       </div>
-    </main>
+
+      {children}
+
+      <footer className="mt-12 border-t border-ink-800 pt-6">
+        <p className="text-xs leading-relaxed text-ink-400">
+          Rows written by <span className="font-mono text-human-500">human:0x…</span> are decisions
+          a person signed for with a key no server holds. <Mono>agent:0x…</Mono> rows are proposals
+          from a capped AI wallet — most of them refused, by design. <Mono>keeper:0x…</Mono> rows
+          are the permissionless calls that finish a market, signed by a wallet holding no role at
+          all. The <Mono>system:*</Mono> rows are deterministic code with no discretion.
+        </p>
+      </footer>
+    </PageShell>
   );
 }

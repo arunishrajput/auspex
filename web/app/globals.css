@@ -1,69 +1,185 @@
 @import "tailwindcss";
 
 /*
- * AuspeX — mission-control aesthetic.
- * Dark, dense, monospace-leaning. Every number on screen is real chain or DB state,
- * so the design's job is to make provenance legible, not to decorate.
+ * AuspeX — the look.
+ *
+ * Light, papery, and typographic: an instrument you read rather than a console you monitor. The
+ * previous theme was dark mission-control, which suited a demo on a projector and worked against
+ * the thing this product actually asks of a visitor, which is to sit and read evidence.
+ *
+ * ## Why the token names did not change
+ *
+ * There are around 1,350 colour-token references across `app/`, and the census behind this file
+ * found the ramp is used with unusual discipline: `ink-950/900/880/850` are only ever surfaces,
+ * `ink-800/700` only ever borders and dividers, and `ink-500` through `ink-100` only ever text.
+ * Nothing crosses over. That meant the entire theme could be inverted by changing values and
+ * keeping every name — `bg-ink-950` was the darkest ground and is now the lightest, `text-ink-100`
+ * was the brightest text and is now the darkest, and both still mean "furthest from the reader's
+ * eye" and "the thing being read". Renaming instead would have churned 1,350 call sites to say
+ * the same thing.
+ *
+ * The number keeps its role, not its brightness: high is surface, low is text.
+ *
+ * ## The semantic five are values, not decoration
+ *
+ * `ok` / `warn` / `bad` / `signal` / `human` encode trust claims — a refusal, a human signature,
+ * an operator key, something the chain confirmed. 237 places render one of them as text directly
+ * through `text-{tone}-500`, which is why each tone is *one* value that has to work as small
+ * text, as a hairline border, as a 12% tint, and as an 8px status dot. Adding a separate darker
+ * step for text would have been two shades of the same claim on one page, which is the drift this
+ * phase existed to remove.
+ *
+ * Their luminances are deliberately spread rather than clustered. Making five colours all clear
+ * AA on a white ground pushes them towards the same lightness, and five colours of the same
+ * lightness are one grey in a black-and-white screenshot. So they climb a ladder — `ok` is the
+ * lightest that still clears 4.5:1 and `human` the darkest — which buys back the greyscale
+ * separation that AA on light would otherwise have cost. `scripts/check-contrast.mjs` measures
+ * both, plus three kinds of colour blindness, and fails the build rather than trusting anyone's
+ * monitor.
+ *
+ * ## The accent is chrome and never data
+ *
+ * `accent` is a vivid teal that appears in the nav, the eyebrows, the section rules, the grid and
+ * the empty states — and nowhere a number lives. A loud palette is safe in a trust product's
+ * furniture and dangerous inside a table of contradictory chain facts, so the checker also
+ * asserts the accent stays ΔE-distant from all five tones: a reader must never wonder whether
+ * the chrome is making a claim.
+ *
+ * A token that is not declared here produces no CSS and no warning — `ink-500` and `ink-200` were
+ * used sixty times before they existed and rendered at their inherited colour (ADR-064). Check
+ * the built stylesheet, not this file.
  */
 
 @theme {
-  --color-ink-950: #07090d;
-  --color-ink-900: #0b0e14;
-  --color-ink-850: #10141c;
-  --color-ink-800: #161b26;
-  --color-ink-700: #212837;
-  --color-ink-600: #323b4f;
-  /* ink-500 and ink-200 were used ~60 times across the app before they existed here, so every
-   * one of those utilities compiled to nothing and the text rendered at its inherited colour.
-   * Tailwind v4 generates a utility only for a token declared in @theme; a missing token is
-   * silent. Found by grepping the built CSS for the classes the pages actually use. */
-  --color-ink-500: #4d5871;
-  --color-ink-400: #6b7893;
-  --color-ink-300: #9aa6bf;
-  --color-ink-200: #c2cadd;
-  --color-ink-100: #dfe5f1;
+  /* --- surfaces: the page, a card, a card's head, a sunken well ----------------------------- */
+  --color-ink-950: #f1f4f9;
+  --color-ink-900: #ffffff;
+  --color-ink-880: #f8fafc;
+  --color-ink-850: #eef1f7;
 
-  --color-signal-500: #3ba1ff;
-  --color-signal-400: #6fbcff;
+  /* --- borders and dividers ---------------------------------------------------------------- */
+  --color-ink-800: #dfe5ef;
+  --color-ink-700: #cfd6e3;
+  --color-ink-600: #a3abbd;
 
-  --color-ok-500: #26c281;
-  --color-warn-500: #e8b339;
-  --color-bad-500: #f0524d;
-  --color-human-500: #a97bff;
+  /* --- text, faintest to darkest ----------------------------------------------------------- */
+  --color-ink-500: #666e80;
+  --color-ink-400: #525a6c;
+  --color-ink-300: #3a4152;
+  --color-ink-200: #242a38;
+  --color-ink-100: #10141e;
 
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  /* --- the semantic five. One value each; the ladder is the greyscale argument above. ------- */
+  --color-ok-500: #0d4f2f;
+  --color-warn-500: #704709;
+  --color-signal-500: #195bab;
+  --color-bad-500: #c91b4f;
+  --color-human-500: #59127e;
+
+  /* --- the accent: chrome, never data ------------------------------------------------------ */
+  --color-accent-500: #157f84;
+  --color-accent-600: #127378;
+
+  /* --- the focus ring. Its own token so it can be checked against every ground. ------------ */
+  --color-focus-500: #3779f9;
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
+
+/*
+ * Dark mode is deliberately absent. Phase 10's plan allowed keeping it if it fell out of the
+ * token layer cheaply; it did not. The semantic five are tuned to a light ground on a measured
+ * luminance ladder, and a second set of five tuned to a dark one is a second palette to keep
+ * honest, not a media query. Shipping a half-tuned dark theme on a product whose claim is "check
+ * my numbers" would put the least legible version of the evidence one system setting away. See
+ * ADR-072.
+ */
 
 html,
 body {
   background-color: var(--color-ink-950);
   color: var(--color-ink-100);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Subtle grid backdrop — reads as instrumentation, not decoration. */
+body {
+  font-family: var(--font-sans);
+}
+
+/*
+ * The backdrop. Still instrumentation rather than decoration, but now a faint accent-tinted
+ * grid on paper instead of a dark one, with a soft wash at the top so a long page does not read
+ * as one flat field.
+ */
 .grid-backdrop {
   background-image:
-    linear-gradient(to right, rgba(107, 120, 147, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(107, 120, 147, 0.06) 1px, transparent 1px);
-  background-size: 48px 48px;
+    radial-gradient(
+      ellipse 130% 55% at 50% -15%,
+      color-mix(in oklab, var(--color-accent-500) 7%, transparent),
+      transparent 72%
+    ),
+    linear-gradient(to right, color-mix(in oklab, var(--color-ink-600) 13%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-ink-600) 13%, transparent) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    72px 72px,
+    72px 72px;
+  background-repeat: no-repeat, repeat, repeat;
+}
+
+/*
+ * Keyboard focus, once, for everything. Set here rather than per component because a redesign
+ * that leaves one button without a visible ring has made the site unusable by keyboard, and the
+ * only reliable way to avoid that is to not rely on remembering.
+ */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-focus-500);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .live-dot {
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
+/* A hairline rule that fades out — under a section label, above a footer. */
+.rule-fade {
+  background-image: linear-gradient(
+    to right,
+    var(--color-ink-700),
+    color-mix(in oklab, var(--color-ink-700) 0%, transparent)
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   .live-dot {
     animation: none;
+  }
+  /* Covers the pulsing dots on the tick and probe buttons, which use Tailwind's own utility. */
+  .animate-pulse {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

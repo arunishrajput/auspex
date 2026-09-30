@@ -73,7 +73,7 @@ export function WalletGate({
 
   return (
     <ReviewerContext.Provider value={reviewer}>
-      <div className="mb-8 overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
+      <div className="mb-8 overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
           <span
             className={`size-2 shrink-0 rounded-full ${
@@ -87,7 +87,7 @@ export function WalletGate({
               type="button"
               onClick={() => connector !== undefined && connect({ connector })}
               disabled={isPending || connector === undefined}
-              className="ml-auto rounded border border-signal-500/40 bg-signal-500/10 px-3 py-1.5 font-mono text-xs text-signal-500 transition-colors hover:border-signal-500/70 hover:bg-signal-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ml-auto rounded-lg border border-accent-500/40 bg-accent-500/10 px-3 py-1.5 font-mono text-xs text-accent-600 transition-colors hover:border-accent-500/70 hover:bg-accent-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {connector === undefined
                 ? "no injected wallet found"

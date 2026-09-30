@@ -1,5 +1,13 @@
 import { Provenance } from "@/components/Provenance";
 import { SiteNav } from "@/components/SiteNav";
+import {
+  Callout,
+  PageHeader,
+  PageShell,
+  SectionLabel,
+  SpecRow,
+  Stat,
+} from "@/components/ui";
 import { explorerUrl, shortHash } from "@/lib/chain";
 import { hasDatabase } from "@/lib/db/client";
 import { humanAuthorityAddress } from "@/lib/approval/authority";
@@ -66,11 +74,11 @@ export default async function ReviewPage() {
   if (!hasDatabase()) {
     return (
       <Shell authority={authority}>
-        <Panel tone="warn" title="DATABASE_URL is not configured on this deployment.">
+        <Callout tone="warn" title="DATABASE_URL is not configured on this deployment.">
           The review queue lives in Postgres. This page shows the real reason it cannot be read
           rather than an empty queue, because an empty queue and an unreachable one look
           identical and mean opposite things.
-        </Panel>
+        </Callout>
       </Shell>
     );
   }
@@ -95,16 +103,16 @@ export default async function ReviewPage() {
   return (
     <Shell authority={authority}>
       {error !== null ? (
-        <Panel tone="warn" title="review queue unavailable">
+        <Callout tone="warn" title="review queue unavailable">
           <span className="font-mono text-xs break-words">{error}</span>
           <br />
           The Neon free tier scales to zero, so the first request after a quiet period can take
           10–25 seconds.
-        </Panel>
+        </Callout>
       ) : (
         <>
           <section className="mb-10">
-            <dl className="grid grid-cols-2 divide-ink-800 overflow-hidden rounded-lg border border-ink-700 bg-ink-900 sm:grid-cols-5 sm:divide-x">
+            <dl className="grid grid-cols-2 divide-ink-800 overflow-hidden rounded-xl border border-ink-700 bg-ink-900 sm:grid-cols-5 sm:divide-x">
               <Stat label="Awaiting you" value={String(counts.pendingReview)} tone="warn" />
               <Stat label="Approved" value={String(counts.approved)} tone="ok" />
               <Stat label="Rejected by you" value={String(counts.rejected)} />
@@ -122,13 +130,13 @@ export default async function ReviewPage() {
           </section>
 
           <section className="mb-12">
-            <SectionLabel>Awaiting human approval</SectionLabel>
+            <SectionLabel className="mb-3">Awaiting human approval</SectionLabel>
             {pending.length === 0 ? (
-              <Panel tone="quiet" title="Nothing is waiting.">
+              <Callout tone="quiet" title="Nothing is waiting.">
                 {counts.awaitingProposal > 0
                   ? `${counts.awaitingProposal} confirmed event(s) have not been drafted yet. Run a tick from the dashboard.`
                   : "No confirmed event is without a proposal. The pipeline needs a second independent publisher on a story before anything reaches this queue."}
-              </Panel>
+              </Callout>
             ) : (
               <ul className="flex flex-col gap-4">
                 {pending.map((proposal) => (
@@ -140,7 +148,7 @@ export default async function ReviewPage() {
 
           {decided.length > 0 && (
             <section className="mb-12">
-              <SectionLabel>Already decided — approvals and refusals alike</SectionLabel>
+              <SectionLabel className="mb-3">Already decided — approvals and refusals alike</SectionLabel>
               <ul className="flex flex-col gap-4">
                 {decided.map((proposal) => (
                   <ProposalCard key={proposal.id} proposal={proposal} decidable={false} />
@@ -198,8 +206,8 @@ function WorkedExample() {
 
   return (
     <section className="mb-10">
-      <SectionLabel>The gate, run on a deliberately bad draft</SectionLabel>
-      <div className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
+      <SectionLabel className="mb-3">The gate, run on a deliberately bad draft</SectionLabel>
+      <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
         <div className="flex flex-wrap items-center gap-2 border-b border-ink-800 px-4 py-2.5">
           <span className="rounded border border-warn-500/40 bg-warn-500/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wide text-warn-500 uppercase">
             constructed input
@@ -279,7 +287,7 @@ function ProposalCard({
           : "border-warn-500/40 bg-warn-500/10 text-warn-500";
 
   return (
-    <li className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
+    <li className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
       <div className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-3">
         <span
           className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] tracking-wide uppercase ${statusTone}`}
@@ -297,8 +305,8 @@ function ProposalCard({
       {/* The spec as discrete fields. Never a paragraph — that is the point of the page. */}
       {spec !== null && (
         <dl className="divide-y divide-ink-800">
-          <Field label="Question">{spec.question}</Field>
-          <Field label="Resolves at">
+          <SpecRow label="Question">{spec.question}</SpecRow>
+          <SpecRow label="Resolves at">
             <a
               href={spec.resolutionSourceUrl}
               target="_blank"
@@ -307,23 +315,23 @@ function ProposalCard({
             >
               {spec.resolutionSourceUrl} ↗
             </a>
-          </Field>
-          <Field label="Exact fact to check">{spec.resolutionCriteria}</Field>
-          <Field label="Betting closes">
+          </SpecRow>
+          <SpecRow label="Exact fact to check">{spec.resolutionCriteria}</SpecRow>
+          <SpecRow label="Betting closes">
             <span className="tabular-nums">
               {new Date(spec.closeTime * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC
             </span>
             <span className="ml-2 text-ink-500">({hoursFromNow(spec.closeTime)})</span>
-          </Field>
-          <Field label="Resolve deadline">
+          </SpecRow>
+          <SpecRow label="Resolve deadline">
             <span className="tabular-nums">
               {new Date(spec.resolveDeadline * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC
             </span>
-          </Field>
-          <Field label="Category">
+          </SpecRow>
+          <SpecRow label="Category">
             <span className="font-mono">{spec.category}</span>
-          </Field>
-          <Field label="Spec hash">
+          </SpecRow>
+          <SpecRow label="Spec hash">
             <span className="font-mono text-[11px] break-all text-ink-300">
               {proposal.specHash}
             </span>
@@ -331,7 +339,7 @@ function ProposalCard({
               keccak256 of the key-sorted spec above. This exact value goes on chain, and the
               contract refuses a second market for it.
             </span>
-          </Field>
+          </SpecRow>
         </dl>
       )}
 
@@ -500,42 +508,42 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="grid-backdrop min-h-dvh">
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
-        <header className="mb-10">
-          <SiteNav current="/review" />
+    <PageShell width="text">
+      <SiteNav current="/review" />
 
-          <h1 className="text-3xl font-semibold tracking-tight text-ink-100 sm:text-4xl">
-            Human review
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-300">
-            An AI agent drafted every specification below from confirmed news. None of them is a
-            market. A market exists only after a person reads the checklist and signs{" "}
-            <span className="font-mono text-ink-200">createMarket</span> with a key that is in a
-            browser wallet and on no server AuspeX runs.
-          </p>
-          <p className="mt-3 font-mono text-sm text-signal-400">AI proposes. The human decides.</p>
-          <p className="mt-3">
-            <Provenance origin="DB" detail="proposals · events · raw_items — nothing here is on chain yet" />
-          </p>
-        </header>
+      <PageHeader
+      eyebrow="The gate"
+      title="Human review"
+      lede={
+        <>
+          An AI agent drafted every specification below from confirmed news. None of them is a
+          market. A market exists only after a person reads the checklist and signs{" "}
+          <span className="font-mono text-ink-200">createMarket</span> with a key that is in a
+          browser wallet and on no server AuspeX runs.
+        </>
+      }
+      >
+      <p className="mb-3 border-l-2 border-accent-500 pl-3 font-display text-base font-medium text-accent-600">
+        AI proposes. The human decides.
+      </p>
+      <Provenance origin="DB" detail="proposals · events · raw_items — nothing here is on chain yet" />
+      </PageHeader>
 
-        <ReviewProviders>
-          <WalletGate authorityAddress={authority}>{children}</WalletGate>
-        </ReviewProviders>
+      <ReviewProviders>
+        <WalletGate authorityAddress={authority}>{children}</WalletGate>
+      </ReviewProviders>
 
-        <footer className="mt-12 border-t border-ink-800 pt-6">
-          <p className="text-xs leading-relaxed text-ink-400">
-            Every transaction hash on this page resolves on{" "}
-            <span className="font-mono">testnet.mstscan.com</span>, and every spec hash can be
-            re-derived from the fields shown above it: sort the keys, JSON-encode, keccak256.
-            The contract stores that hash and refuses a second market for the same one, so the
-            link between &ldquo;what a human approved&rdquo; and &ldquo;what exists on
-            chain&rdquo; is checkable by anyone, not asserted by us.
-          </p>
-        </footer>
-      </div>
-    </main>
+      <footer className="mt-12 border-t border-ink-800 pt-6">
+        <p className="text-xs leading-relaxed text-ink-400">
+          Every transaction hash on this page resolves on{" "}
+          <span className="font-mono">testnet.mstscan.com</span>, and every spec hash can be
+          re-derived from the fields shown above it: sort the keys, JSON-encode, keccak256.
+          The contract stores that hash and refuses a second market for the same one, so the
+          link between &ldquo;what a human approved&rdquo; and &ldquo;what exists on
+          chain&rdquo; is checkable by anyone, not asserted by us.
+        </p>
+      </footer>
+    </PageShell>
   );
 }
 
@@ -546,65 +554,5 @@ function hoursFromNow(unixSeconds: number): string {
   return hours < 1 ? `in ${Math.round(delta / 60)} min` : `in ${hours.toFixed(1)} h`;
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="mb-3 font-mono text-[11px] tracking-widest text-ink-400 uppercase">
-      {children}
-    </h2>
-  );
-}
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:gap-4">
-      <dt className="w-40 shrink-0 font-mono text-[10px] tracking-wide text-ink-500 uppercase sm:pt-0.5">
-        {label}
-      </dt>
-      <dd className="min-w-0 flex-1 text-xs leading-relaxed text-ink-200">{children}</dd>
-    </div>
-  );
-}
 
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "ok" | "warn" | "bad";
-}) {
-  const colour =
-    tone === "ok"
-      ? "text-ok-500"
-      : tone === "warn"
-        ? "text-warn-500"
-        : tone === "bad"
-          ? "text-bad-500"
-          : "text-ink-100";
-  return (
-    <div className="border-b border-ink-800 px-4 py-3 sm:border-b-0">
-      <dt className="font-mono text-[10px] tracking-wide text-ink-400 uppercase">{label}</dt>
-      <dd className={`mt-1 font-mono text-lg tabular-nums ${colour}`}>{value}</dd>
-    </div>
-  );
-}
-
-function Panel({
-  tone,
-  title,
-  children,
-}: {
-  tone: "warn" | "quiet";
-  title: string;
-  children: React.ReactNode;
-}) {
-  const border = tone === "warn" ? "border-warn-500/40 bg-warn-500/5" : "border-ink-700 bg-ink-900";
-  const titleColour = tone === "warn" ? "text-warn-500" : "text-ink-200";
-  return (
-    <div className={`rounded-lg border px-4 py-3 ${border}`}>
-      <p className={`font-mono text-sm ${titleColour}`}>{title}</p>
-      <p className="mt-2 text-xs leading-relaxed text-ink-400">{children}</p>
-    </div>
-  );
-}

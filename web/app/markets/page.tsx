@@ -1,11 +1,29 @@
 import Link from "next/link";
-import { explorerUrl, formatMstc, shortHash, MST_TESTNET } from "@/lib/chain";
+import { formatMstc, shortHash, MST_TESTNET } from "@/lib/chain";
 import { AUSPEX_MARKET_ADDRESS } from "@/lib/chain/deployment";
 import { getIndexerStatus, getMarketsForDisplay, type MarketView } from "@/lib/markets";
 import { humanAuthorityAddress } from "@/lib/approval/authority";
 import { formatIds, marketOrigins } from "@/lib/trust/signers";
 import { Provenance } from "@/components/Provenance";
 import { SiteNav } from "@/components/SiteNav";
+import {
+  AddressLink,
+  Badge,
+  Callout,
+  CardBody,
+  CardHead,
+  CardItem,
+  EmptyState,
+  ExtLink,
+  Field,
+  MARKET_STATE_TONE,
+  Mono,
+  PageHeader,
+  PageShell,
+  Row,
+  TONE,
+  TxLink,
+} from "@/components/ui";
 
 // Every number here is an eth_call made on this request. Never cache it.
 export const dynamic = "force-dynamic";
@@ -16,13 +34,6 @@ export const metadata = {
   description: "Every market on the AuspexMarket contract, read live from MST Testnet.",
 };
 
-const STATE_STYLE: Record<string, string> = {
-  OPEN: "border-ok-500/40 bg-ok-500/10 text-ok-500",
-  CLOSED: "border-warn-500/40 bg-warn-500/10 text-warn-500",
-  RESOLUTION_PROPOSED: "border-signal-500/40 bg-signal-500/10 text-signal-500",
-  FINALIZED: "border-ink-600 bg-ink-800 text-ink-300",
-  INVALIDATED: "border-bad-500/40 bg-bad-500/10 text-bad-500",
-};
 
 export default async function MarketsPage() {
   const [payload, indexer] = await Promise.all([getMarketsForDisplay(), getIndexerStatus()]);
@@ -34,201 +45,176 @@ export default async function MarketsPage() {
   const origin = marketOrigins(payload.markets, humanAuthorityAddress());
 
   return (
-    <main className="grid-backdrop min-h-dvh">
-      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
-        <header className="mb-8">
-          <Link
-            href="/"
-            className="font-mono text-xs text-ink-400 underline-offset-2 hover:text-ink-200 hover:underline"
-          >
-            ← AuspeX
-          </Link>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink-100 sm:text-4xl">
-            Markets
-          </h1>
-          <p className="mt-3 max-w-2xl text-ink-300">
+    <PageShell>
+      <SiteNav current="/markets" />
+
+      <PageHeader
+        eyebrow="On chain"
+        title="Markets"
+        lede={
+          <>
             Every market that exists on{" "}
-            <a
-              href={explorerUrl("address", AUSPEX_MARKET_ADDRESS)}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-signal-500 underline-offset-2 hover:underline"
-            >
-              {shortHash(AUSPEX_MARKET_ADDRESS, 8, 6)}
-            </a>
-            , read from the contract on this page load. Pools and states come from{" "}
-            <span className="font-mono text-ink-200">getMarket()</span>, not from our database —
-            so if our indexer were wrong or asleep, these numbers would still be right.
-          </p>
-          <p className="mt-3">
-            <Provenance origin="CHAIN" detail="getMarket() · marketCount(), per request" />
-          </p>
-        </header>
+            <AddressLink address={AUSPEX_MARKET_ADDRESS} />, read from the contract on this page
+            load. Pools and states come from <Mono>getMarket()</Mono>, not from our database — so
+            if our indexer were wrong or asleep, these numbers would still be right.
+          </>
+        }
+      >
+        <Provenance origin="CHAIN" detail="getMarket() · marketCount(), per request" />
+      </PageHeader>
 
-        <SiteNav current="/markets" />
-
-        {/* Indexer status. Separate from the market data on purpose: it is a claim about OUR
-            plumbing, not about the chain, and the two must not be confused. */}
-        <section className="mb-8 rounded-lg border border-ink-700 bg-ink-900 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-xs">
-            <span className="text-ink-400">indexer</span>
-            <Provenance origin="DB" detail="indexer_cursors · chain_events" />
-            {indexer.error === null ? (
-              <>
-                <span className="text-ink-200">
-                  cursor at block{" "}
-                  {indexer.lastBlock === null
-                    ? "—"
-                    : indexer.lastBlock.toLocaleString("en-US")}
-                </span>
-                <span className="text-ink-200">
-                  {indexer.chainEventCount ?? 0} logs stored
-                </span>
-              </>
-            ) : (
-              <span className="text-warn-500">unavailable — {indexer.error}</span>
-            )}
-          </div>
-        </section>
-
-        {payload.chainError !== null && (
-          <div className="mb-8 rounded-lg border border-bad-500/40 bg-bad-500/5 px-4 py-3">
-            <p className="font-mono text-sm text-bad-500">could not read the contract</p>
-            <p className="mt-2 font-mono text-xs text-ink-400">{payload.chainError}</p>
-            <p className="mt-2 text-xs text-ink-400">
-              This page shows the real error instead of a placeholder list. Nothing here is
-              ever invented.
-            </p>
-          </div>
-        )}
-
-        {payload.indexError !== null && (
-          <div className="mb-8 rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3">
-            <p className="font-mono text-xs text-warn-500">
-              indexed detail unavailable — {payload.indexError}
-            </p>
-            <p className="mt-1 text-xs text-ink-400">
-              Market state below is unaffected: it is read from the chain, not from the
-              database.
-            </p>
-          </div>
-        )}
-
-        {payload.chainError === null && payload.markets.length === 0 && (
-          <div className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-10 text-center">
-            <p className="text-ink-300">No markets exist on this contract yet.</p>
-            <p className="mt-2 text-xs text-ink-400">
-              <span className="font-mono">marketCount()</span> returned 0. The first market
-              appears when someone approves a drafted question in{" "}
-              <span className="font-mono">/review</span> and signs for it.
-            </p>
-          </div>
-        )}
-
-        {/* Approved, signed, not yet confirmed. Kept visually separate from the list below
-            because these rows are NOT on chain, and a page that mixed them would be claiming
-            something the chain has not said. */}
-        {payload.pending.length > 0 && (
-          <section className="mb-8 overflow-hidden rounded-lg border border-warn-500/40 bg-warn-500/5">
-            <div className="flex flex-wrap items-center gap-2 border-b border-warn-500/20 px-4 py-2.5">
-              <span className="rounded border border-warn-500/40 bg-warn-500/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wide text-warn-500 uppercase">
-                off chain
+      {/* Indexer status. Separate from the market data on purpose: it is a claim about OUR
+          plumbing, not about the chain, and the two must not be confused. */}
+      <section className="mb-8 rounded-xl border border-ink-700 bg-ink-900 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-xs">
+          <span className="text-ink-400">indexer</span>
+          <Provenance origin="DB" detail="indexer_cursors · chain_events" />
+          {indexer.error === null ? (
+            <>
+              <span className="text-ink-200">
+                cursor at block{" "}
+                {indexer.lastBlock === null
+                  ? "—"
+                  : indexer.lastBlock.toLocaleString("en-US")}
               </span>
-              <span className="font-mono text-[11px] text-ink-300">
-                approved by a human, transaction in flight — not yet on the contract
+              <span className="text-ink-200">
+                {indexer.chainEventCount ?? 0} logs stored
               </span>
-            </div>
-            <ul className="divide-y divide-warn-500/20">
-              {payload.pending.map((row) => (
-                <li key={row.specHash} className="px-4 py-2.5">
-                  <p className="text-sm text-ink-200">{row.question}</p>
-                  <p className="mt-1 font-mono text-[11px] break-all text-ink-500">
-                    specHash {row.specHash}
-                  </p>
-                </li>
-              ))}
-            </ul>
-            <p className="border-t border-warn-500/20 px-4 py-2.5 text-xs leading-relaxed text-ink-400">
-              A row sits here between a human signing and the indexer reading{" "}
-              <span className="font-mono">MarketCreated</span> out of a confirmed log. When that
-              happens the indexer <span className="text-ink-300">adopts</span> this row by its
-              spec hash and it moves into the list below with its real market id. One that stays
-              here means the transaction has not confirmed — worth seeing rather than hiding.
-            </p>
-          </section>
-        )}
+            </>
+          ) : (
+            <span className="text-warn-500">unavailable — {indexer.error}</span>
+          )}
+        </div>
+      </section>
 
-        <ul className="space-y-4">
-          {payload.markets
-            .slice()
-            .reverse()
-            .map((market) => (
-              <MarketCard key={market.onchainId} market={market} />
-            ))}
-        </ul>
-
-        <footer className="mt-10 border-t border-ink-800 pt-6">
-          <p className="text-xs leading-relaxed text-ink-400">
-            <span className="text-ink-300">
-              {origin.humanCreated.length === 1 ? "Market" : "Markets"}{" "}
-              {formatIds(origin.humanCreated)}{" "}
-              {origin.humanCreated.length === 1 ? "is" : "are"} the product path
-            </span>
-            : an AI agent drafted each question from two independently-confirmed news reports, a
-            person read it as a checklist, and the market exists because they signed for it in a
-            browser wallet.{" "}
-            {origin.operatorCreated.length > 0 && (
-              <>
-                {origin.operatorCreated.length === 1 ? "Market" : "Markets"}{" "}
-                {formatIds(origin.operatorCreated)}{" "}
-                {origin.operatorCreated.length === 1 ? "was" : "were"} created while commissioning
-                the contract, by the operator key rather than through the human gate
-                {origin.selfLabelled.length > 0 && (
-                  <>
-                    {" — "}
-                    {formatIds(origin.selfLabelled)} say so inside{" "}
-                    {origin.selfLabelled.length === 1 ? "its" : "their"} own on-chain question text
-                  </>
-                )}
-                {origin.unlabelled.length > 0 && (
-                  <>
-                    , and {formatIds(origin.unlabelled)} do not: they ask whether AuspeX itself would
-                    have a verified contract, which is plainly not a product question but never
-                    labels itself a test
-                  </>
-                )}
-                .{" "}
-              </>
-            )}
-            {origin.unknown.length > 0 && (
-              <>
-                {origin.unknown.length === 1 ? "Market" : "Markets"}{" "}
-                {formatIds(origin.unknown)}{" "}
-                {origin.unknown.length === 1 ? "has" : "have"} no indexed creating log on this page
-                load, so nothing is claimed about{" "}
-                {origin.unknown.length === 1 ? "it" : "them"} either way.{" "}
-              </>
-            )}
-            Every one of them is a real transaction on chain {MST_TESTNET.id}, not seeded demo data,
-            and you can tell the two kinds apart without trusting this page: check the{" "}
-            <span className="font-mono">from</span> address of each creating transaction on MSTScan.
-            The wallet that signed the product markets holds every role that requires human
-            judgement — <span className="font-mono">MARKET_CREATOR</span>,{" "}
-            <span className="font-mono">RESOLVER</span>,{" "}
-            <span className="font-mono">CHALLENGER</span> — and{" "}
-            <span className="text-ink-300">not</span>{" "}
-            <span className="font-mono">DEFAULT_ADMIN_ROLE</span>, so it cannot register an agent,
-            change a cap, or pause the contract.
-          </p>
+      {payload.chainError !== null && (
+        <Callout tone="bad" title="could not read the contract" className="mb-8">
+          <p className="font-mono">{payload.chainError}</p>
           <p className="mt-2">
-            <Provenance
-              origin="COMPUTED"
-              detail="marketOrigins() over the rows above · creator from the indexed MarketCreated log"
-            />
+            This page shows the real error instead of a placeholder list. Nothing here is ever
+            invented.
           </p>
-        </footer>
-      </div>
-    </main>
+        </Callout>
+      )}
+
+      {payload.indexError !== null && (
+        <Callout
+          tone="warn"
+          title={`indexed detail unavailable — ${payload.indexError}`}
+          className="mb-8"
+        >
+          Market state below is unaffected: it is read from the chain, not from the database.
+        </Callout>
+      )}
+
+      {payload.chainError === null && payload.markets.length === 0 && (
+        <EmptyState title="No markets exist on this contract yet.">
+          <Mono>marketCount()</Mono> returned 0. The first market appears when someone approves a
+          drafted question in <Mono>/review</Mono> and signs for it.
+        </EmptyState>
+      )}
+
+      {/* Approved, signed, not yet confirmed. Kept visually separate from the list below
+          because these rows are NOT on chain, and a page that mixed them would be claiming
+          something the chain has not said. */}
+      {payload.pending.length > 0 && (
+        <section className="mb-8 overflow-hidden rounded-xl border border-warn-500/50 bg-warn-500/10">
+          <div className="flex flex-wrap items-center gap-2 border-b border-warn-500/25 px-4 py-2.5">
+            <Badge tone="warn">off chain</Badge>
+            <span className="font-mono text-[11px] text-ink-300">
+              approved by a human, transaction in flight — not yet on the contract
+            </span>
+          </div>
+          <ul className="divide-y divide-warn-500/20">
+            {payload.pending.map((row) => (
+              <li key={row.specHash} className="px-4 py-2.5">
+                <p className="text-sm text-ink-200">{row.question}</p>
+                <p className="mt-1 font-mono text-[11px] break-all text-ink-500">
+                  specHash {row.specHash}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="border-t border-warn-500/20 px-4 py-2.5 text-xs leading-relaxed text-ink-400">
+            A row sits here between a human signing and the indexer reading{" "}
+            <Mono>MarketCreated</Mono> out of a confirmed log. When that
+            happens the indexer <span className="text-ink-300">adopts</span> this row by its
+            spec hash and it moves into the list below with its real market id. One that stays
+            here means the transaction has not confirmed — worth seeing rather than hiding.
+          </p>
+        </section>
+      )}
+
+      <ul className="space-y-4">
+        {payload.markets
+          .slice()
+          .reverse()
+          .map((market) => (
+            <MarketCard key={market.onchainId} market={market} />
+          ))}
+      </ul>
+
+      <footer className="mt-12 border-t border-ink-800 pt-6">
+        <p className="text-xs leading-relaxed text-ink-400">
+          <span className="text-ink-300">
+            {origin.humanCreated.length === 1 ? "Market" : "Markets"}{" "}
+            {formatIds(origin.humanCreated)}{" "}
+            {origin.humanCreated.length === 1 ? "is" : "are"} the product path
+          </span>
+          : an AI agent drafted each question from two independently-confirmed news reports, a
+          person read it as a checklist, and the market exists because they signed for it in a
+          browser wallet.{" "}
+          {origin.operatorCreated.length > 0 && (
+            <>
+              {origin.operatorCreated.length === 1 ? "Market" : "Markets"}{" "}
+              {formatIds(origin.operatorCreated)}{" "}
+              {origin.operatorCreated.length === 1 ? "was" : "were"} created while commissioning
+              the contract, by the operator key rather than through the human gate
+              {origin.selfLabelled.length > 0 && (
+                <>
+                  {" — "}
+                  {formatIds(origin.selfLabelled)} say so inside{" "}
+                  {origin.selfLabelled.length === 1 ? "its" : "their"} own on-chain question text
+                </>
+              )}
+              {origin.unlabelled.length > 0 && (
+                <>
+                  , and {formatIds(origin.unlabelled)} do not: they ask whether AuspeX itself would
+                  have a verified contract, which is plainly not a product question but never
+                  labels itself a test
+                </>
+              )}
+              .{" "}
+            </>
+          )}
+          {origin.unknown.length > 0 && (
+            <>
+              {origin.unknown.length === 1 ? "Market" : "Markets"}{" "}
+              {formatIds(origin.unknown)}{" "}
+              {origin.unknown.length === 1 ? "has" : "have"} no indexed creating log on this page
+              load, so nothing is claimed about{" "}
+              {origin.unknown.length === 1 ? "it" : "them"} either way.{" "}
+            </>
+          )}
+          Every one of them is a real transaction on chain {MST_TESTNET.id}, not seeded demo data,
+          and you can tell the two kinds apart without trusting this page: check the{" "}
+          <Mono>from</Mono> address of each creating transaction on MSTScan.
+          The wallet that signed the product markets holds every role that requires human
+          judgement — <Mono>MARKET_CREATOR</Mono>,{" "}
+          <Mono>RESOLVER</Mono>,{" "}
+          <Mono>CHALLENGER</Mono> — and{" "}
+          <span className="text-ink-300">not</span>{" "}
+          <Mono>DEFAULT_ADMIN_ROLE</Mono>, so it cannot register an agent,
+          change a cap, or pause the contract.
+        </p>
+        <p className="mt-2">
+          <Provenance
+            origin="COMPUTED"
+            detail="marketOrigins() over the rows above · creator from the indexed MarketCreated log"
+          />
+        </p>
+      </footer>
+    </PageShell>
   );
 }
 
@@ -238,35 +224,28 @@ function MarketCard({ market }: { market: MarketView }) {
     totalWei === 0n ? null : Number((market.poolYesWei * 10000n) / totalWei) / 100;
 
   return (
-    <li className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
+    <CardItem>
+      <CardHead>
         <Link
           href={`/markets/${market.onchainId}`}
           className="font-mono text-xs text-ink-400 underline-offset-2 hover:text-signal-500 hover:underline"
         >
           #{market.onchainId}
         </Link>
-        <span
-          className={`rounded border px-1.5 py-0.5 font-mono text-[10px] tracking-wide uppercase ${
-            STATE_STYLE[market.state] ?? "border-ink-600 bg-ink-800 text-ink-300"
-          }`}
-        >
+        <Badge tone={MARKET_STATE_TONE[market.state] ?? "quiet"}>
           {market.state.replace(/_/g, " ")}
-        </span>
+        </Badge>
         {market.outcome !== "UNRESOLVED" && (
           <span className="font-mono text-[10px] tracking-wide text-ink-300 uppercase">
             outcome {market.outcome}
           </span>
         )}
         {market.createdTxHash !== null && (
-          <a
-            href={explorerUrl("tx", market.createdTxHash)}
-            target="_blank"
-            rel="noreferrer"
-            className="ml-auto font-mono text-[11px] text-signal-500 underline-offset-2 hover:underline"
-          >
-            created in {shortHash(market.createdTxHash, 8, 6)} ↗
-          </a>
+          <TxLink
+            hash={market.createdTxHash}
+            label={`created in ${shortHash(market.createdTxHash, 8, 6)}`}
+            className="ml-auto text-[11px]"
+          />
         )}
         <Link
           href={`/markets/${market.onchainId}`}
@@ -276,17 +255,21 @@ function MarketCard({ market }: { market: MarketView }) {
         >
           lifecycle &amp; payout →
         </Link>
-      </div>
+      </CardHead>
 
-      <div className="px-4 py-4">
-        <p className="text-ink-100">{market.question}</p>
+      <CardBody>
+        <p className="font-display text-lg leading-snug text-ink-100">{market.question}</p>
 
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+          {/* Deliberately not `ok` and `bad`. A market's two sides are positions, not trust
+              claims: a larger NO pool is not bad news, and spending the refusal colour on it
+              would put crimson on every card beside an INVALIDATED badge that means something
+              entirely different. The labels carry the distinction. See ADR-073. */}
           <Field label="Pool YES">
-            <span className="text-ok-500">{formatMstc(market.poolYesWei)} tMSTC</span>
+            <span className="text-ink-100">{formatMstc(market.poolYesWei)} tMSTC</span>
           </Field>
           <Field label="Pool NO">
-            <span className="text-bad-500">{formatMstc(market.poolNoWei)} tMSTC</span>
+            <span className="text-ink-100">{formatMstc(market.poolNoWei)} tMSTC</span>
           </Field>
           <Field label="Implied YES">
             {yesPercent === null ? (
@@ -313,25 +296,15 @@ function MarketCard({ market }: { market: MarketView }) {
             <span className="break-all text-ink-300">{market.specHash}</span>
           </Row>
           <Row label="source">
-            <a
-              href={market.resolutionSourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="break-all text-signal-500 underline-offset-2 hover:underline"
-            >
+            <ExtLink href={market.resolutionSourceUrl} wrap>
               {market.resolutionSourceUrl}
-            </a>
+            </ExtLink>
           </Row>
           {market.evidenceUrl !== "" && (
             <Row label="evidence">
-              <a
-                href={market.evidenceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="break-all text-signal-500 underline-offset-2 hover:underline"
-              >
+              <ExtLink href={market.evidenceUrl} wrap>
                 {market.evidenceUrl}
-              </a>
+              </ExtLink>
             </Row>
           )}
           {market.challengeCount > 0 && (
@@ -342,30 +315,16 @@ function MarketCard({ market }: { market: MarketView }) {
         </dl>
 
         {market.projectionDrift !== null && (
-          <p className="mt-3 rounded border border-warn-500/40 bg-warn-500/5 px-2.5 py-1.5 font-mono text-[11px] text-warn-500">
-            indexer drift: {market.projectionDrift} — the chain figures above are the correct
-            ones
+          <p className="mt-3 flex items-baseline gap-1.5 rounded-xl border border-warn-500/50 bg-warn-500/10 px-2.5 py-1.5 font-mono text-[11px] text-warn-500">
+            <span aria-hidden="true">{TONE.warn.glyph}</span>
+            <span>
+              indexer drift: {market.projectionDrift} — the chain figures above are the correct
+              ones
+            </span>
           </p>
         )}
-      </div>
-    </li>
+      </CardBody>
+    </CardItem>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="font-mono text-[10px] tracking-wide text-ink-400 uppercase">{label}</dt>
-      <dd className="mt-0.5 font-mono text-sm tabular-nums">{children}</dd>
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-      <dt className="w-24 shrink-0 text-ink-400">{label}</dt>
-      <dd className="min-w-0 text-ink-200">{children}</dd>
-    </div>
-  );
-}

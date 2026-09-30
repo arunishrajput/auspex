@@ -10,6 +10,11 @@
  * React to `/` and `/markets` for the sake of one highlighted link. Known gap #14 in
  * `PROGRESS.md` is about keeping wallet code off the pages a visitor lands on first; this is the
  * same instinct applied to the nav.
+ *
+ * The current route is marked in the accent rather than in `signal`. `signal` means "read from
+ * or linked to the chain" everywhere else on the site, and spending it on "you are here" would
+ * make the one loud colour in the chrome look like a claim about data. The accent exists to
+ * carry furniture and is checked to stay clearly distinct from all five semantic tones.
  */
 
 import Link from "next/link";
@@ -45,7 +50,7 @@ export function SiteNav({ current, alerts }: SiteNavProps) {
       aria-label="Sections"
       className="-mx-4 mb-8 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <ul className="flex min-w-max items-center gap-1.5">
+      <ul className="flex min-w-max items-center gap-1">
         {ROUTES.map((route) => {
           const isCurrent = route.href === current;
           const alert = alerts?.[route.href];
@@ -54,7 +59,7 @@ export function SiteNav({ current, alerts }: SiteNavProps) {
               {isCurrent ? (
                 <span
                   aria-current="page"
-                  className="inline-flex items-center gap-1.5 rounded border border-signal-500/50 bg-signal-500/10 px-2.5 py-1.5 font-mono text-xs text-signal-400"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-accent-500/35 bg-accent-500/10 px-3 py-1.5 font-mono text-xs font-medium text-accent-600"
                 >
                   {route.label}
                   {alert !== undefined && <span className="text-warn-500">{alert}</span>}
@@ -62,7 +67,7 @@ export function SiteNav({ current, alerts }: SiteNavProps) {
               ) : (
                 <Link
                   href={route.href}
-                  className="inline-flex items-center gap-1.5 rounded border border-ink-700 bg-ink-850 px-2.5 py-1.5 font-mono text-xs text-ink-200 transition-colors hover:border-signal-500/50 hover:text-signal-400"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 font-mono text-xs text-ink-400 transition-colors hover:border-ink-700 hover:bg-ink-900 hover:text-ink-200"
                 >
                   {route.label}
                   {alert !== undefined && <span className="text-warn-500">{alert}</span>}

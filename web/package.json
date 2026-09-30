@@ -27,7 +27,9 @@
     "lifecycle": "tsx scripts/lifecycle.ts",
     "verify:resolution": "tsx scripts/verify-resolution.ts",
     "resolution:dry-run": "tsx scripts/resolution-dry-run.ts",
-    "probe:cap": "tsx scripts/cap-probe.ts"
+    "probe:cap": "tsx scripts/cap-probe.ts",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "check:render": "node scripts/check-render.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

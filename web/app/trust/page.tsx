@@ -5,6 +5,14 @@ import { hasDatabase } from "@/lib/db/client";
 import { DOCUMENTED_ORIGINS, ORIGIN_META, Provenance } from "@/components/Provenance";
 import { SiteNav } from "@/components/SiteNav";
 import {
+  Counter,
+  PageHeader,
+  PageShell,
+  SectionLabel,
+  TONE,
+  type Tone,
+} from "@/components/ui";
+import {
   capProbes,
   reasonlessActions,
   refusedTransactions,
@@ -58,282 +66,275 @@ export default async function TrustPage() {
   const [roles, data] = await Promise.all([roleReport(), loadCounters()]);
 
   return (
-    <main className="grid-backdrop min-h-dvh">
-      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
-        <header className="mb-6">
-          <Link
-            href="/"
-            className="font-mono text-xs text-ink-400 underline-offset-2 hover:text-ink-200 hover:underline"
-          >
-            ← AuspeX
-          </Link>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink-100 sm:text-4xl">
-            Trust
-          </h1>
-          <p className="mt-3 max-w-2xl text-ink-300">
+    <PageShell>
+      <SiteNav current="/trust" />
+
+      <PageHeader
+        eyebrow="What it cannot do"
+        title="Trust"
+        lede={
+          <>
             Every other page shows what this system did. This one shows what it{" "}
             <span className="text-ink-100">cannot</span> do — and asks the contract rather than
             telling you. The role matrix below is{" "}
             <span className="font-mono text-ink-200">hasRole()</span> read on this request; the
             counters are queries; the button at the bottom lets you make the chain refuse a
             transaction yourself, with no wallet.
-          </p>
-        </header>
+          </>
+        }
+      />
 
-        <SiteNav current="/trust" />
+      {/* ---- 1. The boundary ------------------------------------------------------------ */}
+      <section className="mb-10">
+        <SectionLabel className="mb-3">
+          The boundary
+          <Provenance origin="COMPUTED" detail="rules imported from the modules that enforce them" />
+        </SectionLabel>
 
-        {/* ---- 1. The boundary ------------------------------------------------------------ */}
-        <section className="mb-10">
-          <SectionLabel>
-            The boundary
-            <Provenance origin="COMPUTED" detail="rules imported from the modules that enforce them" />
-          </SectionLabel>
+        <div className="grid gap-3 lg:grid-cols-3">
+          <Column
+            tone="signal"
+            heading="An LLM may only propose"
+            foot="Schema-constrained at the API and re-validated with Zod before any code reads it. A model that returns nothing, times out or rate-limits results in no action at all."
+            items={[
+              "which of two headlines describe the same event, inside a fixed similarity band",
+              "a draft market question, category, close time and resolution source",
+              "a side, a confidence, and a stake as a fraction of a cap it is never shown",
+              "a draft outcome plus a verbatim quote from an article it was handed",
+            ]}
+          />
+          <Column
+            tone="human"
+            heading="Deterministic code decides"
+            foot="Pure functions, no clock of their own, no network. Every one of them is unit-tested from both sides of its boundary, and every refusal is written down with its reason."
+            // The counts are `.length` on the exported rule arrays, so this column cannot
+            // claim a rule count the code does not have. The sample below them is the first
+            // few policy rules verbatim — same arrays `/agents` and `/resolve` render in full.
+            items={[
+              `${VALIDATION_RULES.length} rules on a drafted market spec, before a human sees it`,
+              `${RESOLUTION_RULES.length} rules on a drafted outcome, every failing one collected`,
+              `${POLICY_RULES.length} rules on an agent's bet, in order`,
+              ...POLICY_RULES.slice(0, 3),
+            ]}
+          />
+          <Column
+            tone="ok"
+            heading="Only a human or the chain decides"
+            foot="No key the deployed application holds can do any of these. That is not a policy — it is the role matrix below."
+            items={[
+              "createMarket — signed in a browser wallet, by a person who read the spec",
+              "proposeResolution — signed in a browser wallet, with a public evidence URL",
+              "challengeResolution — signed in a browser wallet, inside the window",
+              "the per-transaction and per-market caps on every agent",
+              "registerAgent, deactivateAgent, pause — admin only, key held offline",
+            ]}
+          />
+        </div>
 
-          <div className="grid gap-3 lg:grid-cols-3">
-            <Column
-              tone="signal"
-              heading="An LLM may only propose"
-              foot="Schema-constrained at the API and re-validated with Zod before any code reads it. A model that returns nothing, times out or rate-limits results in no action at all."
-              items={[
-                "which of two headlines describe the same event, inside a fixed similarity band",
-                "a draft market question, category, close time and resolution source",
-                "a side, a confidence, and a stake as a fraction of a cap it is never shown",
-                "a draft outcome plus a verbatim quote from an article it was handed",
-              ]}
-            />
-            <Column
-              tone="human"
-              heading="Deterministic code decides"
-              foot="Pure functions, no clock of their own, no network. Every one of them is unit-tested from both sides of its boundary, and every refusal is written down with its reason."
-              // The counts are `.length` on the exported rule arrays, so this column cannot
-              // claim a rule count the code does not have. The sample below them is the first
-              // few policy rules verbatim — same arrays `/agents` and `/resolve` render in full.
-              items={[
-                `${VALIDATION_RULES.length} rules on a drafted market spec, before a human sees it`,
-                `${RESOLUTION_RULES.length} rules on a drafted outcome, every failing one collected`,
-                `${POLICY_RULES.length} rules on an agent's bet, in order`,
-                ...POLICY_RULES.slice(0, 3),
-              ]}
-            />
-            <Column
-              tone="ok"
-              heading="Only a human or the chain decides"
-              foot="No key the deployed application holds can do any of these. That is not a policy — it is the role matrix below."
-              items={[
-                "createMarket — signed in a browser wallet, by a person who read the spec",
-                "proposeResolution — signed in a browser wallet, with a public evidence URL",
-                "challengeResolution — signed in a browser wallet, inside the window",
-                "the per-transaction and per-market caps on every agent",
-                "registerAgent, deactivateAgent, pause — admin only, key held offline",
-              ]}
-            />
-          </div>
+        <p className="mt-3 text-xs leading-relaxed text-ink-400">
+          The left column is the only place a model appears, and nothing in it is a decision —
+          each item is a <span className="text-ink-200">suggestion that the middle column is
+          free to throw away</span>. The middle column has no network access and no clock it did
+          not receive as an argument, which is what makes it testable. The right column is
+          enforced by a contract whose source is verified on MSTScan, so it holds even if
+          everything to its left is compromised.
+        </p>
+      </section>
 
-          <p className="mt-3 text-xs leading-relaxed text-ink-400">
-            The left column is the only place a model appears, and nothing in it is a decision —
-            each item is a <span className="text-ink-200">suggestion that the middle column is
-            free to throw away</span>. The middle column has no network access and no clock it did
-            not receive as an argument, which is what makes it testable. The right column is
-            enforced by a contract whose source is verified on MSTScan, so it holds even if
-            everything to its left is compromised.
-          </p>
-        </section>
+      {/* ---- 2. Who holds what --------------------------------------------------------- */}
+      <section className="mb-10">
+        <SectionLabel className="mb-3">
+          Who holds what, according to the contract
+          <Provenance origin="CHAIN" detail={`hasRole() × ${ROLE_NAMES.length} per address`} />
+        </SectionLabel>
+        <RoleMatrix roles={roles} />
+      </section>
 
-        {/* ---- 2. Who holds what --------------------------------------------------------- */}
-        <section className="mb-10">
-          <SectionLabel>
-            Who holds what, according to the contract
-            <Provenance origin="CHAIN" detail={`hasRole() × ${ROLE_NAMES.length} per address`} />
-          </SectionLabel>
-          <RoleMatrix roles={roles} />
-        </section>
+      {/* ---- 3. The kill switch -------------------------------------------------------- */}
+      <section className="mb-10">
+        <SectionLabel className="mb-3">
+          Kill switches
+          <Provenance origin="CHAIN" detail="paused() + an eth_call of pause()" />
+        </SectionLabel>
+        <KillSwitches roles={roles} />
+      </section>
 
-        {/* ---- 3. The kill switch -------------------------------------------------------- */}
-        <section className="mb-10">
-          <SectionLabel>
-            Kill switches
-            <Provenance origin="CHAIN" detail="paused() + an eth_call of pause()" />
-          </SectionLabel>
-          <KillSwitches roles={roles} />
-        </section>
+      {/* ---- 4. What has been refused -------------------------------------------------- */}
+      <section className="mb-10">
+        <SectionLabel className="mb-3">
+          What has been refused
+          <Provenance origin="DB" detail="GROUP BY over proposals · resolution_drafts · agent_decisions · onchain_intents" />
+        </SectionLabel>
 
-        {/* ---- 4. What has been refused -------------------------------------------------- */}
-        <section className="mb-10">
-          <SectionLabel>
-            What has been refused
-            <Provenance origin="DB" detail="GROUP BY over proposals · resolution_drafts · agent_decisions · onchain_intents" />
-          </SectionLabel>
-
-          {data.error !== null ? (
-            <ErrorPanel title="refusal counters unavailable" detail={data.error}>
-              These are live queries against Postgres on every load. The Neon free tier scales to
-              zero, so the first request after a quiet period can take 10–25 seconds. Nothing on
-              this page falls back to a remembered number.
-            </ErrorPanel>
-          ) : data.counters === null ? null : (
-            <Refusals counters={data.counters} reasonless={data.reasonless} />
-          )}
-        </section>
-
-        {/* Every reverted transaction, in full. The most checkable artifact on the site. */}
-        {data.refused.length > 0 && (
-          <section className="mb-10">
-            <SectionLabel>
-              Transactions the chain refused
-              <Provenance origin="INDEXED" detail="onchain_intents where status = REVERTED" />
-            </SectionLabel>
-            <ul className="flex flex-col gap-2">
-              {data.refused.map((tx) => (
-                <li
-                  key={tx.id}
-                  className="overflow-hidden rounded-lg border border-bad-500/30 bg-bad-500/5"
-                >
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-bad-500/20 px-3 py-2">
-                    <span className="font-mono text-xs text-ink-200">{tx.functionName}</span>
-                    <span className="font-mono text-[11px] text-bad-500">
-                      {tx.revertReason ?? "revert reason not decoded"}
-                    </span>
-                    {tx.txHash !== null && (
-                      <a
-                        href={explorerUrl("tx", tx.txHash)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="ml-auto shrink-0 font-mono text-[11px] text-signal-500 underline-offset-2 hover:underline"
-                      >
-                        {shortHash(tx.txHash, 10, 8)} ↗
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-2 font-mono text-[11px] text-ink-400">
-                    <span>from {shortHash(tx.fromAddress, 8, 6)}</span>
-                    <span>value {tx.valueWei} wei</span>
-                    {tx.blockNumber !== null && <span>block {tx.blockNumber}</span>}
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-xs leading-relaxed text-ink-400">
-              These are <span className="text-ink-200">not bugs</span>. Each one is a transaction
-              this server signed and broadcast, and the contract refused. Open any hash: MSTScan
-              shows it as <span className="font-mono text-bad-500">Reverted</span> with the
-              contract&apos;s own error and its arguments. A system where this list is empty has
-              never had its on-chain limits tested.
-            </p>
-          </section>
+        {data.error !== null ? (
+          <ErrorPanel title="refusal counters unavailable" detail={data.error}>
+            These are live queries against Postgres on every load. The Neon free tier scales to
+            zero, so the first request after a quiet period can take 10–25 seconds. Nothing on
+            this page falls back to a remembered number.
+          </ErrorPanel>
+        ) : data.counters === null ? null : (
+          <Refusals counters={data.counters} reasonless={data.reasonless} />
         )}
+      </section>
 
-        {/* ---- 5. The cap probe ---------------------------------------------------------- */}
+      {/* Every reverted transaction, in full. The most checkable artifact on the site. */}
+      {data.refused.length > 0 && (
         <section className="mb-10">
-          <SectionLabel>
-            The cap probe — make the chain refuse something
-            <Provenance origin="CHAIN" detail="a real placeBet, signed on request" />
+          <SectionLabel className="mb-3">
+            Transactions the chain refused
+            <Provenance origin="INDEXED" detail="onchain_intents where status = REVERTED" />
           </SectionLabel>
-
-          <div className="rounded-lg border border-ink-700 bg-ink-900">
-            <div className="border-b border-ink-800 px-4 py-3">
-              <p className="text-sm leading-relaxed text-ink-300">
-                No wallet, no tMSTC, no faucet. This button reads a registered agent&apos;s
-                on-chain per-transaction cap from the contract, adds{" "}
-                <span className="text-ink-100">exactly one wei</span>, and sends the bet with the
-                policy gate deliberately not consulted — which is what a compromised server would
-                do. You get a real transaction hash that resolves on MSTScan.
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-ink-400">
-                It is safe to hand a stranger for one reason:{" "}
-                <span className="text-ink-200">the contract is going to refuse it</span>. An{" "}
-                <span className="font-mono">eth_call</span> is made first and nothing is broadcast
-                unless the chain confirms it will revert with{" "}
-                <span className="font-mono">AgentPerTxCapExceeded</span> — a probe that could
-                succeed does not run. A reverted <span className="font-mono">placeBet</span>{" "}
-                returns its value, so the cost of a click is gas.
-              </p>
-            </div>
-
-            <div className="px-4 py-4">
-              <CapProbeButton explorerBase={MST_TESTNET.explorerUrl} />
-            </div>
-
-            {data.probes.length > 0 && (
-              <div className="border-t border-ink-800">
-                <p className="px-4 pt-3 font-mono text-[11px] tracking-wide text-ink-400 uppercase">
-                  probes already run
-                  <Provenance
-                    className="ml-2"
-                    origin="DB"
-                    detail="audit_log where action = judge.cap_probe"
-                  />
-                </p>
-                <ul className="divide-y divide-ink-800">
-                  {data.probes.map((probe) => (
-                    <ProbeLogRow key={probe.id} probe={probe} />
-                  ))}
-                </ul>
-                <p className="px-4 pt-1 pb-3 text-[11px] leading-relaxed text-ink-500">
-                  The stored action id above reads{" "}
-                  <span className="font-mono">judge.cap_probe</span>. This feature was built under
-                  an earlier name, and <span className="font-mono">audit_log</span> is append-only —
-                  so the label was changed and the identifier was not, rather than giving one event
-                  two names in a log that cannot be rewritten.
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* ---- 6. The provenance legend -------------------------------------------------- */}
-        <section className="mb-10">
-          <SectionLabel>
-            How to read a badge on this site
-            <Provenance origin="COMPUTED" detail="components/Provenance.tsx" />
-          </SectionLabel>
-          <ul className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
-            {DOCUMENTED_ORIGINS.map((origin, i) => (
+          <ul className="flex flex-col gap-2">
+            {data.refused.map((tx) => (
               <li
-                key={origin}
-                className={`flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-4 ${
-                  i < DOCUMENTED_ORIGINS.length - 1 ? "border-b border-ink-800" : ""
-                }`}
+                key={tx.id}
+                className="overflow-hidden rounded-xl border border-bad-500/30 bg-bad-500/5"
               >
-                <span className="shrink-0">
-                  <Provenance origin={origin} />
-                </span>
-                <span className="text-xs leading-relaxed text-ink-300">
-                  {ORIGIN_META[origin].blurb}
-                </span>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-bad-500/20 px-3 py-2">
+                  <span className="font-mono text-xs text-ink-200">{tx.functionName}</span>
+                  <span className="font-mono text-[11px] text-bad-500">
+                    {tx.revertReason ?? "revert reason not decoded"}
+                  </span>
+                  {tx.txHash !== null && (
+                    <a
+                      href={explorerUrl("tx", tx.txHash)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ml-auto shrink-0 font-mono text-[11px] text-signal-500 underline-offset-2 hover:underline"
+                    >
+                      {shortHash(tx.txHash, 10, 8)} ↗
+                    </a>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-2 font-mono text-[11px] text-ink-400">
+                  <span>from {shortHash(tx.fromAddress, 8, 6)}</span>
+                  <span>value {tx.valueWei} wei</span>
+                  {tx.blockNumber !== null && <span>block {tx.blockNumber}</span>}
+                </div>
               </li>
             ))}
           </ul>
           <p className="mt-3 text-xs leading-relaxed text-ink-400">
-            There is a sixth origin for invented data, and it is{" "}
-            <span className="text-ink-200">not on this list because it cannot be used</span>.
-            Three independent things stop it: a CI check that fails if any file outside the
-            component so much as names it, a runtime guard that throws rather than render it in a
-            production build, and a scan of the build output for a badge that got through anyway.
-            Run <span className="font-mono">pnpm --filter web check:provenance</span> to see all
-            three.
+            These are <span className="text-ink-200">not bugs</span>. Each one is a transaction
+            this server signed and broadcast, and the contract refused. Open any hash: MSTScan
+            shows it as <span className="font-mono text-bad-500">Reverted</span> with the
+            contract&apos;s own error and its arguments. A system where this list is empty has
+            never had its on-chain limits tested.
           </p>
         </section>
+      )}
 
-        <footer className="border-t border-ink-800 pt-6">
-          <p className="text-xs leading-relaxed text-ink-400">
-            Contract{" "}
-            <a
-              href={explorerUrl("address", AUSPEX_MARKET_ADDRESS)}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-signal-500 underline-offset-2 hover:underline"
+      {/* ---- 5. The cap probe ---------------------------------------------------------- */}
+      <section className="mb-10">
+        <SectionLabel className="mb-3">
+          The cap probe — make the chain refuse something
+          <Provenance origin="CHAIN" detail="a real placeBet, signed on request" />
+        </SectionLabel>
+
+        <div className="rounded-xl border border-ink-700 bg-ink-900">
+          <div className="border-b border-ink-800 px-4 py-3">
+            <p className="text-sm leading-relaxed text-ink-300">
+              No wallet, no tMSTC, no faucet. This button reads a registered agent&apos;s
+              on-chain per-transaction cap from the contract, adds{" "}
+              <span className="text-ink-100">exactly one wei</span>, and sends the bet with the
+              policy gate deliberately not consulted — which is what a compromised server would
+              do. You get a real transaction hash that resolves on MSTScan.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-ink-400">
+              It is safe to hand a stranger for one reason:{" "}
+              <span className="text-ink-200">the contract is going to refuse it</span>. An{" "}
+              <span className="font-mono">eth_call</span> is made first and nothing is broadcast
+              unless the chain confirms it will revert with{" "}
+              <span className="font-mono">AgentPerTxCapExceeded</span> — a probe that could
+              succeed does not run. A reverted <span className="font-mono">placeBet</span>{" "}
+              returns its value, so the cost of a click is gas.
+            </p>
+          </div>
+
+          <div className="px-4 py-4">
+            <CapProbeButton explorerBase={MST_TESTNET.explorerUrl} />
+          </div>
+
+          {data.probes.length > 0 && (
+            <div className="border-t border-ink-800">
+              <p className="px-4 pt-3 font-mono text-[11px] tracking-wide text-ink-400 uppercase">
+                probes already run
+                <Provenance
+                  className="ml-2"
+                  origin="DB"
+                  detail="audit_log where action = judge.cap_probe"
+                />
+              </p>
+              <ul className="divide-y divide-ink-800">
+                {data.probes.map((probe) => (
+                  <ProbeLogRow key={probe.id} probe={probe} />
+                ))}
+              </ul>
+              <p className="px-4 pt-1 pb-3 text-[11px] leading-relaxed text-ink-500">
+                The stored action id above reads{" "}
+                <span className="font-mono">judge.cap_probe</span>. This feature was built under
+                an earlier name, and <span className="font-mono">audit_log</span> is append-only —
+                so the label was changed and the identifier was not, rather than giving one event
+                two names in a log that cannot be rewritten.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ---- 6. The provenance legend -------------------------------------------------- */}
+      <section className="mb-10">
+        <SectionLabel className="mb-3">
+          How to read a badge on this site
+          <Provenance origin="COMPUTED" detail="components/Provenance.tsx" />
+        </SectionLabel>
+        <ul className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+          {DOCUMENTED_ORIGINS.map((origin, i) => (
+            <li
+              key={origin}
+              className={`flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-4 ${
+                i < DOCUMENTED_ORIGINS.length - 1 ? "border-b border-ink-800" : ""
+              }`}
             >
-              {AUSPEX_MARKET_ADDRESS}
-            </a>{" "}
-            — verified source on MSTScan, so every guarantee on this page can be read in Solidity
-            rather than taken from us. Resolution is a{" "}
-            <span className="text-ink-200">trusted</span> role and the challenge window is
-            120 seconds: both are limitations, both are stated in the README, and neither is hidden
-            behind a claim on this page.
-          </p>
-        </footer>
-      </div>
-    </main>
+              <span className="shrink-0">
+                <Provenance origin={origin} />
+              </span>
+              <span className="text-xs leading-relaxed text-ink-300">
+                {ORIGIN_META[origin].blurb}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-xs leading-relaxed text-ink-400">
+          There is a sixth origin for invented data, and it is{" "}
+          <span className="text-ink-200">not on this list because it cannot be used</span>.
+          Three independent things stop it: a CI check that fails if any file outside the
+          component so much as names it, a runtime guard that throws rather than render it in a
+          production build, and a scan of the build output for a badge that got through anyway.
+          Run <span className="font-mono">pnpm --filter web check:provenance</span> to see all
+          three.
+        </p>
+      </section>
+
+      <footer className="border-t border-ink-800 pt-6">
+        <p className="text-xs leading-relaxed text-ink-400">
+          Contract{" "}
+          <a
+            href={explorerUrl("address", AUSPEX_MARKET_ADDRESS)}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-signal-500 underline-offset-2 hover:underline"
+          >
+            {AUSPEX_MARKET_ADDRESS}
+          </a>{" "}
+          — verified source on MSTScan, so every guarantee on this page can be read in Solidity
+          rather than taken from us. Resolution is a{" "}
+          <span className="text-ink-200">trusted</span> role and the challenge window is
+          120 seconds: both are limitations, both are stated in the README, and neither is hidden
+          behind a claim on this page.
+        </p>
+      </footer>
+    </PageShell>
   );
 }
 
@@ -401,7 +402,7 @@ function RoleMatrix({ roles }: { roles: RoleReport }) {
   const allServerKeysClean = serverKeys.length > 0 && serverKeys.every(holdsNoRole);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
+    <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
       <div
         className={`flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2.5 ${
           allServerKeysClean
@@ -597,7 +598,7 @@ function KillSwitches({ roles }: { roles: RoleReport }) {
   return (
     <div className="flex flex-col gap-3">
       {/* The on-chain switch: state, and who can pull it. */}
-      <div className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
+      <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink-800 px-4 py-2.5">
           <span
             className={`size-2 shrink-0 rounded-full ${
@@ -667,7 +668,7 @@ function KillSwitches({ roles }: { roles: RoleReport }) {
       </div>
 
       {/* The off-chain switches: weaker, ours, and honest about it. */}
-      <div className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
+      <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink-800 px-4 py-2.5">
           <span
             className={`size-2 shrink-0 rounded-full ${globalKillSwitch() ? "bg-bad-500" : "bg-ink-600"}`}
@@ -759,7 +760,7 @@ function Refusals({
         />
       </div>
 
-      <div className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-3">
+      <div className="rounded-xl border border-ink-700 bg-ink-900 px-4 py-3">
         <p className="text-xs leading-relaxed text-ink-400">
           <span className="font-mono text-ink-200">{totalRefused}</span> refusals against{" "}
           <span className="font-mono text-ink-200">
@@ -855,45 +856,6 @@ function ProbeLogRow({ probe }: { probe: CapProbeRow }) {
 // Small pieces
 // ---------------------------------------------------------------------------
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 font-mono text-[11px] tracking-widest text-ink-400 uppercase">
-      {children}
-    </h2>
-  );
-}
-
-const TONE_CLASS = {
-  ok: "border-ok-500/40 text-ok-500",
-  warn: "border-warn-500/40 text-warn-500",
-  bad: "border-bad-500/40 text-bad-500",
-  signal: "border-signal-500/40 text-signal-500",
-  human: "border-human-500/40 text-human-500",
-} as const;
-
-type Tone = keyof typeof TONE_CLASS;
-
-function Counter({
-  label,
-  value,
-  note,
-  tone,
-}: {
-  label: string;
-  value: string;
-  note: string;
-  tone: Tone;
-}) {
-  return (
-    <div className={`rounded-lg border bg-ink-900 px-3 py-3 ${TONE_CLASS[tone].split(" ")[0]}`}>
-      <p className="font-mono text-[10px] tracking-wide text-ink-400 uppercase">{label}</p>
-      <p className={`mt-1 font-mono text-2xl tabular-nums ${TONE_CLASS[tone].split(" ")[1]}`}>
-        {value}
-      </p>
-      <p className="mt-0.5 font-mono text-[10px] text-ink-400">{note}</p>
-    </div>
-  );
-}
 
 function Column({
   heading,
@@ -907,8 +869,8 @@ function Column({
   tone: Tone;
 }) {
   return (
-    <div className={`flex flex-col overflow-hidden rounded-lg border bg-ink-900 ${TONE_CLASS[tone].split(" ")[0]}`}>
-      <h3 className={`border-b border-ink-800 px-4 py-2.5 font-mono text-xs ${TONE_CLASS[tone].split(" ")[1]}`}>
+    <div className={`flex flex-col overflow-hidden rounded-xl border bg-ink-900 ${TONE[tone].border}`}>
+      <h3 className={`border-b border-ink-800 px-4 py-2.5 font-mono text-xs ${TONE[tone].text}`}>
         {heading}
       </h3>
       <ul className="flex flex-1 flex-col divide-y divide-ink-800">
@@ -941,7 +903,7 @@ function Buckets({
   const max = buckets.reduce((high, bucket) => Math.max(high, bucket.count), 0);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-ink-700 bg-ink-900">
+    <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
       <h3 className="border-b border-ink-800 px-4 py-2.5 font-mono text-xs text-ink-300">
         {heading}
       </h3>
@@ -952,7 +914,7 @@ function Buckets({
           {buckets.map((bucket) => (
             <li key={bucket.label} className="px-4 py-2">
               <div className="flex items-baseline gap-2">
-                <span className={`min-w-0 flex-1 font-mono text-[11px] break-all ${TONE_CLASS[tone].split(" ")[1]}`}>
+                <span className={`min-w-0 flex-1 font-mono text-[11px] break-all ${TONE[tone].text}`}>
                   {bucket.label}
                 </span>
                 <span className="shrink-0 font-mono text-xs text-ink-200 tabular-nums">
@@ -988,7 +950,7 @@ function ErrorPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-warn-500/40 bg-warn-500/5 px-4 py-3">
+    <div className="rounded-xl border border-warn-500/40 bg-warn-500/5 px-4 py-3">
       <p className="font-mono text-sm text-warn-500">{title}</p>
       <p className="mt-2 font-mono text-xs break-words text-ink-400">{detail}</p>
       <p className="mt-2 text-xs leading-relaxed text-ink-400">{children}</p>

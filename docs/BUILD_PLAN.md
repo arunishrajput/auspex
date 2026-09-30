@@ -406,21 +406,29 @@ drift between pages that nobody notices until a screenshot. **Extract the compon
 
 **Ships (visible):** the whole deployed site, redesigned.
 
+**Done, 2026-09-30.** All eight routes. The component layer came first (3 shared components → 27
+exports, 24 duplicated helper definitions → 0), then the palette by changing token *values* and
+keeping every name — which is why 1,054 call sites needed no edit. Two checks were added rather
+than any relaxed: `check:contrast` and `check:render`. Dark mode was dropped rather than
+half-tuned (ADR-072). The redesign found one real defect that only the rendered page could show:
+`Pool NO` was using the refusal colour on every market card (ADR-073). See PROGRESS.md
+"Phase 10 — what shipped".
+
 **Exit criteria**
-- [ ] All 8 routes redesigned and served — no route left on the old theme.
-- [ ] Light is the default and `color-scheme` matches; no route renders dark-on-dark or light-on-light
+- [x] All 8 routes redesigned and served — no route left on the old theme.
+- [x] Light is the default and `color-scheme` matches; no route renders dark-on-dark or light-on-light
       anywhere.
-- [ ] **Contrast:** WCAG AA on all body text and UI text (AAA on the primary reading column if it
+- [x] **Contrast:** WCAG AA on all body text and UI text (AAA on the primary reading column if it
       comes free). Check the funky accents on their real backgrounds, not on white.
-- [ ] **The semantic five survive.** `ok` / `warn` / `bad` / `human` / `signal` remain mutually
+- [x] **The semantic five survive.** `ok` / `warn` / `bad` / `human` / `signal` remain mutually
       distinguishable, including in a greyscale screenshot and under a deuteranopia simulation —
       because they are never the only signal, verify each is paired with text or an icon.
-- [ ] `<Provenance>`'s six origins remain visually distinct, and the `MOCK` badge is still the
+- [x] `<Provenance>`'s six origins remain visually distinct, and the `MOCK` badge is still the
       loudest thing that can appear on any page.
-- [ ] No horizontal scroll at 390 px on every route (Phase 7 checked three; this checks all eight).
-- [ ] `prefers-reduced-motion` honoured by every animation that ships.
-- [ ] Keyboard focus is visible on every interactive element against the new backgrounds.
-- [ ] Full suite green; `check:provenance` and `check:links` still pass; the deployed site read
+- [x] No horizontal scroll at 390 px on every route (Phase 7 checked three; this checks all eight).
+- [x] `prefers-reduced-motion` honoured by every animation that ships.
+- [x] Keyboard focus is visible on every interactive element against the new backgrounds.
+- [x] Full suite green; `check:provenance` and `check:links` still pass; the deployed site read
       top-to-bottom on every route, not assumed from the build.
 
 ---
