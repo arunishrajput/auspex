@@ -169,7 +169,8 @@ pnpm --filter web calibrate  # re-read the similarity distribution from live fee
 pnpm --filter web crash-test # the Phase 2 idempotency proof (creates a REAL market on chain)
 
 pnpm --filter web agents:register  # seed members, fund agent wallets, register caps ON CHAIN (local only)
-pnpm --filter web verify:agents    # roles + registry + the cap boundary + kill switch. Writes nothing.
+pnpm --filter web verify:agents    # roles + registry + the cap boundary + kill switch. Signs nothing;
+                                   # appends one audit_log halt row (rule #7), nothing else.
 pnpm --filter web agents:over-cap  # THE over-cap bet: sends cap+1 wei and the chain refuses it
 pnpm --filter web probe:cap        # the cap probe from the terminal — same code path as the button
 

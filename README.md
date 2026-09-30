@@ -168,7 +168,11 @@ registration is a local command rather than a pipeline stage.
 
 Every row of that table is verified by live `eth_call` on
 [/trust](https://auspex-web-mu.vercel.app/trust), and again by
-`pnpm --filter web verify:agents` (41 checks) and `verify:resolution`. Neither writes anything.
+`pnpm --filter web verify:agents` (41 checks) and `verify:resolution`. Neither signs anything
+and neither touches the chain's state — every check is an `eth_call`. `verify:resolution` writes
+nothing at all; `verify:agents` appends exactly one `agents.halted` row to `audit_log`, because the
+check that forces the kill switch on runs the real betting pass, and a halt is a decision that rule
+#7 logs with its reason.
 
 ---
 
@@ -357,8 +361,9 @@ intents · 290 audit rows, every one carrying a reason.
 **The cron cadence is measured on the page, not asserted here.** The pipeline runs unattended on a
 GitHub Actions heartbeat, and a schedule expression is a *request*: scheduled workflows on a public
 repository are best-effort, delayed under load, with free runners dropped first. Measured across 46
-hours to 2026-09-30T18:50Z, the previous every-five-minutes expression was delivered **9 times — 1.6%
-of what it asked for**, a mean gap of 5h07m and a spread of 2h57m to 6h44m, every run successful.
+hours to 2026-09-30T18:50Z, the previous every-five-minutes expression was delivered **10 times —
+1.8% of the 554 runs it asked for**, a mean gap of 5h07m across those nine gaps and a spread of
+2h57m to 6h44m, every run successful.
 
 So this README states no cadence. [`/audit`](https://auspex-web-mu.vercel.app/audit) computes the
 real one from `audit_log` on every request, alongside the median tick duration, and that panel is
@@ -476,13 +481,21 @@ the human gate has many more approvals on record than refusals — the refusal p
 server-verified and signature-checked, and it has been exercised far less. Both counters appear on
 `/trust` as they are, rather than dressed up.
 
-**The resolution agent has never drafted an outcome for a real market.** Markets close, and the stage
-that would read them is starved by the tick's own deadline ladder: clustering runs first with a call
-budget but no deadline, and the resolution stage has repeatedly logged *"out of time for this tick
-after examining 0 market(s)"*. The whole path is implemented and tested against real data with
-`resolution:dry-run`, and market 8's lifecycle is on chain — but on the live pipeline it has not run
-yet, and the reason is a defect rather than a shortage of candidates. It is gap #34 in
-[`PROGRESS.md`](./PROGRESS.md).
+**The resolution agent has never drafted an outcome for a real market** — and the reason changed in
+Phase 11, so the old version of this paragraph is worth knowing about. It used to say the stage was
+*starved*: clustering ran ahead of it with a call budget but no deadline, and resolution repeatedly
+logged *"out of time for this tick after examining 0 market(s)"* — on two of the three ticks that had
+a resolvable market, it never read the chain at all. That was a defect and it is fixed: resolution now
+runs before the news stages, clustering and the proposer have deadlines, and two production ticks are
+on record examining market 11 from the chain.
+
+**What remains is narrower and is not a defect.** The stage examines the market and reports *"1 with
+no evidence to read"*, because no ingested article clears the retrieval coverage floor for that
+question. The floor was calibrated on articles about the same *story* and never on an article
+reporting an *outcome* — the case the resolver actually depends on was not in the calibration sample.
+So the path is implemented, tested against real data with `resolution:dry-run`, and market 8's full
+lifecycle is on chain, but no outcome has been drafted from live news yet. That is gap #22 in
+[`PROGRESS.md`](./PROGRESS.md); the starvation was gap #34, and it is closed.
 
 **Model quality is bounded by a small model on a free tier.** Drafted specs are structurally sound and
 occasionally loose — one approved market's criteria says to check Zoo Atlanta's own website while its

@@ -7,26 +7,32 @@
 > Session protocol and hard rules live in `CLAUDE.md`. Phase tasks and exit criteria live in
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
-**Last updated:** 2026-09-30 (Phase 11)
-**Current status:** ✅ **Phase 11 complete.** The three false or unearned claims are fixed. The
-resolution stage no longer starves — it ran fourth in the ladder behind an *unbounded* clustering
-stage, and **two of the three production ticks that had a resolvable market never read the chain for
-it**. Resolution now runs before the news stages, clustering and the proposer have the deadline they
-never had, and every model stage is clamped to `budget − callTimeoutMs − tail` so no call can start
-too late to finish. The cadence claim is gone from prose entirely: `/audit` computes it from
-`audit_log` per request, separating cron ticks from prompted ones, because the first version of that
-panel averaged both and reported 84 minutes for a system whose unattended mean is 5h07m. `audit_log`
-now records `durationMs`, `budgetMs` and the resolution report. No chain data, address or hash
-changed.
-**Next phase:** **Phase 12 — v1.0.0.** Nothing new is built; everything is verified once, together,
-and labelled. `docs/BUILD_PLAN.md` has the sweep.
+**Last updated:** 2026-09-30 (Phase 12)
+**Current status:** ✅ **Phase 12 complete. Released as `v1.0.0`.** Nothing new was built. Fifteen
+commands were run in one sweep and all fifteen pass, with their numbers recorded below rather than
+their adjectives. The sweep's job was to catch **drift** — a sentence true when it was written that a
+later phase falsified — and it caught four: `verify:agents` has claimed to write nothing since
+Phase 5 while appending one `agents.halted` row per run; the README still described the resolution
+starvation defect in the present tense one phase after it was fixed; the cron delivery rate was
+computed by dividing the *gaps* between runs rather than the runs; and the database has had 15 tables
+since Phase 6, not 14. All four are corrected, and `check:render` ran for the first time in the
+project's history — 8 routes, clean. No chain data, address or hash changed.
+**Next phase:** none. Part II is finished and the build is released. What a future session should
+read first is "After v1.0.0" at the end of this file.
 
 ---
 
-### Phase 10's closing status, for the record
+### Phase 11's closing status, for the record
 
-✅ **Phase 10 complete.** The site is light, typographic and redesigned on all eight routes. A shared component layer was extracted first (3 shared components → 27 exports; 24 duplicated helper definitions → 0), then the palette was replaced by changing token *values* and keeping every name. The semantic five survive, measured rather than asserted: `pnpm --filter web check:contrast` proves AA on every real surface pair plus greyscale and three kinds of colour blindness, and `check:render` proves no horizontal scroll at 390px, a visible focus ring everywhere, and reduced-motion honoured. No chain data, address or hash changed.
-
+✅ **Phase 11 complete.** The three false or unearned claims were fixed. The resolution stage no
+longer starves — it ran fourth in the ladder behind an *unbounded* clustering stage, and **two of the
+three production ticks that had a resolvable market never read the chain for it**. Resolution now
+runs before the news stages, clustering and the proposer have the deadline they never had, and every
+model stage is clamped to `budget − callTimeoutMs − tail` so no call can start too late to finish.
+The cadence claim is gone from prose entirely: `/audit` computes it from `audit_log` per request,
+separating cron ticks from prompted ones, because the first version of that panel averaged both and
+reported 84 minutes for a system whose unattended mean is 5h07m. `audit_log` now records
+`durationMs`, `budgetMs` and the resolution report. No chain data, address or hash changed.
 
 ---
 
@@ -46,14 +52,14 @@ and labelled. `docs/BUILD_PLAN.md` has the sweep.
 | 7 | Dashboard polish + trust page | ✅ Complete |
 | 8 | Live end-to-end run + README + submission | ✅ **Complete — submitted; see "How Phase 8 closed"** |
 
-**Part II — make it a product.** In progress.
+**Part II — make it a product.** Complete. Released as `v1.0.0`.
 
 | Phase | Name | Status |
 |:--|:--|:--|
 | 9 | Reframe: from submission to product | ✅ Complete |
 | 10 | The new look — light, modern, funky, professional | ✅ Complete |
 | 11 | Operational truth — fix what makes a claim false | ✅ Complete |
-| 12 | v1.0.0 — verify everything once, tag, release | ⬜ **NEXT** |
+| 12 | v1.0.0 — verify everything once, tag, release | ✅ Complete — **released `v1.0.0`** |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete with known gaps
 
@@ -106,7 +112,7 @@ See **ADR-068** for the decision and what it costs.
 | Smoke run 2 `createMarket` | `0x1105fb143b6b9a073b1fff22cde224a530120cb9373fcc2ae260495a29ef66d6` | ✅ block 5,786,400 |
 | Smoke run 2 `placeBet` | `0x558dfdafdcdac157176058076c9dafcd825a525346806d2e45e9340213c8a0bf` | ✅ block 5,786,402 |
 | **Crash-test `createMarket`** (market 3) | **`0xeabf2271ef9253d9d3d00aaa086082b0542872d4e98df8c98608b0fa7dbefe83`** | ✅ block 5,787,574, `result: success` |
-| Neon database | project `jolly-queen-98097073`, branch `main`, db `neondb` | ✅ 14 tables migrated |
+| Neon database | project `jolly-queen-98097073`, branch `main`, db `neondb` | ✅ **15** tables migrated |
 | **`POST /api/tick` in production** | 200 in **14.9s**, 0 stage errors, 3 LLM calls | ✅ verified 2026-09-29 |
 | Pipeline state (live) | 255 articles · 106 publishers · 215 events · 3 `CONFIRMED` | ✅ real feeds |
 | Gemini free-tier key | project `agentforge-gemini-free`, no billing account | ✅ `preflight` 9/9 |
@@ -120,7 +126,7 @@ See **ADR-068** for the decision and what it costs.
 | Discord notifications | 4 sent, one per market, each carrying its tx hash | ✅ fired only after indexing |
 | **Agent wallet `atlas`** | **`0xa4ef956f01946b93efd592ce720d24beec19588f`** | ✅ registered, capped 0.02/tx |
 | **Agent wallet `vega`** | **`0x15757d543f6050b6f5ff83782b7c122e21450daa`** | ✅ registered, capped 0.01/tx |
-| **Agent wallet `kestrel`** | **`0x76bf4262aa13632e91e27e0eba3b42b6b353ce4e`** | ✅ registered, kill switch ON |
+| **Agent wallet `kestrel`** | **`0x76bf4262aa13632e91e27e0eba3b42b6b353ce4e`** | ✅ registered, capped 0.016/tx, active |
 | `registerAgent` → atlas | `0x74cb33a18ec7378a832868898e1fcbf1f41d057910f5cddea23f8bb16f124b7a` | ✅ `result: success` |
 | `registerAgent` → kestrel | `0xcc2097f46e608b0dfa13caefb270a9a9709bd5b3f0d0520a40568c009bbd11ef` | ✅ `result: success` |
 | `registerAgent` → vega | `0x92a7a00a7fcdee71ff5db15642342f17aa32b5cd778387ada463965db89dfd41` | ✅ `result: success` |
@@ -128,7 +134,7 @@ See **ADR-068** for the decision and what it costs.
 | **`placeBet` #2 (agent, within caps)** | **`0xc2a426997ae432372d645ac8b95bf947acaa20562c9c69672046ca3f204e0759`** | ✅ block 5,794,735, 0.004 tMSTC YES on market 5 |
 | **Over-cap bet tx (expected revert)** | **`0xf0152234efe078729401162dd8ef16e6d19da2c657dcfe4360f2cd3255720c2d`** | ✅ block 5,794,765, **`AgentPerTxCapExceeded(2e16+1, 2e16)`** |
 | **`/agents` — the gate, visible** | **https://auspex-web-mu.vercel.app/agents** | ✅ 9 decisions, 6 refusals, 1 chain refusal |
-| `pnpm --filter web verify:agents` | 41 live checks: roles, registry, cap boundary, kill switch | ✅ all pass, writes nothing |
+| `pnpm --filter web verify:agents` | 41 live checks: roles, registry, cap boundary, kill switch | ✅ all pass; signs nothing, appends one `agents.halted` audit row (ADR-078) |
 | `pnpm preflight` | now **11/11**, including all three agents registered and funded | ✅ |
 | **`POST /api/tick` in production, post-Phase 5** | 200 in **15.06s**, 0 stage errors, agents stage included | ✅ verified 2026-09-29 |
 | **`POST /api/tick` in production, post-Phase 6** | 200 in **19.69s**, 0 stage errors, **all six stages ran**, 4/10 LLM calls | ✅ verified 2026-09-29 |
@@ -360,6 +366,152 @@ different and worse gap than the one #21 describes, and it is the correction to 
 - **Two ADRs are both numbered 066**, and ADR-057 says *"superseded by ADR-066"* — now ambiguous.
 - **There is no `LICENSE` file**, though `README.md` says MIT.
 - Repo clean, in sync with `origin/main`, CI green on the last commit.
+
+---
+
+## Phase 12 — what shipped
+
+### The shape of it
+
+**Nothing was built.** Fifteen commands were run in one session, their real output recorded, the
+version moved `0.1.0` → `1.0.0` across all four workspace packages, `CHANGELOG.md` written from the
+36-commit history, and `v1.0.0` tagged and pushed.
+
+**The phase existed to catch drift, and drift is what it caught.** Every earlier phase verified its
+own exit criteria against the system as it stood that day, and each was right to. What no single
+phase can catch is a sentence that was *true when written* and that a later phase falsified — because
+the sentence is accurate in its own commit and the check that would catch it lives in a different
+file. A sweep catches it, because it reads the whole repository against one day's live system. Four
+were found:
+
+| Drift | Was | Is |
+|:--|:--|:--|
+| `verify:agents` closing line | "Nothing was signed and nothing was written." **Since Phase 5.** | Signs nothing; appends exactly one `agents.halted` row and says so |
+| README Limitations, resolution | "the stage … is starved by the tick's own deadline ladder" — **fixed in Phase 11** | The stage examines the market; the coverage floor is what stops it drafting |
+| Cron delivery rate | `1.6%` of 554 (heartbeat), `1.7%` of 351 (sync) | **1.8%** and **2.0%** — the old figures divided the *gaps*, not the runs |
+| Database table count | 14 tables | **15** — `resolutionDrafts` arrived in Phase 6 |
+
+### The checker that lied about itself, and why the write stayed
+
+**Found by reading the deployed `/audit` page, not the source.** The action histogram showed
+`agents.halted 2`, and the newest row was timestamped `2026-09-30 19:52:41` — inside the minute the
+`verify:agents` run had just finished. The script ends with the words *"Nothing was signed and
+nothing was written."*
+
+It has been wrong since Phase 5. Check 5 forces `AGENTS_KILL_SWITCH` on and runs the **real** betting
+pass, and `runAgentPass` — correctly — inserts one `audit_log` row carrying the halt's reason before
+it returns. What the check actually asserts is narrower and was always true: no `agent_decisions`
+row, no model call, no transaction. The summary line then generalised past its own evidence.
+
+**The write stayed and the sentence was narrowed.** Suppressing the insert behind a flag would have
+made the sentence true and the check worthless: the row *is* the behaviour under test — hard rule #7
+says a decision is logged with its reason, a halt is a decision, and a verification script that made
+the system log less than production does would be verifying a different system. ADR-078 has the full
+argument, including why this is the same move as retouching a hash, applied to a log instead of a
+number.
+
+Corrected in four places: the script's closing output, the script's header docstring, `README.md`
+and `CLAUDE.md`. `verify:resolution` was checked the same way — it has no `insert` at all and its
+claim stands.
+
+### The measurement that was correct and divided twice
+
+Phase 11 measured the heartbeat honestly: ten scheduled runs between 2026-09-28T20:42:55Z and
+2026-09-30T18:50:44Z, mean gap 5h07m, range 2h57m–6h44m, zero failures. Every one of those values
+re-derives exactly from `gh run list`. It then reported the delivery rate as **1.6% of the 554 runs
+the `*/5` expression asked for** — and 1.6% is 9/554. Nine is the number of *gaps between* ten runs.
+
+The gap count is the correct divisor for a mean gap and the wrong one for a delivery rate:
+
+```
+span 46h07m49s  ·  10 runs  ·  9 gaps  ·  */5 asks for 554
+mean gap = 46h07m49s / 9  = 5h07m32s     <- 9 is right here
+delivered = 10 / 554      = 1.8%          <- and wrong here (9/554 = 1.6%)
+```
+
+`sync.yml` had the same shape: 7 runs, 6 gaps, 351 requested — **2.0%**, reported as 1.7%. Corrected
+in `README.md`, `heartbeat.yml`, `sync.yml` and gap #33 below. Recorded rather than quietly repaired
+because it was not a bad measurement — it was one correct measurement whose second use borrowed the
+first's divisor.
+
+### The new cron expressions are still unmeasured, and this session could not change that
+
+Phase 11's handoff hoped "by the time you read this there should be several hours of data." There is
+none. The Phase 11 commit landed at **2026-09-30T19:34Z** and this session began at **19:53Z** —
+nineteen minutes later. `gh run list --workflow=heartbeat.yml` shows the last scheduled run at
+18:50:44Z, under the *old* `*/5`; the first `7,37` slot had not come round yet.
+
+`/audit` says so on the page, from data, without being told to:
+
+> **Unattended** — · no cron tick(s) recorded so far, of 2 with a known trigger — needs two to
+> measure a gap
+
+**That is the panel working, and the figure is withheld rather than missing.** Nothing in the
+repository claims anything about `7,37 * * * *`, so nothing needed changing. A future session that
+wants the number runs `gh run list --workflow=heartbeat.yml --limit 100` and compares it against that
+panel — and should divide **runs** by requests when it does.
+
+### `check:render` ran for the first time
+
+It has existed since Phase 10 and had never executed: it needs Playwright, which is deliberately not
+a dependency of this project, so it skips with an explanation rather than failing. Playwright and
+Chromium are present in `video/node_modules` for the demo film, which is enough:
+
+```bash
+PLAYWRIGHT=video/node_modules/playwright/index.mjs BASE=http://localhost:3210 \
+  node web/scripts/check-render.mjs
+```
+
+All four properties pass on all eight routes — no horizontal scroll at 390px **or** 1280px, a visible
+focus ring on every element that takes focus, and zero animating elements under
+`prefers-reduced-motion`. Phase 10 had verified the same properties by hand; this is the first
+machine confirmation, and it agreed.
+
+**One line in its output needed chasing rather than accepting.** Every route reported `N/N
+focusable` except `/trust`, at `31/35`. The script only fails an element that takes focus *without* a
+ring, so four elements that never focus would have been skipped silently. They are the `sm:hidden`
+mobile copy of the role matrix, `display:none` at the 1280px viewport the focus pass runs at — and
+each of those four addresses is reachable in the visible desktop copy, checked by comparing against
+`offsetParent !== null`. A responsive duplicate, not a keyboard trap. Written down because "the check
+passed" should not be read as more than it is, the same reason gap #28 exists.
+
+### Live results
+
+```
+pnpm install (clean clone, no .env.local)   4.2s
+pnpm compile (hardhat clean first)          2 files, solc 0.8.28, evm cancun, 0.8s
+pnpm test                                   498 passed (441 web / 31 files, 57 contracts), 46.9s
+pnpm test (clean clone)                     431 passed, 10 skipped (the DB suite), 7.6s
+pnpm lint                                   clean, 3.1s
+pnpm typecheck                              clean, 2.1s
+pnpm build                                  8 pages + 4 API routes, Next 16.3.6, 4.4s
+pnpm build (clean clone)                    same, 9.1s
+pnpm preflight                              11/11, block 5,847,543
+pnpm check:links                            every hash, abbreviation, sender and URL in README.md
+check-links docs/WALKTHROUGH.md             same, for the walkthrough
+pnpm --filter web check:provenance          152 files, guard intact, every route declares its origin
+pnpm --filter web verify:agents             41 checks, all pass
+pnpm --filter web verify:resolution         19 passed, 4 skipped, block 5,847,571
+pnpm --filter web check:contrast            every token AA on 4 surfaces; the five stay apart
+check:render                                8 routes × 4 properties
+```
+
+**The DB suite did not flake this session** — 10/10 in 39.8s against a fresh Neon database, including
+both Phase 6 migrations. Gap #5's re-run instructions were not needed. In the clean clone it skipped,
+which is the documented CI behaviour and the proof that a clone with no `.env.local` still passes.
+
+### Exit criteria
+
+| # | Criterion | Result |
+|:--|:--|:--|
+| 1 | Every command in the sweep passes, output recorded | ✅ 15 commands, numbers above |
+| 2 | `git tag v1.0.0` exists and is pushed; `CHANGELOG.md` covers Phases 0–12 | ✅ annotated tag; changelog written from the 36-commit history |
+| 3 | A clean clone builds and its tests pass with no undocumented step | ✅ `git clone --local`, no `.env.local`: install 4.2s, compile, 431 passed / 10 skipped, build |
+| 4 | All routes 200 on the deployed URL and read correctly **as rendered pages** | ✅ 8 routes read top to bottom; see below |
+| 5 | `README.md`'s Limitations section still accurate after Phases 9–11 | ⚠️ **It was not.** One paragraph described a defect Phase 11 had fixed. Corrected |
+| 6 | No known gap is stale: each closed, or restated as true today | ✅ #5, #7, #26, #28, #33 and #37 restated with today's measurements; #38, #39 and #40 added |
+| 7 | Version `1.0.0` across the workspace | ✅ root, `web`, `contracts` — `video` was already 1.0.0 |
+| 8 | Repo presentation | ✅ description and topics set; social preview image is the one item needing the owner |
 
 ---
 
@@ -1474,7 +1626,7 @@ events carrying NPR + BBC + CBS, Guardian + NYT + AP, and CNN + Axios.
 
 ### The data layer
 
-**`web/lib/db/schema.ts`** — 14 tables, 8 Postgres enums, migrated onto the real Neon database
+**`web/lib/db/schema.ts`** — 15 tables, 8 Postgres enums, migrated onto the real Neon database
 (`web/drizzle/0000_phase2_pipeline_state.sql`). Every table in `docs/ARCHITECTURE.md` §8, plus
 `indexer_cursors`. Money is `numeric(78, 0)` — the exact decimal width of a uint256 — never a
 float and never a JS `number`, because 1 tMSTC is 1e18 wei and that is already past
@@ -1833,7 +1985,10 @@ not use.
 
 **4. ~~`lib/contract.ts` hand-writes ABI fragments.~~** ✅ Closed in Phase 2.
 
-**5. The DB test suite does not run in CI.** `schema.test.ts` creates and drops a real database on
+**5. The DB test suite does not run in CI.** *(Re-measured at v1.0.0: **10/10 in 39.8s**, no flake,
+against a fresh Neon database. In the clean clone with no `.env.local` it skipped — 431 passed, 10
+skipped — which is the documented CI behaviour and is what proves a fresh clone needs no extra step.
+The teardown flake below did not occur this session; the re-run instructions still stand if it does.)* `schema.test.ts` creates and drops a real database on
 Neon and this repo is public, so the credential is deliberately not a CI secret. CI runs the pure
 tests; the DB suite skips with a loud warning. Run locally before any schema change — this session:
 **10/10 against a fresh database**, including the new `UNIQUE(market_id, round)` on
@@ -1847,7 +2002,13 @@ this. Re-run it alone with `--testTimeout=180000 --hookTimeout=240000`.
 **6. Re-org handling is a confirmation depth (3 blocks) and nothing more.** Honest on a
 3-second-block testnet; not mainnet-grade. `docs/ARCHITECTURE.md` §11 says so.
 
-**7. ~~Tick duration.~~** ✅ **Measured in production and comfortable.** A full tick takes **48s
+**7. ~~Tick duration.~~** ✅ **Measured in production and comfortable — and no longer measured by
+hand.** *(At v1.0.0 this is superseded by gap #30's fix: `audit_log` stores `durationMs` and
+`budgetMs` on every `pipeline.tick` row, and `/audit` renders the median. The figures below came from
+hand-made `curl`s and are kept because they are the measurements the batching work was judged
+against. The stored ones read **24.4s median of 2, worst 27.4s, against a 60.0s budget**.)*
+
+The original note follows. **Measured in production and comfortable.** A full tick takes **48s
 locally** but **14.9s on Vercel** (`POST /api/tick`, HTTP 200, zero stage errors). The difference
 is exactly what the batching work predicted: local time is dominated by laptop→Neon round trips
 (~0.5s each) and on Vercel the function and the database are in the same region. `maxDuration` is
@@ -2018,7 +2179,14 @@ such market existed. The audit log says exactly that, no `agent_decisions` row w
 stake was inside the agent's on-chain caps — which the chain enforced regardless of what the script
 believed. ADR-059.
 
-**26. ⚠️ Half closed. The human layer has now refused once — with the reason `test`.** `/trust` counts refusals by the
+**26. ⚠️ Still half closed at v1.0.0, and deliberately so.** The second refusal was not made this
+phase. It needs a human signature in `/review`, Phase 12 needed no wallet and used none, and the item
+is on no critical path — the counter is lit, the mechanism is proved, and what is unsatisfying about
+it is the *wording* of one signed reason, which cannot be edited without invalidating the signature.
+The candidate and the exact wording are still in the handoff for whoever wants it. Original text
+follows.
+
+**The human layer has now refused once — with the reason `test`.** `/trust` counts refusals by the
 schema (0), the policy gate (7), a human (0) and the chain (6). The two zeros are real measurements
 and the page says so in as many words, rather than letting a reader assume they were tested:
 
@@ -2053,7 +2221,9 @@ safety is the `eth_call` guard that refuses to broadcast anything the chain does
 reject (ADR-062). If agent balances look low before a demo, check `/agents` and top up with
 `agents:register`.
 
-**28. Check 3 of the provenance guard proves little on most builds.** It scans prerendered HTML in
+**28. Check 3 of the provenance guard proves little on most builds.** *(Still true at v1.0.0, and
+`check:render` now has the same shape of caveat — see the `31/35` note in "Phase 12 — what shipped".
+A check that skips what it cannot reach must say so, and both of these do.)* It scans prerendered HTML in
 `.next/server/app` for a rendered `MOCK` badge, and nearly every route here is `force-dynamic`, so
 there is almost nothing prerendered to scan. The script prints a note saying exactly that rather than
 reporting a pass it did not earn. Coverage for dynamic pages is the runtime throw, verified by
@@ -2096,11 +2266,20 @@ role, and #2 holds 0.01 tMSTC that would be refunded. It was skipped because `in
 already on chain once (`0xefe33de2…20f3ca6b`, with its refund claim), so a second one proves nothing new
 and spends a real market. Say that if asked why the button was not pressed.
 
-**33. ✅ RESTATED AND CLOSED in Phase 11. The cadence is no longer written down anywhere.**
+**33. ✅ RESTATED AND CLOSED in Phase 11. The cadence is no longer written down anywhere — with one
+arithmetic correction made at v1.0.0.**
 
 Measured with `gh run list` over the 46 hours to 2026-09-30T18:50Z: the heartbeat's `*/5` expression
-produced **ten scheduled runs, mean gap 5h07m, range 2h57m–6h44m, 1.6% of the 554 runs requested,
-zero failures**. `sync.yml`: seven runs over 29h15m, mean 4h52m, 1.7%. This is GitHub throttling
+produced **ten scheduled runs, mean gap 5h07m, range 2h57m–6h44m, 1.8% of the 554 runs requested,
+zero failures**. `sync.yml`: seven runs over 29h15m, mean 4h52m, 2.0% of 351.
+
+⚠️ **Phase 11 wrote those two percentages as 1.6% and 1.7%, and they were wrong.** Ten runs over 554
+is 1.8%; 1.6% is *nine* over 554, and nine is the number of **gaps between** ten runs. The gap count
+is the right divisor for the mean gap — 46h07m49s / 9 = 5h07m32s, which was exact — and the wrong one
+for a delivery rate. One correct measurement, used twice, the second time with the first's divisor.
+Corrected at v1.0.0 in `README.md`, `heartbeat.yml`, `sync.yml` and here; every measured value (run
+counts, spans, mean gaps, ranges, zero failures) re-derived exactly and none of them changed.
+ADR-078. This is GitHub throttling
 scheduled workflows on a low-activity public repository.
 
 **The repair is not a better sentence — it is not having a sentence.** `/audit` computes the cadence
@@ -2163,7 +2342,11 @@ the refusal is stated in `DECISIONS.md`'s header: a log that renumbers itself to
 whose citations cannot be trusted.
 
 **37. ⚠️ DOCUMENTED WITH A BOUND in Phase 11, deliberately not tightened. The indexer projection
-lags the chain visibly.**
+lags the chain visibly.** *(Re-read on the deployed page at v1.0.0: **no drift is currently
+rendered.** `/markets` shows market #11 as `CLOSED` on both sides and the cursor at block 5,847,068
+against a chain head of 5,847,543 — the projection had caught up, which is the one-tick bound
+behaving as described. The gap stays open because the *mechanism* is unchanged, not because a
+disagreement is on screen today.)*
 
 **The bound is one tick**, and the mechanism is structural rather than accidental: `runIndexer` is
 step 8 of the tick and settlement — which broadcasts `closeMarket` — is step 9, so a state change
@@ -2185,6 +2368,36 @@ Original text follows.
 says CLOSED"* on market #11 and names the chain as authoritative. This is the page behaving correctly
 — it reads `getMarket()` per request and only the badge comes from the projection — but a user sees a
 disagreement between two of our own numbers. Either tighten the sync or document the expected bound.
+
+**38. `verify:agents` is not read-only, and now says so.** It signs nothing and touches no cap, but
+check 5 forces `AGENTS_KILL_SWITCH` on and runs the **real** betting pass, which appends one
+`agents.halted` row to `audit_log` with its reason. So every run of the verifier adds a row to the
+log it is verifying. The write is correct and stays — a halt is a decision and hard rule #7 logs
+decisions, and suppressing it behind a flag would make the check exercise a code path production
+never takes (ADR-078). The consequence to know about: **the `agents.halted` count on `/audit` is not
+a count of production halts.** Two of the rows there are verifier runs. If that number is ever
+quoted, it needs separating by actor the way `cadenceReport` separates ticks by source.
+`verify:resolution` has no `insert` at all and is genuinely read-only.
+
+**39. What `7,37 * * * *` and `19,49 * * * *` actually deliver is still unmeasured.** Phase 11
+changed the expressions and claimed nothing about them, correctly. Phase 12 could not measure them
+either: the Phase 11 commit landed at 2026-09-30T19:34Z and this session ran from 19:53Z, so not one
+scheduled slot had come round. The last scheduled heartbeat on record — 18:50:44Z — is still an old
+`*/5` run. `/audit` withholds the figure rather than inventing one (*"no cron tick(s) recorded so
+far, of 2 with a known trigger — needs two to measure a gap"*), and nothing in the repository claims
+anything about the new cadence, so nothing is false. **To close this:** `gh run list
+--workflow=heartbeat.yml --limit 100`, compute the mean gap over the runs since 19:34Z, and divide
+**runs** by requests — 48 a day, not 288. Record it in `heartbeat.yml`'s header comment where the old
+measurement lives.
+
+**40. Four real markets close within three hours of this release, and none has been resolved from
+live news yet.** At 2026-09-30T19:53Z: #4 and #5 close at 22:12:06Z, #6 and #7 at 22:12:51Z, #9 at
+23:43:17Z — the first time more than one human-approved market will be past close at once. The
+resolution stage is fixed and proven to examine a candidate (gap #21), but it has never had more than
+one, and market #11's outcome is undraftable for want of evidence clearing the coverage floor (gap
+#22). **The first session after this release should look at `/resolve` and `/audit` before anything
+else**: either the stage drafts its first real outcome, or gap #22 gets its second data point and the
+coverage floor needs the recalibration that gap says it might.
 
 ## Discord notifications were arriving up to 50 minutes late — fixed 2026-09-29
 
@@ -2217,58 +2430,133 @@ confirmed log. Lowering it trades the exit criterion for 7 seconds.
 the cron repairs misses in hours. If a notification is ever missing, run the `Chain sync` workflow
 from the Actions tab — RUNBOOK §"Notifications are not delivered by the cron".
 
-## What the next session needs to know
+## After v1.0.0 — the closing summary
 
-**You are starting Phase 12 — v1.0.0.** Nothing new is built. Everything is verified once, together,
-and labelled: version bump, annotated tag, `CHANGELOG.md` from the real commit history, one
-verification sweep with its numbers recorded, a final deploy read as rendered pages, and a closing
-summary in this file. `docs/BUILD_PLAN.md` → Phase 12 has the list.
+**The twelve phases are done and the build is released.** There is no "next phase". This section
+replaces the per-phase handoff with what a future session — or a stranger, or the owner in six
+months — needs in order to pick this up.
 
-### Start here, in this order
+### What this is
 
-1. **`docs/BUILD_PLAN.md` → Phase 12.** The sweep, and what "recorded" means for each command.
-2. **Read the chain before trusting this file.** `pnpm --filter web verify:resolution` prints every
-   market's state in about forty seconds and writes nothing. Five sessions running, the live system
+A Polymarket-style prediction platform on MST Blockchain Testnet where **markets are created under
+human authority and members bet through constrained AI agents.** The thesis is one line: **AI
+proposes, humans and the chain decide.** Nothing moves money or reaches a member without passing a
+human gate and an on-chain limit.
+
+Live at **https://auspex-web-mu.vercel.app**, contract
+**`0xc4743d6295311AFead12161881Bfcf601B70104C`** on chain `91562037`, source verified on
+`https://testnet.mstscan.com`.
+
+### What it does
+
+The thin real loop, all of it running on a live chain:
+
+1. **Ingest** eight news feeds; deduplicate deterministically.
+2. **Confirm** a story only when two *independent* publisher domains report it.
+3. **Propose** a market specification with an LLM — schema-constrained at the API and re-validated
+   with Zod, with the news text delimited inside `<untrusted_content>` and never in a system
+   instruction.
+4. **Gate it on a human.** `/review` presents the draft as a checklist; `createMarket` is signed in a
+   browser by `0xA9F68fDf…311fF1`, a wallet whose key no server holds.
+5. **Research and bet** through member agents. A deterministic policy gate decides every bet; the
+   model only ever proposes. The contract caps each agent per transaction and per market, and
+   `claim()` pays the registered *owner*, not the agent.
+6. **Resolve** with an on-chain evidence URL, human-signed, inside a challengeable window;
+   `finalizeResolution` and `invalidateStale` are permissionless, so a market nobody resolves is
+   refunded rather than stuck.
+7. **Log every decision with its reason** — approved and refused alike. The refusals are the half
+   worth reading.
+
+Eight routes serve it, every number on them labelled with where it came from by `<Provenance>`.
+
+### What it does not do
+
+**Read `README.md` → Limitations for the full list, stated plainly.** The four that matter most:
+
+- **Resolution is trusted, by design.** A small authorised set submits outcomes. The challenge
+  window, permissionless finalisation and permissionless invalidation bound what one bad resolver can
+  do, but **this is not a decentralised oracle**, and the market creator and the resolver are
+  currently the same wallet (gap #2b).
+- **No outcome has been drafted from live news yet.** The stage is fixed and examines candidates; the
+  retrieval coverage floor is what stops it, and the floor was calibrated on articles about the same
+  *story* rather than articles reporting an *outcome* (gap #22). This is the product's last unproven
+  claim, and gap #40 says when to look.
+- **Two of the four refusal layers are thin on live data.** Schema rejection has never fired here;
+  the human gate has nine approvals and one refusal, and that refusal's signed reason is the literal
+  string `test` (gap #26).
+- **The pipeline is far less live than it looks.** GitHub throttles scheduled workflows on a
+  low-activity public repository, and what the current expressions deliver is unmeasured (gap #39).
+  Nothing user-facing depends on the cron.
+
+**Nothing here is audited, and tMSTC has no value.**
+
+### Where the history lives
+
+| File | What it holds |
+|:--|:--|
+| `CHANGELOG.md` | the release, and each phase in one paragraph |
+| `docs/BUILD_RECORD.md` | **read this first** if the build record's existence puzzles you — it says why none of it was tidied |
+| `docs/DECISIONS.md` | 79 ADRs: what was decided, why, what it cost, the evidence |
+| `PROGRESS.md` (this file) | per-phase detail, every real artifact, and the forty known gaps |
+| `docs/BUILD_PLAN.md` | the twelve phases as they were planned, with exit criteria |
+
+**Part II's governing rule was: the framing goes, every fact stays.** No address, hash, measurement
+or limitation was ever changed to look better. Every defect this build hit is recorded here with what it
+cost, and that record is the evidence behind every trust claim the product makes. ADR-068 is the
+argument for keeping it, and it is the thing to re-read if deleting any of it starts to feel like
+tidying.
+
+### If you are picking this up to change something
+
+1. **Read the chain before trusting this file.** `pnpm --filter web verify:resolution` prints every
+   market's state in about forty seconds and writes nothing. Six sessions running, the live system
    moved while nobody was looking.
-3. **Look at `/audit`'s cadence panel first.** It now answers, from data, the question this file kept
-   getting wrong by hand: how often the pipeline actually runs, and how long a tick takes. If the
-   "Unattended" figure is still a dash, not enough cron ticks have been recorded since Phase 11 —
-   the number is not missing, it is honestly withheld.
+2. **Then look at `/audit` and `/resolve`.** Gap #40: four real markets closed within hours of this
+   release, and that is the resolution stage's first real test.
+3. **Run `pnpm preflight`.** Eleven checks; it tells you which external dependency has drifted before
+   you waste an hour on it.
+4. **Read the rendered page, not the JSX.** Nine defects in this project were invisible in source and
+   obvious in one look at the served output.
 
-### What Phase 11 changed that Phase 12 will touch
+### What the sweep found that is worth generalising
 
-- **The cron expressions changed and their effect is UNMEASURED.** `7,37 * * * *` and
-  `19,49 * * * *`. Phase 11 deliberately claimed nothing about what they deliver. By the time you
-  read this there should be several hours of data: run
-  `gh run list --workflow=heartbeat.yml --limit 100` and compare against `/audit`'s unattended
-  figure. **If it improved, that is a fact worth recording — but only after measuring it.** If it did
-  not, nothing in the repository needs changing, because nothing claims it did.
-- **The tick's stage order changed.** Resolution now runs before clustering and the proposer. If a
-  Phase 12 sweep sees clustering doing less on some ticks, that is the ladder working, not a
-  regression — the report says `out of time for this tick` and names how much it left.
+**A claim can rot without anybody editing it.** All four defects Phase 12 found were sentences that
+were *true in the commit that wrote them*: `verify:agents` was read-only until check 5 was added,
+the README's resolution paragraph was accurate until Phase 11 fixed the defect it described, the
+delivery percentage was one correct measurement divided by the wrong one of its own two counts, and
+the table count was right until Phase 6 added a table. No per-phase check catches this class, because
+each statement passes review in its own diff. **The only thing that catches it is reading the whole
+repository against one day's live system** — which is what a release is for, and is the argument for
+doing another sweep before any future release rather than trusting the accumulated notes.
+
+### The trap Phase 11 added to the list, still true
+
+**A count on a live page must say *which* things it counted.** The cadence panel's first version
+averaged every tick row and reported **84 minutes** for a system whose unattended cadence is five
+hours — because `audit_log` holds button presses and CLI runs alongside cron ticks. Correct arithmetic
+over the wrong population, invisible in the source, obvious in one look at the served page. That was
+the **ninth** defect in this project with exactly that shape.
+
+**Gap #38 is the same trap one level down:** `agents.halted` on `/audit` counts verifier runs beside
+production halts. If that number is ever put in prose, separate it by actor first.
+
+**`*/5` inside a `/** */` block comment terminates the comment.** Cost ten minutes and four
+nonsensical TypeScript errors (`TS1443`). Write it as prose or in single-line comments.
+
+### What Phase 11 changed, which is still the newest code in the tick
+
+- **The tick's stage order.** Resolution runs before clustering and the proposer. If clustering does
+  less on some ticks, that is the ladder working, not a regression — the report says `out of time for
+  this tick` and names how much it left.
 - **`stageDeadlines` is exported and pure, and its tests are load-bearing.** Six of the seven fail
   if the old fractions come back. Do not "simplify" the clamp away: it is what stops a 22s model
   call starting at 37.9s of a 60s budget and killing the tick before its audit row is written.
-- **A new metadata shape on `pipeline.tick` rows.** `durationMs`, `budgetMs`, `source`, `resolution`.
+- **A metadata shape on `pipeline.tick` rows:** `durationMs`, `budgetMs`, `source`, `resolution`.
   Rows before 2026-09-30T19:27Z have none of them, and `cadenceReport` counts them separately rather
   than assuming — keep that property if you touch it.
 - **`TickSource` is mapped through an allowlist in the route.** A caller cannot write its own label
   onto the page. If you add a caller, add it to `triggerSource` and to `TickSource`, and remember
   that anything unrecognised is `api` on purpose.
-
-### The trap this phase added to the list
-
-**A count on a live page must say *which* things it counted.** The cadence panel's first version
-averaged every tick row and reported **84 minutes** for a system whose unattended cadence is five
-hours — because `audit_log` holds button presses and CLI runs alongside cron ticks. It was correct
-arithmetic over the wrong population, it was invisible in the source, and it was obvious in one look
-at the served page. That is the **ninth** defect in this project with exactly that shape. The fix
-needed a column that did not exist, and the data to populate it had been arriving in the workflows'
-request bodies since Phase 3 with nothing reading it.
-
-**`*/5` inside a `/** */` block comment terminates the comment.** Cost ten minutes and four
-nonsensical TypeScript errors (`TS1443: Module declaration names may only use ' or " quoted
-strings`). Write it as prose or in single-line comments.
 
 ### What Phase 10 changed — still true, still worth knowing
 
@@ -2295,7 +2583,33 @@ final deploy — the only human-signed action still available is the optional se
 chromium` once. The script is written to decline rather than fail without it, and Phase 11 verified
 the same properties by hand instead.
 
-### Measured state, 2026-09-30T19:30Z after Phase 11
+### Measured state, 2026-09-30T19:55Z at v1.0.0
+
+**Read against the chain, the database and the deployed site this session**, not carried forward.
+**Phase 12 wrote nothing to the chain**: no market, no bet, no resolution, no transaction of any
+kind. Off chain it wrote two `agents.halted` rows — one per `verify:agents` run, which is gap #38 —
+and nothing else.
+
+| | Live |
+|:--|:--|
+| Markets on chain | **13**, unchanged since Phase 10 |
+| States | #1–3 `INVALIDATED` · #4–7, 9, 10, 12, 13 `OPEN` · #8 `FINALIZED`/`NO` · #11 `CLOSED`/`UNRESOLVED` |
+| Past close, awaiting an outcome | **#11** only — `proposeResolution(#11)` as the resolver *would succeed*, verified by `eth_call` |
+| Closing within 4 hours of release | **#4, #5** 22:12:06Z · **#6, #7** 22:12:51Z · **#9** 23:43:17Z — gap #40 |
+| Block at verification | 5,847,571 (`verify:resolution`), head 5,847,543 (`preflight`) |
+| Indexer cursor | block **5,847,068**, 47 logs stored — **no drift rendered on `/markets`** |
+| `audit_log` rows | **443** at the `/audit` read, every one carrying a reason |
+| Tests | **498** (441 web · 57 contracts); clean clone 431 passed, 10 skipped |
+| Wallets | deployer 9.7449 tMSTC · human authority 50.0125 · atlas 0.0517 · kestrel 0.0799 · vega 0.0799 |
+| Tick duration, from `audit_log` | median **24.4s** of 2 recorded, worst 27.4s, budget 60.0s |
+| Cron cadence, unattended | **honestly withheld** — 0 cron ticks recorded since Phase 11's change, needs 2 to measure a gap (gap #39) |
+| ADRs | **79** |
+| Version | **1.0.0** across root, `web`, `contracts`, `video` |
+
+**All eight routes 200 on the deployed URL** and were read as rendered pages, not inferred from the
+build — see "Phase 12 — what shipped".
+
+### Superseded — the Phase 11 snapshot, kept for the record
 
 **Read against the chain and the database this session**, not carried forward. Phase 11 wrote
 nothing to the chain: no market, no bet, no resolution, no transaction of any kind. It wrote three
@@ -2310,7 +2624,7 @@ was one proposal for the review queue and nothing on chain.
 | Block at verification | 5,846,492 |
 | `audit_log` rows | **442**, every one carrying a reason |
 | Tests | **498** (441 web · 57 contracts) |
-| Cron cadence, heartbeat | mean **5h07m** over 46h07m, 10 runs, 0 failures, 1.6% of requested |
+| Cron cadence, heartbeat | mean **5h07m** over 46h07m, 10 runs, 0 failures, ~~1.6%~~ **1.8%** of requested (gap #33) |
 | Last production tick | 21,361 ms of a 60,000 ms budget, 0 stage errors, 4 of 10 LLM calls |
 
 **Market #11 is examined but undraftable, and that is gap #22, not a bug.** Both production ticks
@@ -2358,12 +2672,23 @@ nobody was looking — the cron runs unattended and the owner clicks things. Pha
 transactions and a human refusal this file did not record; Phase 8's successor found four more
 markets; Phase 9 found that a sentence about which markets self-label had been wrong the whole time.
 
-**Read the rendered page, not the JSX.** **Eight** defects in this project have been invisible in
-source and obvious in one look at the served output. The latest was Phase 10's: `Pool NO` rendered
-in the refusal colour on every market card, three feet from an `INVALIDATED` badge meaning something
-else entirely. It had been in the code since Phase 2 and the dark theme hid it. `curl` the built
-page and read the prose — and now also *look* at it, because two of the eight were only visible as
-colour.
+**Read the rendered page, not the JSX.** **Ten** defects in this project have been invisible in
+source and obvious in one look at the served output.
+
+- **The tenth was Phase 12's**, and it was a *sentence* rather than a pixel: `/audit`'s action
+  histogram showed an `agents.halted` row timestamped inside the minute `verify:agents` had just
+  run — which is how a script that has printed *"nothing was written"* since Phase 5 was caught
+  writing a row. Nothing in the script's source says so; you have to follow `runAgentPass` two files
+  down. One look at the log it appends to says it immediately. Gap #38, ADR-078.
+- **The ninth was Phase 11's**: the cadence panel averaging cron ticks with button presses and
+  reporting 84 minutes for a five-hour cadence.
+- **The eighth was Phase 10's**: `Pool NO` rendered in the refusal colour on every market card,
+  three feet from an `INVALIDATED` badge meaning something else entirely. It had been in the code
+  since Phase 2 and the dark theme hid it.
+
+`curl` the built page and read the prose; *look* at it, because two of the ten were only visible as
+colour; and **read the pages that record what your own commands did**, because that is where the
+tenth was hiding.
 
 **Prose beside data has to be derived from that data.** Five times now: ADR-065, ADR-067, the
 `/markets/8` caption, `/markets`'s id-range footer (ADR-070), and the landing page's build roadmap.

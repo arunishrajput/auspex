@@ -498,13 +498,26 @@ Cut a release. Nothing new is built; everything is verified once, together, and 
 - `PROGRESS.md` gets a closing summary: what this is, what it does, what it does not do, and where
   the history lives.
 
+**Done, 2026-09-30. Released as `v1.0.0`.** Fifteen commands, all passing, numbers in PROGRESS.md.
+The phase's real yield was **drift** — four sentences that were true in the commit that wrote them and
+that a later phase falsified: `verify:agents` claiming to write nothing while appending one
+`agents.halted` row per run since Phase 5; the README describing the resolution starvation defect in
+the present tense one phase after Phase 11 fixed it; the cron delivery rate divided by the count of
+*gaps* rather than runs (1.6% → 1.8%, 1.7% → 2.0%); and 14 database tables where there have been 15
+since Phase 6. `check:render` ran for the first time in the project's history. ADR-078 has the
+argument for keeping the audit write and narrowing the claim instead. Nothing was built and nothing
+on chain changed.
+
 **Exit criteria**
-- [ ] Every command in the sweep passes, with its output recorded in `PROGRESS.md`.
-- [ ] `git tag v1.0.0` exists and is pushed; `CHANGELOG.md` covers Phases 0–12.
-- [ ] A clean clone builds and its tests pass with no undocumented step.
-- [ ] All routes 200 on the deployed URL and read correctly **as rendered pages**.
-- [ ] `README.md`'s Limitations section is still accurate after Phases 9–11 changed things.
-- [ ] No known gap in `PROGRESS.md` is stale: each is closed, or restated as true today.
+- [x] Every command in the sweep passes, with its output recorded in `PROGRESS.md`.
+- [x] `git tag v1.0.0` exists and is pushed; `CHANGELOG.md` covers Phases 0–12.
+- [x] A clean clone builds and its tests pass with no undocumented step — 431 passed, 10 skipped
+      (the DB suite, by design), no `.env.local`.
+- [x] All routes 200 on the deployed URL and read correctly **as rendered pages**.
+- [x] `README.md`'s Limitations section is still accurate after Phases 9–11 changed things —
+      **it was not**; one paragraph was corrected.
+- [x] No known gap in `PROGRESS.md` is stale: each is closed, or restated as true today — #5, #7,
+      #26, #28, #33 and #37 restated with today's measurements; #38, #39 and #40 added.
 
 ---
 

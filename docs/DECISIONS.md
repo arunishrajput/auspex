@@ -2073,3 +2073,62 @@ that spends its tail reserve catching up a badge.
 
 **Evidence.** The metadata on `pipeline.tick` rows from 2026-09-30T19:16Z onward; the comment at the
 drift computation in `web/lib/markets.ts`.
+
+---
+
+### ADR-078 — v1.0.0 is a verification sweep, not a feature; and a checker that writes keeps the write and loses the claim
+
+**Decided:** cut `1.0.0` by verifying every claim once, together, in one session, and by correcting
+the ones that had stopped being true — building nothing. Where a verification script's own summary
+line was false, narrow the line rather than silence the write it was wrong about.
+
+**Why a release is a sweep.** Every phase verified its own exit criteria, and each did so against
+the system as it stood that day. Nothing had ever run all of it at once, and three of the four
+corrections this phase made were *drift* — a sentence true when written that a later phase falsified.
+The README still described the resolution starvation defect in the present tense one phase after it
+was fixed; `PROGRESS.md` still counted 14 database tables six phases after the fifteenth arrived. No
+single check catches that class of error, because each statement was accurate in its own commit. A
+sweep does, because it reads the whole repository against one day's live system.
+
+**The `verify:agents` problem, which is the interesting one.** The script ends with `Nothing was
+signed and nothing was written.` Its fifth check forces `AGENTS_KILL_SWITCH` on and runs the **real**
+betting pass, and that pass — correctly, per hard rule #7 — appends one `agents.halted` row to
+`audit_log` carrying its reason. So the script has been overstating itself since Phase 5, in its own
+output, in `README.md` and in `CLAUDE.md`. It was found by reading `/audit` on the deployed site and
+noticing a row timestamped inside the minute the check had just run.
+
+There were two ways out and only one of them is honest:
+
+1. **Suppress the write** — pass a flag, or roll the insert back — so the sentence becomes true.
+2. **Narrow the sentence** to what is actually true.
+
+**We chose (2), and (1) is the one worth arguing against.** The write is not a side effect to be
+tidied away; it *is* the behaviour under test. Check 5 exists to prove that the kill switch halts
+the pass with a recorded reason, and hard rule #7 says a decision is logged with its reason —
+approved and refused alike, because the refusals are what prove the gates are real. A verification
+script that made the system log *less* than it does in production would be verifying a different
+system, and the flag that suppressed the write would be a code path no production tick ever takes.
+Making the claim true by making the system quieter is the same move as retouching a hash, applied to
+a log instead of a number.
+
+**So the asymmetry is deliberate:** `verify:resolution` says it writes nothing and writes nothing —
+every check is an `eth_call`. `verify:agents` now says exactly which one row it appends and why. Two
+scripts that look symmetrical in the README are not, and the README says so.
+
+**Why the cadence percentage was wrong, and why it is worth an entry.** Phase 11 measured ten
+heartbeat runs across 46h07m and reported them as `1.6%` of the 554 the `*/5` expression requested.
+Ten runs over 554 is 1.8%; 1.6% is nine over 554, and nine is the number of *gaps* between ten runs.
+The gap count is the right divisor for the mean gap — 46h07m / 9 = 5h07m, which was correct — and
+the wrong one for a delivery rate. One measurement, two divisors, and the second borrowed the first's.
+Every underlying value was exact. Recorded here rather than quietly repaired because the shape of the
+error is worth recognising: it was not a bad measurement, it was a correct measurement divided twice.
+
+**What it costs.** The release contains no new capability, which makes it an unexciting `1.0.0`. And
+`verify:agents` now needs a sentence of explanation where it used to have four words. Both are the
+price of a version number that means "every claim in here was checked on one day against one live
+system", which is the only thing a `1.0.0` can honestly mean for a product whose entire proposition
+is that its claims can be checked.
+
+**Evidence.** The sweep table in `CHANGELOG.md` and in `PROGRESS.md` under "Phase 12 — what
+shipped"; the `agents.halted` row on https://auspex-web-mu.vercel.app/audit timestamped inside the
+`verify:agents` run that produced it; `git tag -v v1.0.0`.

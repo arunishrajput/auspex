@@ -10,8 +10,9 @@ name: Chain sync
 # ## Read this before trusting the schedule
 #
 # The expression is a request and GitHub does not honour it. Measured over 29 hours of
-# 2026-09-29/30: seven scheduled runs, mean gap 4h52m, range 2h53m-6h29m — 1.7% of what the
-# previous `*/5` asked for. Scheduled workflows are explicitly best-effort, delayed under load,
+# 2026-09-29/30: seven scheduled runs, mean gap 4h52m, range 2h53m-6h29m — 2.0% of what the
+# previous `*/5` asked for (seven delivered of 351 requested; Phase 11 wrote 1.7%, which divided
+# the six gaps rather than the seven runs — corrected in Phase 12, arithmetic only). Scheduled workflows are explicitly best-effort, delayed under load,
 # and free runners are dropped first. The sibling `heartbeat.yml` measured the same way.
 #
 # So this is a backstop measured in hours, not minutes, and nothing user-facing may depend on

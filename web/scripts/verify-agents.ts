@@ -20,8 +20,12 @@
  * contract says, and `policyGate.test.ts` pins the off-chain gate to the same wei. Neither is
  * asserted from the other — one is a unit test, the other is a live call.
  *
- * It writes nothing and signs nothing. Check 5 runs the real pass with the switch forced on, and
- * the assertion is that it produced no writes.
+ * It signs nothing, touches no cap and creates no market. It is **not** entirely read-only, and
+ * the closing line used to say it was: check 5 runs the real betting pass with the switch forced
+ * on, and that pass appends one `agents.halted` row to `audit_log` with its reason. That write is
+ * hard rule #7 working — a halt is a decision, and a decision is logged — so the write stays and
+ * the claim was narrowed instead. What check 5 asserts is that no `agent_decisions` row appears,
+ * no model is asked and no transaction is prepared.
  */
 
 import { formatEther, id, toBeHex, zeroPadValue } from "ethers";
@@ -225,7 +229,10 @@ async function main(): Promise<void> {
   );
 
   heading(failures === 0 ? "All checks pass." : `${failures} check(s) FAILED.`);
-  console.log(`  Nothing was signed and nothing was written. ${explorerUrl("address", contract)}`);
+  console.log(
+    `  Nothing was signed. One \`agents.halted\` row was appended to audit_log by check 5 —\n` +
+      `  the halt is a decision and rule #7 logs it. Nothing else was written. ${explorerUrl("address", contract)}`,
+  );
 
   if (failures > 0) process.exitCode = 1;
 }

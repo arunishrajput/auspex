@@ -9,8 +9,11 @@ name: Pipeline heartbeat
 #
 # Phase 11 measured 46 hours of this workflow under the previous `*/5 * * * *`:
 # ten scheduled runs, 2026-09-28T20:42Z to 2026-09-30T18:50Z, mean gap 5h07m,
-# range 2h57m-6h44m, every one of them successful. That is **1.6% of the 554 runs
-# the expression asked for**. GitHub throttles scheduled workflows on public
+# range 2h57m-6h44m, every one of them successful. That is **1.8% of the 554 runs
+# the expression asked for** — ten delivered of 554 requested. (Phase 11 wrote 1.6%
+# here, which is nine divided by 554: the count of the GAPS between ten runs, not the
+# count of the runs. The gaps are what the mean is computed over; the delivery rate is
+# not. Corrected in Phase 12, arithmetic only — every measured value is unchanged.) GitHub throttles scheduled workflows on public
 # repositories: they are delayed under load and free runners are dropped first.
 #
 # Two things changed as a result, and only one of them is a claim.
