@@ -1662,3 +1662,49 @@ page's trust claim. A missing row is better than a guessed signer.
 recovered `placeBet` is an operator row, `lifecycleClaim` correctly **withholds** the strong trust
 claim on that market — the same self-correction ADR-065 built it for, now firing on evidence that
 page could not previously see.
+
+---
+
+### ADR-068 — The hackathon framing goes; the build record stays
+
+**Decided:** on 2026-09-30, after the submission was filed and the event ended, AuspeX becomes a
+product rather than a competition entry. Phases 9–12 remove every trace of the event **from the
+framing** — the README byline, the "judge" as the addressed reader, the "judge mode" feature name,
+the deadline language in the docs, the event in the repo metadata. They remove **nothing** from the
+record: `PROGRESS.md`, `docs/BUILD_PLAN.md` and this file are kept in full, unrenumbered and
+unretouched, framed as the engineering log.
+
+**Why keep the record when the point is to look professional.** The temptation is to delete it —
+a repository that documents its own eight-phase scramble looks less like a product than one that
+appears to have arrived finished. That instinct is wrong here for a specific reason: **this product's
+proposition is that its claims can be checked.** It says an AI cannot move money, that a human signs
+every market, that the contract refused six transactions — and the reason those sentences are
+credible is that the log beside them records each time the project believed something flattering and
+was proved wrong by its own output. ADR-029, ADR-045, ADR-049, ADR-060, ADR-065, ADR-067: six
+recorded instances of a measurement contradicting a claim, and the claim losing. Deleting that to
+look tidier would remove the evidence for the one thing the product is selling.
+
+It would also be the same move the project has refused seven times. `<Provenance>` exists so a number
+cannot be shown without saying where it came from. `check:links` exists because a flattering caption
+beside a real hash is worse than a broken link. Erasing an inconvenient history to present a cleaner
+surface is that error at the scale of the whole repository.
+
+**Cost, stated plainly.** A visitor will find a build log describing a 24-hour competition inside a
+repository that no longer mentions one. That is mildly incongruous, and it is the price. It is paid
+down by a one-paragraph preface framing the log as what it is, rather than by hiding it. A reader
+who does not care can ignore `docs/`; a reader who does care gets more than a polished README could
+give them.
+
+**What cannot be changed at all, and is therefore explained instead.** Markets 1–3 and 8 carry
+`[Phase N … test]` inside their on-chain question strings. Those strings are immutable and are
+indexed on a public explorer. They stay, they are labelled as commissioning tests in the README's
+market table, and no surface implies otherwise.
+
+**What this decision does not license.** Not a rewrite of history to be more flattering, not a
+quiet correction of a past measurement, not a deleted gap. A gap that is still true stays open; one
+that stopped being true is restated with what replaced it and why — the way gap #21 was superseded
+by gap #34 on the day this was decided.
+
+**Evidence:** the inventory this decision was sized against — 24 direct event references in 15 files,
+224 `judge` references in 65 files, 271 `Phase N` references in 73 files — is recorded in Phase 9 of
+`docs/BUILD_PLAN.md`, measured 2026-09-30.

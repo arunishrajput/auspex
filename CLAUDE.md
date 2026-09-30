@@ -10,7 +10,16 @@ are created under **human authority** and members bet through **constrained AI a
 The thesis, in one line: **AI proposes, humans and the chain decide.**
 Nothing moves money or reaches a member without passing a human gate and an on-chain limit.
 
-Built solo for the MST Blockchain x Newrro Buildathon, AI & Web3 Builders track.
+**The build has two parts, and you are in the second one.** Phases 0–8 built and shipped the
+system under a competition deadline; that is finished and the event has ended. Phases 9–12
+("Part II" in `docs/BUILD_PLAN.md`) turn it into a product that stands on its own — reframing,
+a full visual redesign, fixing what makes a claim untrue, and a v1.0 release.
+
+**Part II's governing rule: the framing goes, every fact stays.** No address, hash, measurement or
+limitation is changed to look better. The build record is kept, not erased — ADR-068 says why, and
+it is the argument to re-read if deleting something starts to feel like tidying.
+
+*(This file is itself in Phase 9's scope for the framing pass.)*
 
 ## Session protocol — THIS IS THE IMPORTANT PART
 
@@ -28,7 +37,7 @@ The build is split into **phases**. **One phase per session.** The user starts a
    say so explicitly and record it in `PROGRESS.md` under "Known gaps" — never silently skip it.
 2. Update `PROGRESS.md`: mark the phase complete, record **real artifacts**
    (contract addresses, tx hashes, deployed URLs), and write a short "what the next session needs to know".
-3. Update `docs/DECISIONS.md` if you made an architectural choice worth defending to a judge.
+3. Update `docs/DECISIONS.md` if you made an architectural choice worth defending to a reviewer.
 4. `git add -A && git commit` with a clear message, then `git push`.
 5. Tell the user in 3-5 lines: what shipped, what is verifiable on-chain, and what the next phase is.
 
@@ -37,11 +46,12 @@ commit did not happen, that next session starts blind. **Do not skip the ritual.
 
 ## Hard rules
 
-These are not style preferences. Breaking one damages the submission.
+These are not style preferences. Breaking one damages the product's only real claim.
 
 1. **Never fake chain data.** Every contract address, tx hash and balance shown anywhere — UI, README,
-   logs — must be real and resolvable on `https://testnet.mstscan.com`. The buildathon rules say fake
-   or misleading deployment/transaction data can disqualify the project. There is no upside to faking.
+   logs — must be real and resolvable on `https://testnet.mstscan.com`. This was once a competition
+   rule; it is now the product. The entire proposition is that the claims can be checked, so a
+   fabricated hash is not a rule violation — it is the thing itself failing.
 
 2. **Never present mock data as real.** If something is mocked during development, it renders through
    the `<Provenance origin="MOCK">` component, which shows a loud badge. CI fails if `MOCK` reaches a
@@ -69,11 +79,13 @@ These are not style preferences. Breaking one damages the submission.
 8. **Secrets only in `.env.local`.** Never commit a key. Never print a private key to logs or to chat.
    Never ask the user to paste a key into the conversation.
 
-9. **No phase is complete without something visible.** Every phase from 2 onward ships a page or panel
-   a judge can look at. This prevents the failure mode of "lots running underneath, nothing to show".
+9. **No phase is complete without something visible.** Every phase ships a page, a panel or a
+   rendered artifact someone can look at. This prevents the failure mode of "lots running
+   underneath, nothing to show". **Read the deployed page, not the JSX** — three defects in this
+   project were invisible in source and obvious in the rendered output.
 
-10. **You must be able to explain every line.** The track's originality policy requires the builder to
-    defend the architecture to judges. Prefer the boring, explainable solution over the clever one.
+10. **You must be able to explain every line.** The owner maintains this alone and has to be able to
+    defend and change any part of it. Prefer the boring, explainable solution over the clever one.
 
 ## Verified environment facts — do not re-derive, do not guess
 
@@ -95,7 +107,7 @@ Faucet    : https://faucet.masterstroke.academy
 - **The chain is Cancun-capable** (PUSH0, MCOPY, TSTORE/TLOAD verified by `eth_call` probes).
   Compile with `evmVersion: "cancun"`.
 - **Gas is effectively free**: `baseFeePerGas = 0`, 1 gwei priority, 55M block gas limit, 3s blocks.
-  So we deliberately **store readable strings on-chain** (question, sources, evidence URL). Judge
+  So we deliberately **store readable strings on-chain** (question, sources, evidence URL). Reader
   legibility on the explorer is worth far more than gas savings here.
 - **Hardhat 2 does NOT work on this machine.** Node is v26 and Hardhat 2's `ts-node` dependency
   crashes (`Cannot read properties of undefined (reading 'fileExists')`). **We use Hardhat 3.**
@@ -135,7 +147,7 @@ Faucet    : https://faucet.masterstroke.academy
 | Chain client | ethers v6 | the MST SDK is too thin to trust on the critical path |
 | Wallet | wagmi + viem, `injected()` connector | EIP-1193/6963 standard — works with BridgeKey, no vendor code |
 | LLM | `@google/genai`, Gemini free tier | user's choice; free |
-| Hosting | Vercel + Neon + GitHub Actions cron | all $0, judge-accessible URL |
+| Hosting | Vercel + Neon + GitHub Actions cron | all $0, public URL — but see gap #33 on cadence |
 
 ## Commands
 
@@ -170,7 +182,7 @@ PROGRESS.md    <- the file that carries state between sessions
 
 ## Tone for user-facing output
 
-The user is building this solo and will defend it to judges. Be direct. Flag risks early. When you
-make a judgement call, say what you chose and why in one or two sentences — not an essay. If something
-is a trusted assumption or a limitation, name it plainly rather than hiding it; the honesty is part of
-the submission's credibility.
+The user maintains this solo and has to be able to defend and change any part of it. Be direct. Flag
+risks early. When you make a judgement call, say what you chose and why in one or two sentences — not
+an essay. If something is a trusted assumption or a limitation, name it plainly rather than hiding it;
+in a product whose pitch is "check my claims", that honesty *is* the product.

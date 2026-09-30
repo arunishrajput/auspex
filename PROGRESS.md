@@ -7,13 +7,15 @@
 > Session protocol and hard rules live in `CLAUDE.md`. Phase tasks and exit criteria live in
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
-**Last updated:** 2026-09-29
-**Current status:** ⚠️ Phase 8 substantially complete — README, DEMO_SCRIPT and an automated honesty guard shipped; **two items are blocked and need the user** (see below)
-**Next phase:** **Finish Phase 8** — one substantive refusal in `/review`, then resolve markets #4/#5 after they close on 2026-09-30 22:12 UTC. **The demo film is built** (`video/out/AuspeX-demo-4min.mp4`); what remains is uploading it and the submission form
+**Last updated:** 2026-09-30
+**Current status:** ✅ **Part I is closed. The project was submitted and the event has ended.** Phases 0–8 are complete; the video was uploaded and the form filed by the owner.
+**Next phase:** **Phase 9 — Reframe: from submission to product.** Start of **Part II**, which turns a competition entry into a product that stands on its own. Read the Part II preface in `docs/BUILD_PLAN.md` first.
 
 ---
 
 ## Phase status
+
+**Part I — build the system.** Complete and shipped.
 
 | Phase | Name | Status |
 |:--|:--|:--|
@@ -25,9 +27,41 @@
 | 5 | Member agents + deterministic policy gate | ✅ Complete |
 | 6 | Resolution, challenge window, payout | ✅ Complete |
 | 7 | Dashboard polish + trust page | ✅ Complete |
-| 8 | Live end-to-end run + README + submission | ⚠️ **In progress — 4 of 6 exit criteria met, 2 blocked** |
+| 8 | Live end-to-end run + README + submission | ✅ **Complete — submitted; see "How Phase 8 closed"** |
+
+**Part II — make it a product.** Not started.
+
+| Phase | Name | Status |
+|:--|:--|:--|
+| 9 | Reframe: from submission to product | ⬜ **NEXT** |
+| 10 | The new look — light, modern, funky, professional | ⬜ not started |
+| 11 | Operational truth — fix what makes a claim false | ⬜ not started |
+| 12 | v1.0.0 — verify everything once, tag, release | ⬜ not started |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete with known gaps
+
+---
+
+## How Phase 8 closed, and what Part II is
+
+**Phase 8 is done.** The demo film was uploaded and the submission filed by the owner on 2026-09-30,
+and the event has ended. Its last two exit criteria — *"a cold visitor understands the story"* and
+*"the builder can explain it unprompted"* — were always judgements rather than checks, and the
+submission settled both in the only way they could be settled. Nothing further is owed to Part I.
+
+**Two of its criteria are now permanently unverifiable and that is fine.** They were not skipped;
+they were answered by the event itself.
+
+**Part II exists because the repository still reads like a contest entry.** It addresses a judge,
+dates itself to an event, and organises its surfaces around being assessed. The plan for turning
+that into a product is Phases 9–12 in `docs/BUILD_PLAN.md`, and its governing rule is in the Part II
+preface: **the framing goes, every fact stays.** No address, hash, measurement or limitation is
+touched. The build record — this file, `BUILD_PLAN.md`, `DECISIONS.md` — is kept rather than erased,
+because the sequence of defects it records is the evidence behind every trust claim the product
+makes. Erasing it to look more polished would be the same retouching this project has refused seven
+times.
+
+See **ADR-068** for the decision and what it costs.
 
 ---
 
@@ -237,6 +271,72 @@ refusal with a real reason; the queue already holds the right candidate. See the
 **Also on chain, no longer in the repo:** `Ping` at `0x540d73793f5AA5E605A0243EA3DfCF106D6558D8`
 (verified). It was the Phase 0 toolchain probe used to prove the deploy→verify pipeline works before
 `AuspexMarket` existed. Deleted from the repo per `docs/BUILD_PLAN.md`; it is claimed nowhere.
+
+---
+
+## State of the running system — measured 2026-09-30, after the submission
+
+**Read this before Phase 9 and do not trust it after that.** Everything below was read off the live
+site, the chain and GitHub Actions on 2026-09-30 at ~12:30 UTC, because the Phase 8 handoff warned
+that the cron keeps running between sessions and this file goes stale. It did, again. It said nine
+markets; there were thirteen.
+
+### What the live system holds now
+
+| | Phase 8 recorded | Live 2026-09-30 |
+|:--|:--|:--|
+| Markets on chain | 9 | **13** |
+| Human-approved markets | 5 | **9** (#4, 5, 6, 7, 9, 10, 11, 12, 13) |
+| `/review` queue | — | 10 awaiting · 9 approved · **1 rejected** · 0 schema-rejected |
+| Policy-gate refusals | 7 | **16** |
+| Chain refusals | 6 | **10** |
+| Human refusals | 1 | **1** — still the one whose reason is the string `test` |
+| Confirmed transactions | — | **24** (11 `createMarket`, 8 `placeBet`, 2 `proposeResolution`, 3 `claim`) |
+| Deployed routes | 8 | all **8 return 200** |
+
+### The refusal candidate was approved instead
+
+Gap #26's named fix — proposal *"Will the stock price of Summit Therapeutics close above $25.00 …"* —
+was **approved rather than refused**. It is now market **#11**, `CLOSED`, holding 0.004 tMSTC of an
+agent's stake, with a resolve deadline of 2026-10-01 02:18 UTC. By the three reasons the handoff
+itself gave, it cannot be settled inside that deadline, so it will go stale and the keeper will
+refund it. Nothing dishonest happened; the cheapest remaining demonstration was simply spent on the
+other button.
+
+**The runner-up is still in the queue with the same clean defect** — the RBA market asks about
+"before the end of the current calendar year" while its own resolve deadline is 2026-10-02. If a
+substantive human refusal is ever wanted, that is still the one. It is **no longer on any critical
+path**, and Part II should treat it as optional.
+
+### Two defects that make current claims false — these are Phase 11's input
+
+**1. The pipeline does not run every five minutes.** `heartbeat.yml` and `sync.yml` both specify
+`*/5 * * * *`. GitHub fired the heartbeat at **07:18, 01:29, and 22:32 / 18:28 / 12:55 the previous
+day** — roughly **every five hours**. Every run succeeded; this is GitHub throttling scheduled
+workflows on a low-activity repository, not a broken workflow. Any sentence anywhere claiming a
+five-minute cadence is currently false.
+
+**2. The resolution stage is starved by its own deadline ladder.** `web/lib/pipeline/tick.ts:111`
+gives resolution 40% of `maxDuration` — 24s of 60 — measured absolutely from the start of the tick.
+Clustering runs first and has **no** deadline, only a call budget (gap #20 said so and it now
+matters). On the 07:18 tick, clustering handled 200 items into 93 events and adjudicated 15/15
+borderline pairs, and the resolution stage then logged:
+
+> `resolution halted: out of time for this tick after examining 0 market(s)`
+
+It did not merely fail to draft — **it never read the chain for market #11 at all.** Both ticks that
+had a resolvable candidate halted this way. So the resolution agent has still never examined a real
+past-close market, and the reason is no longer "nothing has closed yet"; it is the ladder. That is a
+different and worse gap than the one #21 describes, and it is the correction to #21.
+
+### Smaller, and true
+
+- **Indexer drift is user-visible.** `/markets` renders *"indexed as OPEN, chain says CLOSED"* on
+  market #11 and names the chain as correct. The page is behaving well; the projection is behind.
+- **`audit_log` has 412 entries** and still records no `durationMs` (gap #30).
+- **Two ADRs are both numbered 066**, and ADR-057 says *"superseded by ADR-066"* — now ambiguous.
+- **There is no `LICENSE` file**, though `README.md` says MIT.
+- Repo clean, in sync with `origin/main`, CI green on the last commit.
 
 ---
 
@@ -1431,7 +1531,11 @@ are watching it than in the place you cannot see.
 four calls are the largest single allowance in the tick. Worth doing if a tick is ever seen to be
 killed; not done, and not claimed.
 
-**21. The resolution agent has never run against a market that is genuinely past close.**
+**21. ⚠️ Superseded on 2026-09-30, and the truth is worse — see gap #34.** A market past close
+now exists (#11), and the stage still has not examined it: it is cut off by its own deadline before
+it reads the chain. The original text, which was accurate when written, follows.
+
+**The resolution agent has never run against a market that is genuinely past close.**
 `runResolutionPass` requires `close_time <= now()`, and markets #4–#7 close on **2026-09-30 22:12
 UTC**. Market #8 is finalised and has no proposal row, so it is out of scope by design. Every part of
 the agent has been proved on real data through `resolution:dry-run` — retrieval, the model, the quote
@@ -1534,6 +1638,42 @@ role, and #2 holds 0.01 tMSTC that would be refunded. It was skipped because `in
 already on chain once (`0xefe33de2…20f3ca6b`, with its refund claim), so a second one proves nothing new
 and spends a real market. Say that if asked why the button was not pressed.
 
+**33. The pipeline runs roughly every five hours, not every five minutes.** `heartbeat.yml` and
+`sync.yml` both specify `*/5 * * * *`. GitHub fired the heartbeat at 07:18 and 01:29 on 2026-09-30
+and at 22:32 / 18:28 / 12:55 the day before. Every run **succeeded** — this is GitHub throttling
+scheduled workflows on a low-activity repository, a documented behaviour of the hosted cron, not a
+broken workflow or a failing tick. The consequence is that the system is far less live than the
+configuration implies, and **any sentence claiming a five-minute cadence is currently false.**
+Phase 11 either moves the schedule somewhere that honours it or restates the claim. Until then,
+prefer "runs unattended on a schedule" over any specific number.
+
+**34. The resolution stage is starved by the deadline ladder, and never reads the market at all.**
+This is the correction to gap #21 and it is a worse finding than #21 was. `lib/pipeline/tick.ts:111`
+gives the resolution stage a deadline at **40% of `maxDuration`** — 24s of 60 — measured absolutely
+from the start of the tick. Clustering runs before it and has **no** deadline, only a call budget
+(gap #20 flagged exactly this as "still unbounded"). On the 07:18 tick clustering processed 200 items
+into 93 events and adjudicated 15/15 borderline pairs, and resolution then logged:
+
+> `resolution halted: out of time for this tick after examining 0 market(s)`
+
+Both ticks that had a resolvable candidate halted this way. The stage is not failing to draft — it
+never calls `readMarket` at all, so the chain is never consulted. The mitigation that already exists:
+`pnpm --filter web tick` passes 300s rather than 60s, so a locally-run tick gives resolution 120s and
+does reach the market. Phase 11 owns the real fix.
+
+**35. There is no `LICENSE` file, and `README.md` says MIT.** A licence claimed in prose and absent
+from the tree is not a licence. Phase 9 adds the file.
+
+**36. Two ADRs are both numbered ADR-066**, and ADR-057 says *"superseded by ADR-066"* — which is now
+ambiguous between "the keeper invalidates a stale market after a grace period" (the intended target)
+and "every market notification was late". Renumbering an append-only log breaks every cross-reference
+that points into it, so the fix is disambiguation rather than renumbering. Phase 9 owns it.
+
+**37. The indexer projection lags the chain visibly.** `/markets` renders *"indexed as OPEN, chain
+says CLOSED"* on market #11 and names the chain as authoritative. This is the page behaving correctly
+— it reads `getMarket()` per request and only the badge comes from the projection — but a user sees a
+disagreement between two of our own numbers. Either tighten the sync or document the expected bound.
+
 ## Discord notifications were arriving up to 50 minutes late — fixed 2026-09-29
 
 **Root cause was arithmetic, not scheduling.** `recordApproval` already ran indexer + notifier
@@ -1567,74 +1707,87 @@ from the Actions tab — RUNBOOK §"Notifications are not delivered by the cron"
 
 ## What the next session needs to know
 
-**Phase 8 is four-sixths done and the rest is not code.** The README, `DEMO_SCRIPT.md` and the
-`check:links` guard are shipped, verified and pushed. What is left needs either the user's wallet or
-the passage of time.
+**Part I is closed. You are starting Phase 9, the first phase of Part II.** Read the **Part II
+preface** in `docs/BUILD_PLAN.md` before the phase itself — it sets the one rule that governs all
+four remaining phases: *the framing goes, every fact stays.*
 
-### ⛔ Two things are waiting on the user, and neither can be done by an agent
+### Start here, in this order
 
-**1. Refuse one proposal in `/review`, with a real reason.** This is the only cheap thing left that
-lights up a counter a judge will otherwise discount. A refusal exists but its reason is the string
-`test` (gap #26), and it cannot be edited because the reason is inside the signed message.
+1. **`docs/BUILD_PLAN.md` → Part II preface → Phase 9.** Phase 9 carries a measured inventory of
+   exactly how much hackathon framing exists and where.
+2. **"State of the running system — measured 2026-09-30"**, above in this file. It is the only
+   section of this file that describes the present rather than the past.
+3. **Then verify it yourself before you trust it.** This file has now gone stale between sessions
+   three times running. `pnpm --filter web verify:resolution` prints every market's state; diff it
+   against what is written here before writing anything new.
 
-The candidate is already in the queue — proposal `36d5788e-8a9a-465b-b1d9-d487c6507c16`:
+### What Phase 9 is, in one paragraph
 
-> *"Will the stock price of Summit Therapeutics close above $25.00 on the NASDAQ exchange within 48
-> hours of the market closing?"*
+The system works, is deployed, and every claim it makes is checkable on chain. What it is not, yet,
+is a product: it opens by naming a competition, it narrates itself to a judge 224 times across 65
+files, and its most compelling feature is called "judge mode". Phase 9 changes who the repository is
+talking to. It changes **no fact** — not an address, not a hash, not a measurement, not a
+limitation. The two places that will tempt you to cheat are the build record (keep it — ADR-068) and
+the four on-chain market questions that contain the literal string `[Phase N … test]` (immutable —
+explain them, do not hide them).
 
-**Three independent, checkable reasons to refuse it**, which is exactly the judgement the gate exists
-for and none of which a schema could catch. Paste some version of this as the reason:
+### Nothing is waiting on the user any more
 
-> Unresolvable as written. (1) The question asks about a price "within 48 hours of the market
-> closing", but this market's own resolveDeadline is 24 hours after close — it asks about a window
-> that ends after the deadline by which it must be settled. (2) The criteria say "the next trading
-> day", which is not the same window as "within 48 hours". (3) The resolution source is wsj.com's
-> front page, which is paywalled and cannot settle a historical closing price.
+The two items the Phase 8 handoff was blocked on are both resolved or retired:
 
-The runner-up, if a second is wanted: `42fe3cb2-e482-42c0-94be-76883854636c` asks whether the RBA
-raises rates "before the end of the current calendar year" but closes on 2026-10-01 — three months
-before the question can be answered.
+- **The video was uploaded and the submission filed.** Phase 8's last open tasks are done.
+- **The substantive human refusal never happened**, and the candidate it named was approved instead
+  (see the measured-state section). It is **no longer on any critical path** — there is no judge to
+  convince. If you want it for completeness, the RBA proposal in the `/review` queue still has the
+  same clean defect. Treat it as optional, and never as a blocker.
 
-**2. Resolve markets #4 and #5 through `/resolve`, after 2026-09-30 22:12 UTC.** They carry the real
-agent stakes (0.005 and 0.004 tMSTC on YES). **This is the one remaining hole in the story**, and it
-is bigger than it looks: `RESOLVER_ROLE` is held by the browser wallet and `/resolve` signs with it,
-but **no market has ever been resolved through that path.** Every `proposeResolution` on chain came
-from the operator key during the market-8 lifecycle test. Until markets #4–#7 close, the claim "a human
-signs every outcome in a browser" is implemented and tested but not *demonstrated*, and the README says
-so rather than implying otherwise.
+**Phase 9 needs no wallet, no signature and no waiting.** It is the first phase in a long time that
+one session can finish alone.
 
-When they close, watch `resolution:dry-run` first, then `/resolve`. Look for the pattern that has bitten
-five times: a threshold or a prompt that is individually sensible and wrong in composition.
+### The traps, carried forward because they keep firing
 
-### Then: the video and the form
+**Read the chain before you trust this file.** Three sessions in a row, the live system moved while
+nobody was looking — the cron runs unattended and the owner clicks things. Phase 8 found three
+transactions and a human refusal this file did not record; this session found four more markets.
 
-Repo · contract address · a tx hash · the demo link · the video. `DEMO_SCRIPT.md` is the script and its
-hash table is already verified. Record `pnpm check:links` passing on camera if there is time — it is
-thirty seconds and it answers "how do I know this is real" better than any sentence.
+**Read the rendered page, not the JSX.** ADR-065's defect was invisible in source and obvious the
+moment the deployed page was read top to bottom. Phase 10 redesigns eight pages; this trap is
+waiting for it specifically.
 
-### Do not rebuild any of this
+**Prose beside data has to be derived from that data.** Three times now (ADR-065, ADR-067, and the
+`/markets/8` caption) a hand-written sentence has contradicted the rows printed under it. Phase 9
+rewrites a great deal of prose that sits beside real numbers. `pnpm check:links` is the guard —
+run it, and do not weaken it to make a sentence pass.
 
-**`README.md` is finished and self-checking.** Do not add a tally to it: every number that moves was
-deliberately replaced with a pointer to `/trust`, because a count in a README is stale the moment the
-cron fires again. `pnpm check:links` fails the build of the claim, not the prose.
+### Phase 10 has one non-obvious prerequisite, and it is the whole phase
+
+There are **three** shared components and **~1,200 inline colour-token references** across
+**5,191 lines** of page code. A redesign attempted directly is a find-and-replace across all of it,
+and the pages will drift apart. **Extract the component layer first**, with behaviour unchanged and
+the suite green, and the redesign becomes cheap. The phase is written in that order for that reason.
+
+Colour in this app is semantic — `ok` / `warn` / `bad` / `human` / `signal` are trust claims, not
+decoration. Keep the token *names* and change their values.
+
+
+### Do not rebuild any of this — but Phase 9 does rewrite the README
+
+**`README.md` is being rewritten in Phase 9, and its *structure* is the part worth keeping.** Do not
+add a tally to it: every number that moves was deliberately replaced with a pointer to `/trust`,
+because a count in a README is stale the moment the pipeline runs again. The 60-second self-check,
+the two evidence tables and the Limitations section are the best writing in the repository — carry
+their substance across, change who they are addressed to.
 
 **`/markets/[id]`'s footer is computed, not written.** If you find yourself wanting to write a sentence
 about who signed what, put it in `lifecycleClaim` in `lib/trust/signers.ts` and test it. ADR-065 is the
-third time this project has learned that prose beside data has to be derived from that data.
+third time this project has learned that prose beside data has to be derived from that data. Phase 10
+redesigns that page; the sentence must stay derived.
 
-### The trap this session fell into, so the next one does not
+**The four verification commands are load-bearing and cheap.** `preflight`, `check:links`,
+`check:provenance`, `verify:resolution`. Part II should be adding to them, never relaxing one to let
+a new sentence or a new colour pass.
 
-**Read the chain before you trust this file.** Three real transactions and a human refusal happened on
-the live site between the Phase 7 commit and this session, because the cron runs every five minutes and
-the user clicks things. `PROGRESS.md` said eight markets; there were nine. Run
-`pnpm --filter web verify:resolution` first — it prints every market's state — and diff it against what
-is written here before writing anything new.
-
-**Read the rendered page, not the JSX.** The caption defect ADR-065 fixed was invisible in the source
-and obvious the moment the deployed page was read top to bottom.
-
-
-### The role change is the thing to re-read before speaking to a judge
+### The role facts to re-read before describing the system to anyone
 
 `0xA9F68fDf84388fa548a685085E2bee0e5b311fF1` now holds `MARKET_CREATOR_ROLE`, `RESOLVER_ROLE` **and**
 `CHALLENGER_ROLE`. The old line "holds `MARKET_CREATOR_ROLE` and nothing else" is **false** and must
