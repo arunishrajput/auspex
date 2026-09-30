@@ -489,12 +489,23 @@ a resolvable market, it never read the chain at all. That was a defect and it is
 runs before the news stages, clustering and the proposer have deadlines, and two production ticks are
 on record examining market 11 from the chain.
 
-**What remains is narrower and is not a defect.** The stage examines the market and reports *"1 with
-no evidence to read"*, because no ingested article clears the retrieval coverage floor for that
-question. The floor was calibrated on articles about the same *story* and never on an article
-reporting an *outcome* — the case the resolver actually depends on was not in the calibration sample.
+**What remains is narrower, and only one half of it is ours.** The stage examines the one market that
+is past close and reports *"1 with no evidence to read"*. Two separate things are true about that:
+
+- **That market should not have been approved.** Market 11 asks whether a stock will close above a
+  price *"within 48 hours of the market closing"* — a question whose answer does not exist until
+  after its own resolve deadline has passed. It was drafted by the model, and the human reviewer
+  approved it; an earlier note had already identified the same proposal as a clean candidate for
+  *refusal*. So no retrieval improvement would settle it, and the contract will do the right thing
+  anyway: nobody can resolve it, it will go stale, and permissionless `invalidateStale` refunds the
+  stake. That is the human gate being fallible, recorded rather than hidden.
+- **And the retrieval floor is genuinely uncalibrated for this job.** It was tuned on articles about
+  the same *story* and never on an article reporting an *outcome*, so the case the resolver depends
+  on was not in the sample.
+
 So the path is implemented, tested against real data with `resolution:dry-run`, and market 8's full
-lifecycle is on chain, but no outcome has been drafted from live news yet. That is gap #22 in
+lifecycle is on chain — but no outcome has been drafted from live news yet. The first markets that
+could test it properly closed within hours of this release. That is gaps #22 and #40 in
 [`PROGRESS.md`](./PROGRESS.md); the starvation was gap #34, and it is closed.
 
 **Model quality is bounded by a small model on a free tier.** Drafted specs are structurally sound and

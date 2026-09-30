@@ -11,11 +11,13 @@
 **Current status:** ✅ **Phase 12 complete. Released as `v1.0.0`.** Nothing new was built. Fifteen
 commands were run in one sweep and all fifteen pass, with their numbers recorded below rather than
 their adjectives. The sweep's job was to catch **drift** — a sentence true when it was written that a
-later phase falsified — and it caught four: `verify:agents` has claimed to write nothing since
+later phase falsified — and it caught five: `verify:agents` has claimed to write nothing since
 Phase 5 while appending one `agents.halted` row per run; the README still described the resolution
 starvation defect in the present tense one phase after it was fixed; the cron delivery rate was
-computed by dividing the *gaps* between runs rather than the runs; and the database has had 15 tables
-since Phase 6, not 14. All four are corrected, and `check:render` ran for the first time in the
+computed by dividing the *gaps* between runs rather than the runs; the database has had 15 tables
+since Phase 6, not 14; and **the fifth was caught by reading the deployed page** — market #11's
+undrafted outcome was being blamed on the retrieval floor when its question cannot be answered before
+its own resolve deadline. All five are corrected, and `check:render` ran for the first time in the
 project's history — 8 routes, clean. No chain data, address or hash changed.
 **Next phase:** none. Part II is finished and the build is released. What a future session should
 read first is "After v1.0.0" at the end of this file.
@@ -381,8 +383,8 @@ version moved `0.1.0` → `1.0.0` across all four workspace packages, `CHANGELOG
 own exit criteria against the system as it stood that day, and each was right to. What no single
 phase can catch is a sentence that was *true when written* and that a later phase falsified — because
 the sentence is accurate in its own commit and the check that would catch it lives in a different
-file. A sweep catches it, because it reads the whole repository against one day's live system. Four
-were found:
+file. A sweep catches it, because it reads the whole repository against one day's live system. Five
+were found — and the fifth was in prose this phase had itself written an hour earlier:
 
 | Drift | Was | Is |
 |:--|:--|:--|
@@ -390,6 +392,7 @@ were found:
 | README Limitations, resolution | "the stage … is starved by the tick's own deadline ladder" — **fixed in Phase 11** | The stage examines the market; the coverage floor is what stops it drafting |
 | Cron delivery rate | `1.6%` of 554 (heartbeat), `1.7%` of 351 (sync) | **1.8%** and **2.0%** — the old figures divided the *gaps*, not the runs |
 | Database table count | 14 tables | **15** — `resolutionDrafts` arrived in Phase 6 |
+| Why market #11 has no outcome | the retrieval coverage floor | **its question cannot be answered before its own resolve deadline** — and the floor, second |
 
 ### The checker that lied about itself, and why the write stayed
 
@@ -500,6 +503,33 @@ check:render                                8 routes × 4 properties
 both Phase 6 migrations. Gap #5's re-run instructions were not needed. In the clean clone it skipped,
 which is the documented CI behaviour and the proof that a clone with no `.env.local` still passes.
 
+### The deployed read-through, and what it caught
+
+**All eight routes were read as rendered text, not inferred from the build** — `/`, `/markets`,
+`/review`, `/agents`, `/resolve`, `/trust`, `/audit` and `/markets/8`, all 200, on deployment
+`9ec7a35` (GitHub deployment status `success`, 2026-09-30T20:13:17Z). `/trust`'s role matrix, the
+`pause()` refusal, `/agents`' per-market cap bars and `/markets/8`'s computed lifecycle footer all
+read correctly.
+
+**And it caught a fifth drifted claim, in prose this session had written an hour earlier.** `/resolve`
+renders market #11's question in full:
+
+> *"Will the stock price of Summit Therapeutics close above $25.00 on the NASDAQ exchange within 48
+> hours of the market closing?"*
+
+That is the **same proposal gap #26 named as the clean candidate for a human refusal** — approved
+instead, and now the one market past close. So the README paragraph this phase had just rewritten was
+still incomplete: it blamed the retrieval coverage floor for the undrafted outcome, when the first
+reason is that **the question's answer does not exist until after its own resolve deadline**. No
+retriever settles that. Both reasons are now stated, in the README and in gap #40 — one market nobody
+can resolve, and a coverage floor never tested on an article reporting an outcome. The contract
+handles the market correctly regardless: it goes stale and `invalidateStale` refunds the stake.
+
+**The lesson is the one this project keeps relearning, one turn further on.** The fix was not
+available from the source, or from the tests, or from this file — it was on a page, in a sentence the
+page had assembled out of the database, sitting next to a number that made the old explanation look
+sufficient.
+
 ### Exit criteria
 
 | # | Criterion | Result |
@@ -507,8 +537,8 @@ which is the documented CI behaviour and the proof that a clone with no `.env.lo
 | 1 | Every command in the sweep passes, output recorded | ✅ 15 commands, numbers above |
 | 2 | `git tag v1.0.0` exists and is pushed; `CHANGELOG.md` covers Phases 0–12 | ✅ annotated tag; changelog written from the 36-commit history |
 | 3 | A clean clone builds and its tests pass with no undocumented step | ✅ `git clone --local`, no `.env.local`: install 4.2s, compile, 431 passed / 10 skipped, build |
-| 4 | All routes 200 on the deployed URL and read correctly **as rendered pages** | ✅ 8 routes read top to bottom; see below |
-| 5 | `README.md`'s Limitations section still accurate after Phases 9–11 | ⚠️ **It was not.** One paragraph described a defect Phase 11 had fixed. Corrected |
+| 4 | All routes 200 on the deployed URL and read correctly **as rendered pages** | ✅ 8 routes read top to bottom on `9ec7a35`; the read caught a fifth drifted claim |
+| 5 | `README.md`'s Limitations section still accurate after Phases 9–11 | ⚠️ **It was not.** One paragraph described a defect Phase 11 had fixed; the first rewrite of it was also incomplete. Both corrected |
 | 6 | No known gap is stale: each closed, or restated as true today | ✅ #5, #7, #26, #28, #33 and #37 restated with today's measurements; #38, #39 and #40 added |
 | 7 | Version `1.0.0` across the workspace | ✅ root, `web`, `contracts` — `video` was already 1.0.0 |
 | 8 | Repo presentation | ✅ description and topics set; social preview image is the one item needing the owner |
@@ -2391,7 +2421,18 @@ anything about the new cadence, so nothing is false. **To close this:** `gh run 
 measurement lives.
 
 **40. Four real markets close within three hours of this release, and none has been resolved from
-live news yet.** At 2026-09-30T19:53Z: #4 and #5 close at 22:12:06Z, #6 and #7 at 22:12:51Z, #9 at
+live news yet — and the one market already past close is unresolvable by construction.**
+
+**Market #11 is not a coverage-floor problem, or not only one.** It asks whether a stock closes above
+a price *"within 48 hours of the market closing"*, so its answer does not exist until after its own
+resolve deadline (2026-10-01 02:18 UTC) has passed. The model drafted it and the human approved it —
+and gap #26 had already named that same proposal as the clean candidate for a *refusal*. No retrieval
+improvement settles it. The contract handles it correctly regardless: it goes stale and
+permissionless `invalidateStale` refunds the 0.004 tMSTC. **So "the resolution stage has never
+drafted an outcome" currently has two causes, and they need separating** — one market that cannot be
+resolved by anyone, and a coverage floor that has never been tested on an article reporting an
+outcome. Markets #4–#7 and #9 are the first candidates that can distinguish them. The README now
+states both. At 2026-09-30T19:53Z: #4 and #5 close at 22:12:06Z, #6 and #7 at 22:12:51Z, #9 at
 23:43:17Z — the first time more than one human-approved market will be past close at once. The
 resolution stage is fixed and proven to examine a candidate (gap #21), but it has never had more than
 one, and market #11's outcome is undraftable for want of evidence clearing the coverage floor (gap

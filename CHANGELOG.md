@@ -44,10 +44,14 @@ approved and refused alike — is logged with the reason it carried at the time.
   `README.md` and in `CLAUDE.md`. `verify:resolution` was checked the same way and writes nothing,
   as it says.
 - **The README described the resolution starvation defect as though it were still live.** Phase 11
-  fixed it; the Limitations section had not caught up. It now states what is actually true: the
-  stage examines the market, and what stops it drafting an outcome is the retrieval coverage floor,
-  not the deadline ladder. Both the old reason and the new one are named, because the change of
-  reason is the interesting part.
+  fixed it; the Limitations section had not caught up. It now states what is actually true — and the
+  first rewrite of it was *also* incomplete, which the deployed-page read-through caught: it blamed
+  the retrieval coverage floor alone, when the first reason market 11 has no drafted outcome is that
+  its question asks about a stock price *"within 48 hours of the market closing"*, so the answer does
+  not exist until after its own resolve deadline. It is a market the human gate should have refused
+  — an earlier note had already named that same proposal as a candidate for refusal — and the
+  contract handles it correctly anyway by letting it go stale and refunding the stake. Both reasons
+  are now stated, separately.
 - **The cron delivery rate was computed from the wrong count.** Phase 11 measured ten scheduled
   heartbeat runs over 46h07m and reported `1.6%` of the 554 runs the `*/5` expression requested.
   Nine is the number of *gaps* between ten runs — correct for the mean gap, wrong for a delivery
