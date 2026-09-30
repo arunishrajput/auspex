@@ -558,8 +558,15 @@ The reasons, in order:
 5. **Moved onto this version**, which asserts neither a hash nor a total, and therefore survives
    being tagged.
 
-**`git reflog show v1.0.0` and this file's own history hold the exact sequence** — they are the right
-place for it, because they are records that are written *after* the thing they describe.
+**The exact sequence is in this file's own git history** — `git log --oneline --follow -- PROGRESS.md`
+— and in the commit messages, each of which names the move it was making. Every position the tag held
+is an ordinary ancestor of `main`, so nothing was orphaned by the moves.
+
+⚠️ **This paragraph first pointed at `git reflog show v1.0.0`, and that was wrong.** Git does not
+keep a reflog for tag refs by default, so the command returns nothing — checked before this sentence
+was written, which is the only reason it says something different now. The tag message carried the
+same bad pointer and was corrected with it. A note about where to find evidence is itself a claim,
+and it needed the same verification as any other.
 
 **Steps 3 and 4 are the part worth keeping.** Twice, a note about the tag was made false by tagging
 the note. The fix was not a better hash or a better count; it was removing the hash and the count,
