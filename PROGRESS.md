@@ -533,44 +533,52 @@ available from the source, or from the tests, or from this file — it was on a 
 page had assembled out of the database, sitting next to a number that made the old explanation look
 sufficient.
 
-### The release, and the tag that was force-updated three times
+### The release, and the tag that kept having to move
 
-**`v1.0.0` is an annotated tag on the commit that carries this table.** Its position is
-`git rev-list -n1 v1.0.0`; this section deliberately does not hardcode a hash, for a reason the
-history below makes obvious. There is no GitHub Release object — it is a tag ref.
+**`v1.0.0` is an annotated tag on the commit that carries this section.** Its position is whatever
+`git rev-list -n1 v1.0.0` says; this section names no hash for it, for the reason below. There is no
+GitHub Release object — it is a tag ref.
 
-**It was pushed four times, and each move is here with what the previous tree got wrong:**
+**The ref was force-updated several times during this session.** Each move had the same
+justification: a tag whose own message says *"every claim in the repository was verified once"* must
+not point at a tree containing a claim known to be false. The alternative — an immutable `v1.0.0`
+shipping a wrong number with an erratum on `main` — is precisely what this product exists not to do.
+The reasons, in order:
 
-| Tag pointed at | Moved because | What that tree still got wrong |
-|:--|:--|:--|
-| `9ec7a35` | — (first push) | README blamed the retrieval floor alone for market #11's undrafted outcome |
-| `c48a10f` | the deployed-page read-through found that claim | `docs/ARCHITECTURE.md` still read **1.6%**, a number already known to be wrong |
-| `e4d2aa5` | a residual-number scan found the file the percentage fix had missed | this table named `e4d2aa5` as the tag's position, which moving the tag made false |
-| this commit | the note describing the moves could not describe its own | — |
+1. **First push.** Then the deployed-page read-through found that the README blamed the retrieval
+   coverage floor alone for market #11's undrafted outcome, when the first reason is that its
+   question cannot be answered before its own resolve deadline.
+2. **Moved onto that fix.** Then a scan for the old percentage found `docs/ARCHITECTURE.md` still
+   reading **1.6%** — a number already known to be wrong, in a file the first correction had missed.
+3. **Moved onto that fix.** Then this very section, which then *stated the tag's hash*, was
+   falsified by the act of tagging it.
+4. **Moved onto the rewrite that removed the hash.** Then this section, which then *counted the
+   moves and listed each position*, was falsified the same way — one move short and one row missing,
+   because a list of positions grows by one every time it is tagged.
+5. **Moved onto this version**, which asserts neither a hash nor a total, and therefore survives
+   being tagged.
 
-**The reasoning was the same every time.** A tag whose own message says *"every claim in the
-repository was verified once"* must not point at a tree containing a claim known to be false. The
-alternative — an immutable `v1.0.0` shipping a wrong number with an erratum on `main` — is precisely
-what this product exists not to do.
+**`git reflog show v1.0.0` and this file's own history hold the exact sequence** — they are the right
+place for it, because they are records that are written *after* the thing they describe.
 
-**The third move is the funny one and it is worth keeping.** A note that states the tag's hash cannot
-survive being tagged, so the act of recording the second move invalidated the record of it. The fix
-was not another hash but removing the hash: the note now describes *where* the tag is rather than
-*what* it is, and a reader who wants the sha asks git. **A fact about an artifact cannot live inside
-that artifact if it changes when the artifact is made** — which is the same lesson as "prose beside
-data has to be derived from that data", applied to a tag instead of a table.
+**Steps 3 and 4 are the part worth keeping.** Twice, a note about the tag was made false by tagging
+the note. The fix was not a better hash or a better count; it was removing the hash and the count,
+so that what remains is the *reasons*, which do not change when the ref moves. **A fact about an
+artifact cannot live inside that artifact if the fact changes when the artifact is made.** That is
+the same lesson as *"prose beside data has to be derived from that data"* and *"a count on a live
+page must say which things it counted"* — this project has now paid for some version of it six
+times, and this was the first time it appeared in a git ref rather than on a page.
 
 ⚠️ **An earlier version of this section said the tag would not be moved again.** That reasoning was
-sound and its premise was wrong: it was written before the residual scan found `1.6%` in
-`ARCHITECTURE.md`, which is a wrong measurement rather than the count nuance the sentence was about.
-Replaced rather than deleted, and this paragraph is why — a note that pre-commits to an action and is
-then overtaken by a fact should say so.
+sound and its premise was wrong: it was written before the percentage scan, and it was arguing about
+an imprecise *count of commands* rather than a wrong measurement. Replaced rather than deleted, and
+this paragraph is why — a note that pre-commits to an action and is then overtaken by a fact should
+say so.
 
-**Nothing in the tag message is now imprecise.** The first three versions of it said *"Fifteen
-commands"* against an exact figure of sixteen runs over thirteen checks, and said *"six"* drifted
-claims where the count is five; both are corrected in the final message, since the ref was being
-rewritten anyway. Every other figure was exact throughout: 498 tests, 11/11 preflight, 41 agent
-checks, 8 routes.
+**The tag message's figures are exact**: sixteen command runs across thirteen distinct checks, 498
+tests, 11/11 preflight, 41 agent checks, 8 routes, five drifted-or-wrong claims. Earlier versions of
+it said *"Fifteen commands"* and *"six"* claims; both were corrected on a move that was happening
+anyway.
 
 **Main is at the tag.**
 
