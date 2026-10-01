@@ -1,9 +1,14 @@
 {
   "name": "auspex-launch-film",
   "version": "1.0.0",
-  "description": "AuspeX launch film: Remotion, Amazon Polly narration, a synthesised score, real captures of the live deployment",
-  "repository": {},
-  "license": "UNLICENSED",
+  "description": "The AuspeX demo video: Remotion motion graphics over real captures, narrated with Amazon Polly.",
+  "license": "MIT",
+  "author": "Arunish Rajput",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arunishrajput/auspex.git",
+    "directory": "launch-film"
+  },
   "private": true,
   "dependencies": {
     "@remotion/cli": "4.0.532",

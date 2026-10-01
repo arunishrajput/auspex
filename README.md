@@ -1,5 +1,11 @@
 # AuspeX
 
+[![CI](https://github.com/arunishrajput/auspex/actions/workflows/ci.yml/badge.svg)](https://github.com/arunishrajput/auspex/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Live demo](https://img.shields.io/badge/live-auspex--web--mu.vercel.app-ff5a1f)](https://auspex-web-mu.vercel.app)
+[![Contract verified](https://img.shields.io/badge/contract-verified%20on%20MSTScan-0dea81)](https://testnet.mstscan.com/address/0xc4743d6295311AFead12161881Bfcf601B70104C)
+[![Demo video](https://img.shields.io/badge/demo-YouTube-red?logo=youtube)](https://www.youtube.com/watch?v=Jp08xTuiHVI)
+
 **Prediction markets created under human authority, researched by AI agents that the chain keeps on a leash.**
 
 > **AI proposes. Humans and the chain decide.**
@@ -19,6 +25,7 @@ all by hand". It is running on a testnet, it is not audited, and the
 | | |
 |---|---|
 | **Live** | **https://auspex-web-mu.vercel.app** |
+| **Demo video** (3:47) | **https://www.youtube.com/watch?v=Jp08xTuiHVI** |
 | **Contract** (verified) | [`0xc4743d6295311AFead12161881Bfcf601B70104C`](https://testnet.mstscan.com/address/0xc4743d6295311AFead12161881Bfcf601B70104C) |
 | **Network** | MST Testnet · chain `91562037` |
 | **The transaction that matters** | [`0xbfe9bb2c…ced060a`](https://testnet.mstscan.com/tx/0xbfe9bb2c3ffee4be2f660473b3de916380f5d10da8548173d44810118ced060a) — **Reverted**, on purpose |
@@ -26,6 +33,17 @@ all by hand". It is running on a testnet, it is not audited, and the
 Every address, hash and balance in this repository is real and resolvable on
 `testnet.mstscan.com`. Nothing here is fabricated, and nothing is mocked — the app fails its own
 build if mock data reaches production.
+
+---
+
+## Watch it
+
+[![AuspeX demo — an AI agent bets one wei over its on-chain cap, and the chain refuses it](./docs/assets/demo-video.png)](https://www.youtube.com/watch?v=Jp08xTuiHVI)
+
+**[▶ Watch the 3:47 demo on YouTube](https://www.youtube.com/watch?v=Jp08xTuiHVI)** — the pipeline, the human gate, the policy gate, and an
+agent betting one wei over its on-chain cap while the chain refuses it. Every page in it is a real
+capture of the live deployment or the explorer, every hash it names was re-read from MSTScan before the
+render was allowed to start, and its source is in [`launch-film/`](./launch-film/).
 
 ---
 
@@ -331,8 +349,11 @@ web/           Next.js 16 · dashboard · API routes · pipeline stages · the t
   lib/agents/      the policy gate (pure) and the member agents
   lib/resolution/  outcome drafting: retrieve → draft → validate → propose
   lib/trust/       live role reads and the refusal counters
-docs/          PRD · ARCHITECTURE · TRUST_MODEL · CONTRACTS · RUNBOOK · WALKTHROUGH
+docs/          PRD · ARCHITECTURE · TRUST_MODEL · CONTRACTS · SELF_HOSTING · RUNBOOK · WALKTHROUGH
                BUILD_RECORD · BUILD_PLAN · PROGRESS · DECISIONS   <- the engineering log
+scripts/       wallet generation · preflight · the README link and sender checker
+launch-film/   the demo video: Remotion + Amazon Polly, rendered only after its hashes are re-verified
+.github/       CI (build · test · lint · secret and mock guards) · the pipeline heartbeat
 ```
 
 **Idempotency is a design constraint, not a test.** Off-chain: unique keys plus
@@ -387,22 +408,35 @@ them is the honest choice for a product whose whole pitch is that its claims can
 
 ## Running it locally
 
+### In two minutes — no accounts, no secrets
+
 ```bash
 git clone https://github.com/arunishrajput/auspex
 cd auspex
 pnpm install
-
-cp .env.example .env.local     # then fill it in — docs/RUNBOOK.md is click-by-click
-
-pnpm wallets:new               # generate a deployer wallet, fund it at the faucet
-pnpm preflight                 # 11 checks: RPC, chain id, explorer, DB, LLM, contract, agent caps
-
 pnpm compile                   # solc 0.8.28, evmVersion cancun
-pnpm test                      # contract + unit tests
-pnpm deploy:testnet            # deploy to MST Testnet
-pnpm verify:testnet            # verify source on MSTScan
-
+pnpm test                      # contract + web unit tests; no network, no keys
 pnpm dev                       # dashboard on http://localhost:3000
+```
+
+With no `.env.local`, the dashboard reads **the live contract** through MST's public RPC: the
+markets, the role matrix and the contract's own refusals render for real, and every panel that needs a
+database says `DATABASE_URL is not configured` rather than inventing a number. Checked on a clean
+clone on 2026-10-01 — all eight routes return 200. That is enough to work on the UI, the contract, the
+policy gate or the schemas.
+
+### Your own deployment
+
+**[`docs/SELF_HOSTING.md`](./docs/SELF_HOSTING.md)** walks through it step by step: a funded testnet
+wallet, a Postgres database (Neon's free tier), a Gemini key (free tier), deploying and verifying
+your own contract, granting roles to a browser wallet that becomes your human authority, registering
+agents on chain, and optionally hosting on Vercel with a GitHub Actions heartbeat.
+
+```bash
+cp .env.example .env.local     # every variable is documented inline
+pnpm wallets:new               # prints a deployer key once; writes nothing to disk
+pnpm deploy:testnet && pnpm verify:testnet
+pnpm preflight                 # RPC, chain id, explorer, deployer, human wallet roles, LLM, DB, contract, agents
 ```
 
 **Requirements:** Node ≥ 22 (developed on 26), pnpm 11. **Hardhat 3, not 2** — Hardhat 2's `ts-node`
@@ -531,6 +565,22 @@ was cut to keep the thin real loop — news → confirmation → human gate → 
 agent bet → resolution → payout — genuinely working end to end, rather than half-built in six places.
 
 ---
+
+## Contributing
+
+Issues and pull requests are welcome — read **[`CONTRIBUTING.md`](./CONTRIBUTING.md)** first. The
+short version: AI may only propose; nothing fake reaches a page; every state change is idempotent;
+every decision is logged with its reason; and a pull request that makes a claim *more* true — even
+by adding a limitation to this file — is one of the best things you can send. The *Limitations*
+section above doubles as the roadmap.
+
+Everyone taking part is expected to follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+## Security
+
+Found a way around a gate, a cap or a role? Please **don't open a public issue** — report it
+privately through [GitHub security advisories](https://github.com/arunishrajput/auspex/security/advisories/new).
+[`SECURITY.md`](./SECURITY.md) says what is in scope and which limitations are by design.
 
 ## License
 

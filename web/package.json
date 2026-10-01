@@ -1,6 +1,14 @@
 {
   "name": "web",
   "version": "1.1.0",
+  "description": "AuspeX dashboard, API routes, pipeline workers and the three agents (Next.js).",
+  "license": "MIT",
+  "author": "Arunish Rajput",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arunishrajput/auspex.git",
+    "directory": "web"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",

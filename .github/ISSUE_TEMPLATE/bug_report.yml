@@ -1,0 +1,53 @@
+name: Bug report
+description: Something behaves differently from what the code or the docs say it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security issues go through [private reporting](https://github.com/arunishrajput/auspex/security/advisories/new), not here.**
+        A transaction that reverts is not necessarily a bug — many in this project are deliberate refusals. Check the decoded revert reason on testnet.mstscan.com first.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and where (a route, a command, a transaction).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      placeholder: |
+        1. Open /markets/8
+        2. …
+    validations:
+      required: true
+  - type: input
+    id: tx
+    attributes:
+      label: Transaction or address (if on-chain)
+      description: A full link on https://testnet.mstscan.com — not mstscan.com, which indexes a different chain.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - The live deployment (auspex-web-mu.vercel.app)
+        - A local run with no .env.local (read-only)
+        - My own deployment
+        - The contract
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Browser and wallet, or Node / pnpm versions and OS for a local run. Never paste a key or a connection string.

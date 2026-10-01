@@ -1,5 +1,10 @@
 # RUNBOOK.md — setup state and manual steps
 
+> **Setting up your own copy?** Read [`SELF_HOSTING.md`](./SELF_HOSTING.md) instead. This file is the
+> operations log of the reference deployment at https://auspex-web-mu.vercel.app — what was set up,
+> in what order, and every diagnosis worth not repeating. Its diagnoses are still the best reference
+> when something in your own setup misbehaves.
+
 **Rule that never bends:** secrets go into `.env.local` (git-ignored) and into the Vercel / GitHub
 secret stores. Never into a file that is committed, never into a chat message, never into a log.
 

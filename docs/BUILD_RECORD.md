@@ -17,13 +17,13 @@ them was the right call rather than an oversight.
 | [`../PROGRESS.md`](../PROGRESS.md) | The session-by-session build state: what each phase shipped, the real artifacts it produced, the defects it found, and a "known gaps" list with measurements attached. ~2,000 lines. |
 | [`BUILD_PLAN.md`](./BUILD_PLAN.md) | The phase plan, with the tasks and exit criteria each phase was held to. Part I is phases 0–8; Part II is 9–12, the turn from entry into product. |
 | [`DECISIONS.md`](./DECISIONS.md) | 79 architecture decision records as of v1.0.0. What was decided, why, what it cost, and the evidence. This is the most useful file in the repository for anyone changing the system. |
-| `video/` *(removed 2026-10-01)* | The September 2026 four-minute demo film and its Remotion source, made for the event. Removed from the tree at the owner's request when `launch-film/` replaced it; the source is intact in git history at commit `9abe3fc` (`git show 9abe3fc:video/README.md`). |
+| `video/` *(removed 2026-10-01)* | The September 2026 four-minute demo film and its Remotion source, made for the event. Removed from the tree at the owner's request when `launch-film/` replaced it (ADR-082); the source is intact in git history at commit `9abe3fc` (`git show 9abe3fc:video/README.md`). |
 | [`WALKTHROUGH.md`](./WALKTHROUGH.md) | A reader's tour of the live system with the verified hash table. It began as a presenter's script for a table at the event and was rewritten for a reader with no presenter. |
 | [`original-brief-2026-09.pdf`](./original-brief-2026-09.pdf) | The event's own brief, which the first sections of `PRD.md` were written against. Kept out of the repository root and kept at all, because "what was actually asked for" is the only way to judge what was built against it. |
 
 Everything else in `docs/` is current product documentation:
 [`PRD.md`](./PRD.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md), [`TRUST_MODEL.md`](./TRUST_MODEL.md),
-[`CONTRACTS.md`](./CONTRACTS.md), [`RUNBOOK.md`](./RUNBOOK.md).
+[`CONTRACTS.md`](./CONTRACTS.md), [`SELF_HOSTING.md`](./SELF_HOSTING.md), [`RUNBOOK.md`](./RUNBOOK.md).
 
 **One line outside the record still names the event, on purpose.** `RUNBOOK.md`'s setup checklist
 records that the Gemini API key in use is listed in Google Cloud as *"AuspeX MST Buildathon"*. That is

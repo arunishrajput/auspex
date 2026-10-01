@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/arunishrajput/auspex/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue. See SECURITY.md.
+  - name: Run your own deployment
+    url: https://github.com/arunishrajput/auspex/blob/main/docs/SELF_HOSTING.md
+    about: Step-by-step setup — contract, human wallet, agents, database.
+  - name: Check the claims yourself
+    url: https://auspex-web-mu.vercel.app/trust
+    about: Every claim on /trust is a live read of the contract. No wallet needed.

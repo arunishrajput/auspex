@@ -9,12 +9,39 @@ after the release, and the phase boundaries
 are the only meaningful unit of change in it — so that is how this file is organised. The full
 build record, including the defects and what each one cost, is
 [`docs/BUILD_RECORD.md`](./docs/BUILD_RECORD.md) and
-[`docs/DECISIONS.md`](./docs/DECISIONS.md) (82 ADRs).
+[`docs/DECISIONS.md`](./docs/DECISIONS.md) (84 ADRs).
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) exactly.
 
 ---
+
+## [Unreleased]
+
+**Open-source ready, and a new demo video.** Documentation and repository scaffolding only — no
+application code, contract, address, hash or measurement changed.
+
+### Added
+
+- **The demo video** — [youtube.com/watch?v=Jp08xTuiHVI](https://www.youtube.com/watch?v=Jp08xTuiHVI),
+  3:47, built in `launch-film/` (Remotion, Amazon Polly narration, a score synthesised in code). Its
+  render is gated on `npm run verify`, which re-reads every on-screen hash from MSTScan (ADR-082).
+- **`docs/SELF_HOSTING.md`** — running your own deployment end to end: wallets, database, model,
+  contract deploy and verification, the human authority's roles, agent registration, hosting and the
+  heartbeat.
+- **A zero-secret quickstart.** A clean clone with no `.env.local` installs, compiles, passes the
+  full test suite and serves all eight routes read-only against the live contract — measured on
+  2026-10-01 and now the README's first instruction (ADR-083).
+- **`CONTRIBUTING.md`**, **`SECURITY.md`** (private vulnerability reporting), **`CODE_OF_CONDUCT.md`**
+  (Contributor Covenant 2.1), issue forms and a pull-request template that mirrors CI.
+- README badges, a *Watch it* section, *Contributing* and *Security* sections, and the repository
+  layout now lists `launch-film/`, `scripts/` and `.github/`.
+- `license`, `author` and `repository` metadata in every package.
+
+### Removed
+
+- **`video/`**, the September 2026 film, at the owner's request. Its source is in git history at
+  `9abe3fc`; `docs/BUILD_RECORD.md` points there (ADR-082).
 
 ## [1.1.0] — 2026-10-01
 

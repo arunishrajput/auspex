@@ -1,0 +1,33 @@
+name: Idea or improvement
+description: A change to what AuspeX does, or how it proves it.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is missing, unclear or weaker than it should be?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+    validations:
+      required: true
+  - type: dropdown
+    id: authority
+    attributes:
+      label: Does it change who or what can decide something?
+      description: AI may only propose. Anything that moves money or reaches a user passes a human, deterministic code, or the contract.
+      options:
+        - No — authority is unchanged
+        - Yes — and the proposal explains which gate still applies
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Does it remove or add a limitation?
+      description: The README's Limitations section is a roadmap too. Say if this addresses one of them, or would need a new one written down.

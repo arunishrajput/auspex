@@ -7,7 +7,7 @@
 > Session protocol and hard rules live in `CLAUDE.md`. Phase tasks and exit criteria live in
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
-**Last updated:** 2026-10-01 (Phase 13)
+**Last updated:** 2026-10-01 (Phase 13, then the demo video and open-source readiness — see the end of this file)
 **Current status:** ✅ **Phase 12 complete. Released as `v1.0.0`.** Nothing new was built. **Sixteen
 command runs across thirteen distinct checks**, all passing, with their numbers recorded below rather
 than their adjectives. The sweep's job was to catch **drift** — a sentence true when it was written that a
@@ -109,6 +109,7 @@ See **ADR-068** for the decision and what it costs.
 | **Public GitHub repo** | https://github.com/arunishrajput/auspex | ✅ |
 | **CI** (build/test/lint/secret+mock guards) | https://github.com/arunishrajput/auspex/actions | ✅ green |
 | **Live demo URL** | **https://auspex-web-mu.vercel.app** | ✅ public, live chain data |
+| **Demo video** | **https://www.youtube.com/watch?v=Jp08xTuiHVI** — 3:47, built in `launch-film/` | ✅ public, 2026-10-01 |
 | Vercel project | `auspex-web` (team `arunish-rajputs-projects`), root dir `web` | ✅ auto-deploys on push |
 | Deployer wallet | `0xc71dC478040F7A6bcc5Cb1f316A4a446F7D4ad24` | ✅ 9.976 tMSTC left |
 | **Human authority wallet (BridgeKey)** | **`0xA9F68fDf84388fa548a685085E2bee0e5b311fF1`** | ✅ 50 tMSTC, chain `91562037` |
@@ -3091,3 +3092,42 @@ MARKET=5 pnpm --filter web resolution:dry-run   # a specific market
   the clone has no `.env.local`, which is the condition that catches a whole class of bug.
 - Index from block **5,786,343**. The deployed ABI is `contracts/deployments/mstTestnet.json`.
 - Vercel auto-deploys `main` to https://auspex-web-mu.vercel.app — a broken build there is public.
+
+---
+
+## After v1.1.0 — the demo video and open-source readiness (2026-10-01)
+
+Not a numbered phase: two pieces of work asked for after the dark edition. **No application code,
+contract, address, hash or measurement changed.**
+
+**The demo video.** https://www.youtube.com/watch?v=Jp08xTuiHVI — built in `launch-film/` (Remotion,
+Amazon Polly voice *Matthew* on the generative engine, a score synthesised in `scripts/score.py`).
+`npm run render` refuses to start unless `npm run verify` re-reads every on-screen hash from
+`testnet.mstscan.com/api/v2` and they all match. Two things worth knowing for next time:
+
+- **The cap probe could not be pressed for the film** — no market was open, and the button refused
+  with *"not run — and here is why"*. The film shows that refusal and uses the earlier real probe
+  `0xbfe9bb2c…ced060a`. Re-capturing with a live press needs an open market first.
+- **Polly's generative voice comes out at about −25 LUFS**, quieter than the score; the first mix
+  buried the narration. `scripts/vo-level.sh` brings every clip to −16 LUFS, and the master is
+  −14 LUFS. Measured, not listened to — nobody in the session could hear it.
+
+The September film in `video/` was removed from the tree at the owner's request (ADR-082); its source
+is at `9abe3fc`. Earlier mentions of `video/` in this file are history and are left as written. The
+`check:render` instructions above that point at `video/node_modules/playwright` should now use
+`launch-film/node_modules/playwright/index.mjs`.
+
+**Open-source readiness.** `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue forms, a PR
+template, `docs/SELF_HOSTING.md`, package licence metadata, and a README with badges, the video,
+and a two-minute zero-secret quickstart (ADR-083). Measured on a clean `git worktree` with no
+`.env.local`: `pnpm install`, `pnpm compile` and `pnpm test` pass (57 contract tests, 431 web tests,
+10 skipped), and all eight routes return 200 from `next dev`. Before anything was published the whole
+git history was scanned: no real secret value from `.env.local` appears in any commit; only public
+values (RPC URL, contract and wallet addresses) do.
+
+**Open items for the owner:**
+
+- The Code of Conduct's enforcement contact is the maintainer's GitHub profile. A dedicated email
+  address would be better if contributors arrive.
+- The `[Unreleased]` section of `CHANGELOG.md` is ready to become `1.2.0` whenever a release is cut.
+

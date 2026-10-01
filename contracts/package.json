@@ -1,6 +1,14 @@
 {
   "name": "contracts",
   "version": "1.0.0",
+  "description": "AuspexMarket — the authority layer: roles, agent caps, resolution and payout (Solidity, Hardhat 3).",
+  "license": "MIT",
+  "author": "Arunish Rajput",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arunishrajput/auspex.git",
+    "directory": "contracts"
+  },
   "private": true,
   "type": "module",
   "scripts": {

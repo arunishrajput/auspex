@@ -187,9 +187,11 @@ project; it skips with an explanation rather than failing. To actually run it:
 ```
 contracts/     Hardhat 3 · Solidity · tests · deploy + verify scripts
 web/           Next.js app — dashboard, API routes, pipeline workers, agents
-docs/          product: PRD · ARCHITECTURE · TRUST_MODEL · CONTRACTS · RUNBOOK · WALKTHROUGH
+docs/          product: PRD · ARCHITECTURE · TRUST_MODEL · CONTRACTS · SELF_HOSTING · RUNBOOK · WALKTHROUGH
                record:  BUILD_RECORD · BUILD_PLAN · DECISIONS  (PROGRESS.md is in the root)
 scripts/       one-off dev utilities (wallet gen, doctor)
+launch-film/   the demo video (Remotion + Amazon Polly) — own npm, not a workspace package
+CONTRIBUTING · SECURITY · CODE_OF_CONDUCT   <- the hard rules above, restated for human contributors
 PROGRESS.md    <- the file that carries state between sessions
 ```
 

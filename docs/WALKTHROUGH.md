@@ -11,6 +11,9 @@ says it is.
 **The one idea to leave with:**
 > AI proposes. Humans and the chain decide.
 
+Prefer to watch first? **[The 3:47 demo video](https://www.youtube.com/watch?v=Jp08xTuiHVI)** covers
+the same path, built from real captures of these pages.
+
 Live at **https://auspex-web-mu.vercel.app**. Contract:
 **`0xc4743d6295311AFead12161881Bfcf601B70104C`** on MST Testnet, chain `91562037`, verified source on
 [MSTScan](https://testnet.mstscan.com/address/0xc4743d6295311AFead12161881Bfcf601B70104C).

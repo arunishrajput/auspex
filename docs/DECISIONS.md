@@ -2250,3 +2250,61 @@ action points at `/trust`, and on `/trust` it points at `/audit` instead. A butt
 page you are on is not a call to action.
 
 **Evidence:** `pnpm check:render` visits all 8 routes; `/markets/13` now reports a header.
+
+### ADR-082 — The September film leaves the tree; history keeps it
+
+**Decided:** on 2026-10-01 a new demo video was made in `launch-film/` and published at
+https://www.youtube.com/watch?v=Jp08xTuiHVI, and at the owner's request the September film in
+`video/` was deleted from the working tree. Its source remains in git history at `9abe3fc`, and
+`docs/BUILD_RECORD.md` says so where the folder used to be listed.
+
+**Why this is not the deletion ADR-068 warns against.** ADR-068 keeps the build record because the
+record is the evidence behind the trust claims — the sequence of beliefs the project held and its own
+output disproved. `video/` was an *artifact* of that record, not part of the reasoning: no claim
+anywhere depends on the September film, and every fact it showed is still stated, with its hash, in
+the README and `WALKTHROUGH.md`. Removing it from the tree loses no evidence a reader could otherwise
+check, and keeping a film the owner calls a bad attempt beside the one that replaced it would confuse
+a newcomer without making the repository more honest. What ADR-068 actually forbids — erasing the record so it cannot
+be found — is avoided by naming the commit.
+
+**What the new film keeps from the old one.** The render is gated on `npm run verify`, which re-reads
+every on-screen hash from `testnet.mstscan.com/api/v2` and checks status, method, sender and revert
+reason; the two non-chain visuals are labelled on screen. The cap probe could not be pressed for the
+film because no market was open — the button refused, and the film shows that refusal instead of
+staging a press.
+
+**What it costs.** `PROGRESS.md` and `CHANGELOG.md` still mention `video/` as it was; they are history
+and are left as written. A reader following one of those mentions has to use `git show 9abe3fc:…`.
+
+**Evidence:** `git log --stat 6ca7fdb` — the commit that added `launch-film/` and removed `video/`.
+
+### ADR-083 — The open-source front door is a zero-secret clone, and security reports have one channel
+
+**Decided:** the repository's first instruction to a stranger is *clone, install, compile, test,
+`pnpm dev`* — with no accounts and no `.env.local`. A full deployment is a separate document,
+`docs/SELF_HOSTING.md`. Security reports go only through GitHub's private vulnerability reporting.
+The hard rules that `CLAUDE.md` gives AI assistants are restated for people in `CONTRIBUTING.md`.
+
+**Why the zero-secret path is the front door.** It was measured rather than hoped: on a clean
+`git worktree` with no `.env.local`, install, compile and the full test suite pass (57 contract tests,
+431 web tests), and all eight routes return 200 — chain-backed panels render from the public RPC, and
+database-backed panels say `DATABASE_URL is not configured` instead of guessing. That property was
+already there because of `<Provenance>` and the graceful degradation every page does; this decision
+only puts it first. Asking a contributor to create a Neon project, a Gemini key and a funded wallet
+before they can see a page would turn most of them away for no reason.
+
+**Why a separate self-hosting guide rather than the runbook.** `RUNBOOK.md` is the operations log of
+the reference deployment — what was done, in order, and every diagnosis worth not repeating. A
+stranger needs the same steps as instructions. Rewriting the runbook would lose the log; so the runbook
+stays and points at the guide.
+
+**Why one security channel.** The maintainer is one person, and the repository's most valuable
+reports — a way past a cap, a role, or the human gate — should not be public before they are
+understood. Private advisories need no published email address and keep the report next to the code.
+`SECURITY.md` also lists the limitations that are by design, so a report that restates one can be
+answered with a pointer.
+
+**What it costs.** Two copies of the rules (`CLAUDE.md`, `CONTRIBUTING.md`) that must be changed
+together; `CONTRIBUTING.md` says so. The Code of Conduct's enforcement contact is the maintainer's
+GitHub profile rather than a dedicated address, which is weaker than a mailbox and is the obvious
+thing to improve if the project gains contributors.

@@ -1,10 +1,13 @@
 # launch-film/ — the AuspeX launch video
 
-A 3:47 film for YouTube: Remotion motion graphics over real captures of the live deployment and
-MSTScan, narrated by Amazon Polly (voice **Matthew**, generative engine), with a score and sound
-effects synthesised from scratch so nothing in it carries a licence question.
+**Watch it: https://www.youtube.com/watch?v=Jp08xTuiHVI**
 
-It replaces nothing. The September film in `../video/` is part of the build record and is left as it was.
+A 3:47 film: Remotion motion graphics over real captures of the live deployment and MSTScan,
+narrated by Amazon Polly (voice **Matthew**, generative engine), with a score and sound effects
+synthesised from scratch so nothing in it carries a licence question.
+
+It replaced the September 2026 film that lived in `video/`; that one's source is in git history at
+commit `9abe3fc` (`docs/BUILD_RECORD.md` says why it was removed from the tree).
 
 Not a pnpm workspace package — `pnpm-workspace.yaml` lists only `contracts` and `web`, so this
 directory cannot affect CI. It has its own `node_modules` via plain `npm`.
@@ -56,3 +59,11 @@ changing a line of narration moves the picture with it.
 - Preview: `npm run dev` — every scene is also registered on its own under *Scenes*.
 - Colours are the product's tokens (`src/theme.ts`) and keep their meaning: blue a model proposing,
   amber deterministic code, violet a person, green the chain, red a refusal. Orange is chrome only.
+
+## Licences
+
+The code here is MIT, like the rest of the repository. The narration in `public/vo/` was generated
+with Amazon Polly and the score and effects by `scripts/score.py`, so there is no third-party audio.
+**Remotion itself has its own licence** — free for individuals and companies of up to three people,
+a paid company licence above that; read https://remotion.pro/license before reusing this folder
+commercially.
