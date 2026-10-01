@@ -17,8 +17,8 @@ import type { ReactNode } from "react";
 export function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div>
-      <dt className="font-mono text-[10px] tracking-[0.12em] text-ink-400 uppercase">{label}</dt>
-      <dd className="mt-0.5 font-mono text-sm tabular-nums">{children}</dd>
+      <dt className="font-mono text-[10px] tracking-[0.16em] text-ink-500 uppercase">{label}</dt>
+      <dd className="mt-1 font-mono text-sm tabular-nums">{children}</dd>
     </div>
   );
 }
@@ -35,7 +35,7 @@ export function Row({ label, children }: { label: ReactNode; children: ReactNode
 export function SpecRow({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:gap-4">
-      <dt className="w-40 shrink-0 font-mono text-[10px] tracking-[0.12em] text-ink-500 uppercase sm:pt-0.5">
+      <dt className="w-40 shrink-0 font-mono text-[10px] tracking-[0.16em] text-ink-500 uppercase sm:pt-0.5">
         {label}
       </dt>
       <dd className="min-w-0 flex-1 text-xs leading-relaxed text-ink-200">{children}</dd>
@@ -54,7 +54,7 @@ export function FieldBlock({
 }) {
   return (
     <div className={className ?? "mt-4"}>
-      <p className="font-mono text-[10px] tracking-[0.12em] text-ink-400 uppercase">{label}</p>
+      <p className="font-mono text-[10px] tracking-[0.16em] text-ink-500 uppercase">{label}</p>
       <div className="mt-1 text-sm leading-relaxed break-words text-ink-200">{children}</div>
     </div>
   );

@@ -3,20 +3,20 @@
 /*
  * AuspeX — the look.
  *
- * Light, papery, and typographic: an instrument you read rather than a console you monitor. The
- * previous theme was dark mission-control, which suited a demo on a projector and worked against
- * the thing this product actually asks of a visitor, which is to sit and read evidence.
+ * Near-black, editorial, and loud where it is allowed to be loud. The page is a dark field; the
+ * type is large and tight; one orange carries every piece of chrome. Evidence still reads like
+ * evidence — the tables, hashes and refusal reasons are unchanged — but the frame around them
+ * now has a point of view instead of apologising for taking up space.
  *
- * ## Why the token names did not change
+ * ## Why the token names did not change, again
  *
- * There are around 1,350 colour-token references across `app/`, and the census behind this file
- * found the ramp is used with unusual discipline: `ink-950/900/880/850` are only ever surfaces,
- * `ink-800/700` only ever borders and dividers, and `ink-500` through `ink-100` only ever text.
- * Nothing crosses over. That meant the entire theme could be inverted by changing values and
- * keeping every name — `bg-ink-950` was the darkest ground and is now the lightest, `text-ink-100`
- * was the brightest text and is now the darkest, and both still mean "furthest from the reader's
- * eye" and "the thing being read". Renaming instead would have churned 1,350 call sites to say
- * the same thing.
+ * This is the second inversion these tokens have survived, and the reason is the same both
+ * times. Around 1,350 colour-token references across `app/` use the ramp with unusual
+ * discipline: `ink-950/900/880/850` are only ever surfaces, `ink-800/700/600` only ever borders,
+ * dividers and inert grounds, and `ink-500` through `ink-100` only ever text. Nothing crosses
+ * over. So the whole theme inverts by changing values and keeping every name — `bg-ink-950` was
+ * the darkest ground, became the lightest in Phase 10, and is the darkest again now, while
+ * `text-ink-100` has meant "the thing being read" throughout.
  *
  * The number keeps its role, not its brightness: high is surface, low is text.
  *
@@ -25,63 +25,78 @@
  * `ok` / `warn` / `bad` / `signal` / `human` encode trust claims — a refusal, a human signature,
  * an operator key, something the chain confirmed. 237 places render one of them as text directly
  * through `text-{tone}-500`, which is why each tone is *one* value that has to work as small
- * text, as a hairline border, as a 12% tint, and as an 8px status dot. Adding a separate darker
- * step for text would have been two shades of the same claim on one page, which is the drift this
- * phase existed to remove.
+ * text, as a hairline border, as a 12% tint, and as an 8px status dot.
  *
- * Their luminances are deliberately spread rather than clustered. Making five colours all clear
- * AA on a white ground pushes them towards the same lightness, and five colours of the same
- * lightness are one grey in a black-and-white screenshot. So they climb a ladder — `ok` is the
- * lightest that still clears 4.5:1 and `human` the darkest — which buys back the greyscale
- * separation that AA on light would otherwise have cost. `scripts/check-contrast.mjs` measures
- * both, plus three kinds of colour blindness, and fails the build rather than trusting anyone's
- * monitor.
+ * Their luminances climb a deliberate ladder rather than clustering, because lightness is the
+ * only thing a greyscale screenshot preserves, and the order of that ladder is set by which
+ * pairs collapse under colour blindness rather than by taste. `scripts/check-contrast.mjs`
+ * measures all of it and fails the build rather than trusting anyone's monitor.
+ *
+ * Two things changed in the move to a dark ground, and both were measured rather than assumed:
+ *
+ *   - **There is more room here.** On white, five AA-legal tones were confined to a narrow band
+ *     of lightness and the worst greyscale pair could not be pushed past 1.13 (ADR-074). On
+ *     near-black the same five span L 0.23–0.61 and the worst pair is 1.20.
+ *   - **The ladder reordered.** It is now ok, warn, human, signal, bad from lightest to darkest,
+ *     where on white it was bad, signal, warn, ok, human. `bad` moved from one end of the ladder
+ *     to the other because a saturated red has a luminance ceiling near 0.21: on white that made
+ *     red the easiest tone to keep legible, and on black it makes red the hardest. `bad` clears
+ *     AA here by 4.64:1, the narrowest margin in the palette, and that is the cost of keeping it
+ *     a red rather than letting it drift to pink.
  *
  * ## The accent is chrome and never data
  *
- * `accent` is a vivid teal that appears in the nav, the eyebrows, the section rules, the grid and
- * the empty states — and nowhere a number lives. A loud palette is safe in a trust product's
- * furniture and dangerous inside a table of contradictory chain facts, so the checker also
- * asserts the accent stays ΔE-distant from all five tones: a reader must never wonder whether
- * the chrome is making a claim.
+ * `accent` is the orange in the header, the eyebrows, the rules, the primary button and the
+ * glow — and nowhere a number lives. That rule matters more now than it did on paper, because
+ * this orange sits one hue step from `bad`, and `bad` is the single most important signal the
+ * product has. So the checker asserts the accent stays ΔE-distant from all five tones; it
+ * measures 52 from `bad`, against a floor of 30. A reader must never wonder whether the chrome
+ * is making a claim.
  *
- * A token that is not declared here produces no CSS and no warning — `ink-500` and `ink-200` were
- * used sixty times before they existed and rendered at their inherited colour (ADR-064). Check
- * the built stylesheet, not this file.
+ * `accent-600` is the *text* weight of the accent and `accent-500` the chrome weight. On white
+ * 600 was the darker of the two; here it is the lighter. The role is unchanged.
+ *
+ * A token that is not declared here produces no CSS and no warning — `ink-500` and `ink-200`
+ * were used sixty times before they existed and rendered at their inherited colour (ADR-064).
+ * Check the built stylesheet, not this file.
  */
 
 @theme {
   /* --- surfaces: the page, a card, a card's head, a sunken well ----------------------------- */
-  --color-ink-950: #f1f4f9;
-  --color-ink-900: #ffffff;
-  --color-ink-880: #f8fafc;
-  --color-ink-850: #eef1f7;
+  --color-ink-950: #070709;
+  --color-ink-900: #101014;
+  --color-ink-880: #15151a;
+  --color-ink-850: #1a1a20;
 
-  /* --- borders and dividers ---------------------------------------------------------------- */
-  --color-ink-800: #dfe5ef;
-  --color-ink-700: #cfd6e3;
-  --color-ink-600: #a3abbd;
+  /* --- borders, dividers and inert grounds -------------------------------------------------- */
+  --color-ink-800: #26262e;
+  --color-ink-700: #35353f;
+  --color-ink-600: #6b6b7a;
 
-  /* --- text, faintest to darkest ----------------------------------------------------------- */
-  --color-ink-500: #666e80;
-  --color-ink-400: #525a6c;
-  --color-ink-300: #3a4152;
-  --color-ink-200: #242a38;
-  --color-ink-100: #10141e;
+  /* --- text, faintest to brightest ---------------------------------------------------------- */
+  --color-ink-500: #9094a3;
+  --color-ink-400: #b2b6c4;
+  --color-ink-300: #ced2dd;
+  --color-ink-200: #e4e7ef;
+  --color-ink-100: #f7f8fc;
 
   /* --- the semantic five. One value each; the ladder is the greyscale argument above. ------- */
-  --color-ok-500: #0d4f2f;
-  --color-warn-500: #704709;
-  --color-signal-500: #195bab;
-  --color-bad-500: #c91b4f;
-  --color-human-500: #59127e;
+  --color-ok-500: #0dea81;
+  --color-warn-500: #f0aa28;
+  --color-signal-500: #688cfb;
+  --color-bad-500: #f92c70;
+  --color-human-500: #da82ef;
 
   /* --- the accent: chrome, never data ------------------------------------------------------ */
-  --color-accent-500: #157f84;
-  --color-accent-600: #127378;
+  --color-accent-500: #ff5a1f;
+  --color-accent-600: #ff7a45;
 
-  /* --- the focus ring. Its own token so it can be checked against every ground. ------------ */
-  --color-focus-500: #3779f9;
+  /* --- the focus ring ----------------------------------------------------------------------
+   * Achromatic on purpose. Every coloured thing on this page is either one of the five claims
+   * or the accent, and a sixth colour arriving around whatever you happened to tab to is one
+   * more thing for a reader to interpret. White makes no claim and clears 3:1 on all four
+   * surfaces by a wide margin. */
+  --color-focus-500: #ffffff;
 
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -89,16 +104,17 @@
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 /*
- * Dark mode is deliberately absent. Phase 10's plan allowed keeping it if it fell out of the
- * token layer cheaply; it did not. The semantic five are tuned to a light ground on a measured
- * luminance ladder, and a second set of five tuned to a dark one is a second palette to keep
- * honest, not a media query. Shipping a half-tuned dark theme on a product whose claim is "check
- * my numbers" would put the least legible version of the evidence one system setting away. See
- * ADR-072.
+ * A light theme is deliberately absent, which is the same decision ADR-072 made in the other
+ * direction and for the same reason: the semantic five are tuned against one ground on a
+ * measured ladder, and a second set tuned against the opposite ground is a second palette to
+ * keep honest, not a media query. On a product whose pitch is "check my numbers", shipping an
+ * unverified second theme would put the least legible version of the evidence one system
+ * setting away. The gate is the check, not the taste — a palette that passes
+ * `scripts/check-contrast.mjs` can ship.
  */
 
 html,
@@ -114,24 +130,54 @@ body {
 }
 
 /*
- * The backdrop. Still instrumentation rather than decoration, but now a faint accent-tinted
- * grid on paper instead of a dark one, with a soft wash at the top so a long page does not read
- * as one flat field.
+ * The backdrop. Instrumentation rather than decoration: a faint grid, with one warm pool of
+ * accent light at the top so a long dark page does not read as one flat field. The glow is the
+ * only place the accent appears at large scale, and it sits behind everything rather than
+ * beside any number.
  */
 .grid-backdrop {
   background-image:
     radial-gradient(
-      ellipse 130% 55% at 50% -15%,
-      color-mix(in oklab, var(--color-accent-500) 7%, transparent),
+      ellipse 110% 48% at 50% -10%,
+      color-mix(in oklab, var(--color-accent-500) 16%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 80% 40% at 88% 8%,
+      color-mix(in oklab, var(--color-signal-500) 7%, transparent),
       transparent 72%
     ),
-    linear-gradient(to right, color-mix(in oklab, var(--color-ink-600) 13%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklab, var(--color-ink-600) 13%, transparent) 1px, transparent 1px);
+    linear-gradient(to right, color-mix(in oklab, var(--color-ink-600) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-ink-600) 9%, transparent) 1px, transparent 1px);
   background-size:
     100% 100%,
-    72px 72px,
-    72px 72px;
-  background-repeat: no-repeat, repeat, repeat;
+    100% 100%,
+    76px 76px,
+    76px 76px;
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
+}
+
+/*
+ * The top edge a card catches from the glow above it. One pixel of brightened border along the
+ * top only, which is what stops a flat dark rectangle on a flat dark page from disappearing.
+ * Applied by `Card`, so no page has to remember it.
+ */
+.lit-edge {
+  position: relative;
+}
+.lit-edge::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in oklab, var(--color-ink-100) 14%, transparent) 22%,
+    color-mix(in oklab, var(--color-ink-100) 14%, transparent) 78%,
+    transparent
+  );
+  pointer-events: none;
 }
 
 /*
@@ -168,8 +214,60 @@ body {
   );
 }
 
+/*
+ * Sections arriving as you scroll.
+ *
+ * Scroll-driven CSS animation, so there is no JavaScript, no observer and no hydration cost on
+ * pages that are otherwise server-rendered. It is wrapped in `@supports` because the property
+ * is not everywhere yet: where it is missing the rule never applies and content is simply
+ * visible, which is the correct fallback and the reason the un-animated state is not hidden by
+ * default. Content is never hidden waiting for script.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * The ticker under the hero. Duplicated content in the markup and translated by exactly half,
+ * which is what makes the loop seamless without measuring anything at runtime. The copy is
+ * marked `aria-hidden` at the call site so a screen reader hears the line once.
+ */
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee-left 42s linear infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .live-dot {
+    animation: none;
+  }
+  .marquee-track {
     animation: none;
   }
   /* Covers the pulsing dots on the tick and probe buttons, which use Tailwind's own utility. */

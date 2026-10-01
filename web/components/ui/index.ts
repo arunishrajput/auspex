@@ -13,7 +13,7 @@
  */
 
 export { TONE, TONES, MARKET_STATE_TONE, toneOf, type Tone, type ToneSlots } from "./tone";
-export { PageShell, PageHeader, SectionLabel, Section } from "./Page";
+export { PageShell, PageHeader, SectionLabel, Section, SectionHead } from "./Page";
 export { Card, CardItem, CardHead, CardBody, CardFoot } from "./Card";
 export { Badge } from "./Badge";
 export { Callout } from "./Callout";

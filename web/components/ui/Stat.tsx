@@ -5,6 +5,11 @@
  * The divider now belongs to `StatGrid`, which is what five call sites were already doing by
  * hand with `divide-ink-800 sm:divide-x`. That is why `Stat` itself has no border: a stat
  * inside a grid should not know how many neighbours it has.
+ *
+ * The value is set in the display face rather than the mono one. Mono is reserved for strings a
+ * reader compares against MSTScan character by character — hashes, addresses, wei. A count of
+ * markets is a number to be read at a glance, and at this size the display face reads better and
+ * carries the page's voice. `tabular-nums` keeps a column aligned either way.
  */
 
 import type { ReactNode } from "react";
@@ -23,11 +28,15 @@ export type StatProps = {
 export function Stat({ label, value, tone = "quiet", children }: StatProps) {
   const colour = tone === "quiet" ? "text-ink-100" : TONE[tone].text;
   return (
-    <div className="px-4 py-3">
-      <dt className="font-mono text-[10px] tracking-[0.12em] text-ink-400 uppercase">{label}</dt>
-      <dd className={`mt-1 font-mono text-xl tabular-nums ${colour}`}>{value}</dd>
+    <div className="px-4 py-4">
+      <dt className="font-mono text-[10px] tracking-[0.16em] text-ink-500 uppercase">{label}</dt>
+      <dd
+        className={`mt-1.5 font-display text-2xl leading-none font-bold tracking-[-0.02em] tabular-nums ${colour}`}
+      >
+        {value}
+      </dd>
       {children !== undefined && (
-        <div className="mt-1 text-[11px] leading-snug text-ink-400">{children}</div>
+        <div className="mt-2 text-[11px] leading-snug text-ink-400">{children}</div>
       )}
     </div>
   );
@@ -81,11 +90,15 @@ export function Counter({
   const skin = tone === "quiet" ? "border-ink-700 bg-ink-900" : meta.surface;
   const colour = tone === "quiet" ? "text-ink-100" : meta.text;
   return (
-    <div className={`rounded-xl border px-3.5 py-3 ${skin}`}>
-      <p className="font-mono text-[10px] tracking-[0.12em] text-ink-400 uppercase">{label}</p>
-      <p className={`mt-1 font-mono text-2xl tabular-nums ${colour}`}>{value}</p>
+    <div className={`lit-edge rounded-2xl border px-4 py-3.5 ${skin}`}>
+      <p className="font-mono text-[10px] tracking-[0.16em] text-ink-500 uppercase">{label}</p>
+      <p
+        className={`mt-1.5 font-display text-3xl leading-none font-bold tracking-[-0.03em] tabular-nums ${colour}`}
+      >
+        {value}
+      </p>
       {note !== undefined && (
-        <p className="mt-0.5 font-mono text-[10px] leading-snug text-ink-400">{note}</p>
+        <p className="mt-1.5 font-mono text-[10px] leading-snug text-ink-400">{note}</p>
       )}
     </div>
   );

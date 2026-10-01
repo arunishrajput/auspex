@@ -35,7 +35,14 @@ export type ToneSlots = {
   border: string;
   /** Tinted ground plus border, for a callout. */
   surface: string;
-  /** Border, ground and foreground together, for a badge or pill. */
+  /**
+   * Border, ground and foreground together, for a badge or pill.
+   *
+   * Every tone tints its badge ground at the same 12%, and `scripts/check-contrast.mjs` reads
+   * that number out of this file rather than carrying its own copy. The two had already drifted
+   * — `warn` tinted at 14% while the checker measured 12% — and on a dark ground that gap is
+   * not cosmetic: `bad` clears AA on a 12% tint at 4.64:1 and fails it at 16%.
+   */
   badge: string;
   /**
    * The non-colour mark. Never the only thing rendered, always available beside the colour, so
@@ -51,7 +58,7 @@ export const TONE: Record<Tone, ToneSlots> = {
   ok: {
     text: "text-ok-500",
     border: "border-ok-500/45",
-    surface: "border-ok-500/45 bg-ok-500/8",
+    surface: "border-ok-500/40 bg-ok-500/10",
     badge: "border-ok-500/45 bg-ok-500/12 text-ok-500",
     glyph: "✓",
     meaning: "confirmed — the chain or a check says so",
@@ -59,23 +66,23 @@ export const TONE: Record<Tone, ToneSlots> = {
   warn: {
     text: "text-warn-500",
     border: "border-warn-500/50",
-    surface: "border-warn-500/50 bg-warn-500/10",
-    badge: "border-warn-500/50 bg-warn-500/14 text-warn-500",
+    surface: "border-warn-500/40 bg-warn-500/10",
+    badge: "border-warn-500/50 bg-warn-500/12 text-warn-500",
     glyph: "▲",
     meaning: "needs attention — not wrong, not settled",
   },
   bad: {
     text: "text-bad-500",
     border: "border-bad-500/45",
-    surface: "border-bad-500/45 bg-bad-500/8",
-    badge: "border-bad-500/50 bg-bad-500/12 text-bad-500",
+    surface: "border-bad-500/40 bg-bad-500/10",
+    badge: "border-bad-500/45 bg-bad-500/12 text-bad-500",
     glyph: "✕",
     meaning: "refused, reverted or invalid",
   },
   signal: {
     text: "text-signal-500",
     border: "border-signal-500/45",
-    surface: "border-signal-500/45 bg-signal-500/8",
+    surface: "border-signal-500/40 bg-signal-500/10",
     badge: "border-signal-500/45 bg-signal-500/12 text-signal-500",
     glyph: "◆",
     meaning: "read from or linked to the chain",
@@ -83,7 +90,7 @@ export const TONE: Record<Tone, ToneSlots> = {
   human: {
     text: "text-human-500",
     border: "border-human-500/45",
-    surface: "border-human-500/45 bg-human-500/8",
+    surface: "border-human-500/40 bg-human-500/10",
     badge: "border-human-500/45 bg-human-500/12 text-human-500",
     glyph: "✍",
     meaning: "a person signed this",

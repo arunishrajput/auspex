@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Provenance } from "@/components/Provenance";
-import { SiteNav } from "@/components/SiteNav";
 import {
   Callout,
   FieldBlock,
@@ -125,7 +124,7 @@ export default async function ResolvePage() {
       )}
 
       {/* Counters. Real queries, never constants. */}
-      <section className="mb-8 overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+      <section className="mb-8 overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
           <span className="live-dot size-2 rounded-full bg-ok-500" />
           <span className="font-mono text-xs text-ink-300">
@@ -163,7 +162,7 @@ export default async function ResolvePage() {
             {challengeable.map((item) => (
               <li
                 key={item.marketRowId}
-                className="overflow-hidden rounded-xl border border-signal-500/40 bg-signal-500/5"
+                className="overflow-hidden rounded-2xl border border-signal-500/40 bg-signal-500/10"
               >
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-signal-500/20 px-4 py-2.5">
                   <span className="font-mono text-xs text-ink-400">#{item.chain.onchainId}</span>
@@ -211,9 +210,9 @@ export default async function ResolvePage() {
             {unresolved.map((market) => (
               <li
                 key={market.marketRowId}
-                className={`overflow-hidden rounded-xl border ${
+                className={`overflow-hidden rounded-2xl border ${
                   market.stage === "PAST_RESOLVE_BY"
-                    ? "border-warn-500/40 bg-warn-500/5"
+                    ? "border-warn-500/40 bg-warn-500/10"
                     : "border-ink-700 bg-ink-900"
                 }`}
               >
@@ -267,7 +266,7 @@ export default async function ResolvePage() {
         <SectionLabel>Drafted outcomes waiting for a human</SectionLabel>
 
         {pending.length === 0 ? (
-          <div className="mt-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-8 text-center">
+          <div className="mt-3 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-8 text-center">
             <p className="text-ink-300">Nothing is waiting to be resolved.</p>
             <p className="mt-2 text-xs leading-relaxed text-ink-400">
               {counters.awaitingDraft > 0
@@ -290,7 +289,7 @@ export default async function ResolvePage() {
       {/* What the validator checks, stated so the queue above is legible. */}
       <section className="mb-10">
         <SectionLabel>What every draft had to pass before it reached this page</SectionLabel>
-        <ol className="mt-3 space-y-1.5 rounded-xl border border-ink-700 bg-ink-900 px-4 py-3">
+        <ol className="mt-3 space-y-1.5 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-3">
           {RESOLUTION_RULES.map((rule, index) => (
             <li key={rule} className="flex gap-2 text-xs leading-relaxed text-ink-300">
               <span className="font-mono text-ink-500">{index + 1}.</span>
@@ -310,7 +309,7 @@ export default async function ResolvePage() {
       <section>
         <SectionLabel>Already decided — including what was refused</SectionLabel>
         {decided.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-6 text-center text-xs text-ink-400">
+          <p className="mt-3 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-6 text-center text-xs text-ink-400">
             No resolution has been decided yet.
           </p>
         ) : (
@@ -348,7 +347,7 @@ const OUTCOME_STYLE: Record<string, string> = {
 
 function DraftCard({ draft, signable }: { draft: DraftRow; signable: boolean }) {
   return (
-    <li className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+    <li className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
         <span className="font-mono text-xs text-ink-400">
           {draft.onchainId === null ? "off chain" : `#${draft.onchainId}`}
@@ -427,7 +426,7 @@ function DraftCard({ draft, signable }: { draft: DraftRow; signable: boolean }) 
             {draft.warnings.map((warning) => (
               <li
                 key={warning}
-                className="rounded border border-warn-500/40 bg-warn-500/5 px-2.5 py-1.5 text-[11px] leading-relaxed text-warn-500"
+                className="rounded border border-warn-500/40 bg-warn-500/10 px-2.5 py-1.5 text-[11px] leading-relaxed text-warn-500"
               >
                 ⚠ {warning}
               </li>
@@ -436,7 +435,7 @@ function DraftCard({ draft, signable }: { draft: DraftRow; signable: boolean }) 
         )}
 
         {draft.rejectionReason !== null && (
-          <div className="mt-4 rounded border border-bad-500/40 bg-bad-500/5 px-2.5 py-2">
+          <div className="mt-4 rounded border border-bad-500/40 bg-bad-500/10 px-2.5 py-2">
             <p className="font-mono text-[10px] tracking-wide text-bad-500 uppercase">
               {draft.status === "SCHEMA_REJECTED" ? "refused by the validator" : "refused, because"}
             </p>
@@ -508,8 +507,7 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <PageShell width="text">
-      <SiteNav current="/resolve" />
+    <PageShell width="text" current="/resolve">
 
       <PageHeader
       eyebrow="Human-signed"

@@ -168,7 +168,7 @@ export default async function MarketDetailPage({
     .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
-    <PageShell width="text">
+    <PageShell width="text" current="/markets">
       <header className="mb-8">
       <Link
         href="/markets"
@@ -200,7 +200,7 @@ export default async function MarketDetailPage({
       </header>
 
       {chainError !== null && (
-        <div className="mb-8 rounded-xl border border-bad-500/40 bg-bad-500/5 px-4 py-3">
+        <div className="mb-8 rounded-2xl border border-bad-500/40 bg-bad-500/10 px-4 py-3">
           <p className="font-mono text-sm text-bad-500">could not read the contract</p>
           <p className="mt-2 font-mono text-xs break-words text-ink-400">{chainError}</p>
           <p className="mt-2 text-xs text-ink-400">
@@ -211,7 +211,7 @@ export default async function MarketDetailPage({
 
       {chain !== null && (
         <>
-          <section className="mb-8 overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+          <section className="mb-8 overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
             <div className="px-4 py-4">
               <p className="text-lg leading-snug text-ink-100">{chain.question}</p>
 
@@ -315,14 +315,14 @@ export default async function MarketDetailPage({
           <section className="mb-8">
             <SectionLabel>Payout — read from previewPayout() on this request</SectionLabel>
             {chain.state !== "FINALIZED" && chain.state !== "INVALIDATED" ? (
-              <p className="mt-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-4 text-xs leading-relaxed text-ink-400">
+              <p className="mt-3 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-4 text-xs leading-relaxed text-ink-400">
                 Nothing is claimable yet. <span className="font-mono">previewPayout</span> returns
                 0 for a market that is not <span className="font-mono">FINALIZED</span> or{" "}
                 <span className="font-mono">INVALIDATED</span> — the contract will not let anyone
                 withdraw before the challenge window has elapsed and finalisation has happened.
               </p>
             ) : payouts.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-4 text-xs leading-relaxed text-ink-400">
+              <p className="mt-3 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-4 text-xs leading-relaxed text-ink-400">
                 This market is settled and{" "}
                 <span className="font-mono">previewPayout</span> returns 0 for every agent wallet.
                 That means one of three things, all of them normal: nothing was staked, every agent
@@ -334,7 +334,7 @@ export default async function MarketDetailPage({
                 {payouts.map((payout) => (
                   <li
                     key={payout.agentAddress}
-                    className="rounded-xl border border-ok-500/40 bg-ok-500/5 px-4 py-3"
+                    className="rounded-2xl border border-ok-500/40 bg-ok-500/10 px-4 py-3"
                   >
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <span className="font-mono text-sm text-ink-100">{payout.handle}</span>
@@ -378,17 +378,17 @@ export default async function MarketDetailPage({
           />
         </SectionLabel>
         {dbError !== null ? (
-          <p className="mt-3 rounded-xl border border-warn-500/40 bg-warn-500/5 px-4 py-3 font-mono text-xs break-words text-warn-500">
+          <p className="mt-3 rounded-2xl border border-warn-500/40 bg-warn-500/10 px-4 py-3 font-mono text-xs break-words text-warn-500">
             intent history unavailable — {dbError}
           </p>
         ) : intents.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-4 text-xs leading-relaxed text-ink-400">
+          <p className="mt-3 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-4 text-xs leading-relaxed text-ink-400">
             Nothing is recorded for this market — neither an intent of ours nor an indexed log
             that names its own caller. The <span className="font-mono">created in</span> link
             above is the authoritative record, and MSTScan is the place to read it.
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-ink-700 bg-ink-900">
+          <div className="mt-3 overflow-x-auto lit-edge rounded-2xl border border-ink-700 bg-ink-900">
             <table className="w-full text-left font-mono text-[11px]">
               <thead className="border-b border-ink-800 text-ink-400">
                 <tr>
@@ -490,7 +490,7 @@ export default async function MarketDetailPage({
             {drafts.map((draft) => (
               <li
                 key={draft.id}
-                className="rounded-xl border border-ink-700 bg-ink-900 px-4 py-3"
+                className="lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-3"
               >
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-mono text-[11px] text-ink-500">round {draft.round}</span>
@@ -586,7 +586,7 @@ async function NoSuchMarket({ onchainId }: { onchainId: number }) {
   }
 
   return (
-    <PageShell width="text">
+    <PageShell width="text" current="/markets">
       <Link
         href="/markets"
         className="font-mono text-xs text-ink-400 underline-offset-2 hover:text-ink-200 hover:underline"

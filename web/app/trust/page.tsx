@@ -3,7 +3,6 @@ import { MST_TESTNET, explorerUrl, shortHash } from "@/lib/chain";
 import { AUSPEX_MARKET_ADDRESS } from "@/lib/chain/deployment";
 import { hasDatabase } from "@/lib/db/client";
 import { DOCUMENTED_ORIGINS, ORIGIN_META, Provenance } from "@/components/Provenance";
-import { SiteNav } from "@/components/SiteNav";
 import {
   Counter,
   PageHeader,
@@ -66,8 +65,7 @@ export default async function TrustPage() {
   const [roles, data] = await Promise.all([roleReport(), loadCounters()]);
 
   return (
-    <PageShell>
-      <SiteNav current="/trust" />
+    <PageShell current="/trust">
 
       <PageHeader
         eyebrow="What it cannot do"
@@ -188,7 +186,7 @@ export default async function TrustPage() {
             {data.refused.map((tx) => (
               <li
                 key={tx.id}
-                className="overflow-hidden rounded-xl border border-bad-500/30 bg-bad-500/5"
+                className="overflow-hidden rounded-2xl border border-bad-500/30 bg-bad-500/10"
               >
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-bad-500/20 px-3 py-2">
                   <span className="font-mono text-xs text-ink-200">{tx.functionName}</span>
@@ -231,7 +229,7 @@ export default async function TrustPage() {
           <Provenance origin="CHAIN" detail="a real placeBet, signed on request" />
         </SectionLabel>
 
-        <div className="rounded-xl border border-ink-700 bg-ink-900">
+        <div className="lit-edge rounded-2xl border border-ink-700 bg-ink-900">
           <div className="border-b border-ink-800 px-4 py-3">
             <p className="text-sm leading-relaxed text-ink-300">
               No wallet, no tMSTC, no faucet. This button reads a registered agent&apos;s
@@ -288,7 +286,7 @@ export default async function TrustPage() {
           How to read a badge on this site
           <Provenance origin="COMPUTED" detail="components/Provenance.tsx" />
         </SectionLabel>
-        <ul className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+        <ul className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
           {DOCUMENTED_ORIGINS.map((origin, i) => (
             <li
               key={origin}
@@ -402,12 +400,12 @@ function RoleMatrix({ roles }: { roles: RoleReport }) {
   const allServerKeysClean = serverKeys.length > 0 && serverKeys.every(holdsNoRole);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+    <div className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
       <div
         className={`flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2.5 ${
           allServerKeysClean
-            ? "border-ink-800 bg-ok-500/5"
-            : "border-warn-500/40 bg-warn-500/5"
+            ? "border-ink-800 bg-ok-500/10"
+            : "border-warn-500/40 bg-warn-500/10"
         }`}
       >
         <span
@@ -538,7 +536,7 @@ function RoleMatrix({ roles }: { roles: RoleReport }) {
       </div>
 
       {roles.error !== null && (
-        <p className="border-t border-warn-500/40 bg-warn-500/5 px-4 py-2.5 font-mono text-[11px] text-warn-500">
+        <p className="border-t border-warn-500/40 bg-warn-500/10 px-4 py-2.5 font-mono text-[11px] text-warn-500">
           {roles.error}
         </p>
       )}
@@ -598,7 +596,7 @@ function KillSwitches({ roles }: { roles: RoleReport }) {
   return (
     <div className="flex flex-col gap-3">
       {/* The on-chain switch: state, and who can pull it. */}
-      <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+      <div className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink-800 px-4 py-2.5">
           <span
             className={`size-2 shrink-0 rounded-full ${
@@ -668,7 +666,7 @@ function KillSwitches({ roles }: { roles: RoleReport }) {
       </div>
 
       {/* The off-chain switches: weaker, ours, and honest about it. */}
-      <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+      <div className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink-800 px-4 py-2.5">
           <span
             className={`size-2 shrink-0 rounded-full ${globalKillSwitch() ? "bg-bad-500" : "bg-ink-600"}`}
@@ -760,7 +758,7 @@ function Refusals({
         />
       </div>
 
-      <div className="rounded-xl border border-ink-700 bg-ink-900 px-4 py-3">
+      <div className="lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-3">
         <p className="text-xs leading-relaxed text-ink-400">
           <span className="font-mono text-ink-200">{totalRefused}</span> refusals against{" "}
           <span className="font-mono text-ink-200">
@@ -869,7 +867,7 @@ function Column({
   tone: Tone;
 }) {
   return (
-    <div className={`flex flex-col overflow-hidden rounded-xl border bg-ink-900 ${TONE[tone].border}`}>
+    <div className={`flex flex-col overflow-hidden rounded-2xl border bg-ink-900 ${TONE[tone].border}`}>
       <h3 className={`border-b border-ink-800 px-4 py-2.5 font-mono text-xs ${TONE[tone].text}`}>
         {heading}
       </h3>
@@ -903,7 +901,7 @@ function Buckets({
   const max = buckets.reduce((high, bucket) => Math.max(high, bucket.count), 0);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+    <div className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
       <h3 className="border-b border-ink-800 px-4 py-2.5 font-mono text-xs text-ink-300">
         {heading}
       </h3>
@@ -950,7 +948,7 @@ function ErrorPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-warn-500/40 bg-warn-500/5 px-4 py-3">
+    <div className="rounded-2xl border border-warn-500/40 bg-warn-500/10 px-4 py-3">
       <p className="font-mono text-sm text-warn-500">{title}</p>
       <p className="mt-2 font-mono text-xs break-words text-ink-400">{detail}</p>
       <p className="mt-2 text-xs leading-relaxed text-ink-400">{children}</p>

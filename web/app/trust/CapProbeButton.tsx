@@ -52,7 +52,7 @@ export function CapProbeButton({ explorerBase }: { explorerBase: string }) {
       </div>
 
       {result !== null && !result.ok && (
-        <div className="rounded border border-warn-500/40 bg-warn-500/5 px-3 py-2.5" role="status">
+        <div className="rounded border border-warn-500/40 bg-warn-500/10 px-3 py-2.5" role="status">
           <p className="font-mono text-[11px] tracking-wide text-warn-500 uppercase">
             not run — and here is why
           </p>

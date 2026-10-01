@@ -172,7 +172,7 @@ export function ResolutionControls({
   return (
     <div className="border-t border-ink-800 px-4 py-3">
       {blocked !== null && (
-        <p className="mb-3 rounded border border-warn-500/40 bg-warn-500/5 px-2.5 py-1.5 font-mono text-[11px] text-warn-500">
+        <p className="mb-3 rounded border border-warn-500/40 bg-warn-500/10 px-2.5 py-1.5 font-mono text-[11px] text-warn-500">
           cannot be signed: {blocked}
         </p>
       )}

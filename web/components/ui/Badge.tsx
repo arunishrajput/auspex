@@ -24,7 +24,7 @@ export function Badge({ tone = "quiet", children, glyph = true, title, className
   return (
     <span
       title={title ?? (tone === "quiet" ? undefined : meta.meaning)}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] uppercase ${meta.badge} ${className ?? ""}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium tracking-[0.12em] uppercase ${meta.badge} ${className ?? ""}`}
     >
       {glyph && meta.glyph !== "" && (
         <span aria-hidden="true" className="text-[9px] leading-none">

@@ -1841,6 +1841,12 @@ registry's own tests added.
 
 ### ADR-072 — Light is the only theme; dark mode is dropped rather than half-tuned
 
+> **Superseded by ADR-079.** The decision below is kept as written because its reasoning is
+> what ADR-079 had to satisfy, and because its own closing line is the condition that was
+> eventually met: *"the check is the gate, not the taste — if a dark palette can pass it, it
+> can ship."* One did. Everything measured here about a light ground remains true of a light
+> ground; it is no longer true of this site.
+
 **Decided:** `color-scheme: light`, one palette, no `prefers-color-scheme` branch. The Phase 10
 plan permitted keeping dark "if it falls out cheaply from the token layer". It did not.
 
@@ -2132,3 +2138,115 @@ is that its claims can be checked.
 **Evidence.** The sweep table in `CHANGELOG.md` and in `PROGRESS.md` under "Phase 12 — what
 shipped"; the `agents.halted` row on https://auspex-web-mu.vercel.app/audit timestamped inside the
 `verify:agents` run that produced it; `git tag -v v1.0.0`.
+
+---
+
+### ADR-079 — The theme inverts to near-black with an orange accent, and the gate is what let it
+
+**Decided:** Phase 13 replaced the light palette with a dark one — near-black surfaces, an orange
+accent, display type at roughly twice its previous size — without changing a single token *name*,
+a single tone's *meaning*, or any measured fact on any page.
+
+**Why it was allowed at all.** ADR-072 dropped dark mode and closed with a condition: *"the check is
+the gate, not the taste — if a dark palette can pass it, it can ship."* `scripts/check-contrast.mjs`
+turned out to be genuinely theme-agnostic, because contrast is symmetric and the tone separations
+are measured between tones rather than against a ground. So the question "is this new look honest?"
+had a mechanical answer before any of it was drawn. That is the whole reason this was a one-session
+change rather than a rebuild: the guarantees were already written down as a program.
+
+**What the measurement said, which was not what was expected.**
+
+| | light (Phase 10) | dark (Phase 13) |
+|:--|--:|--:|
+| worst greyscale separation, five tones | 1.19:1 | **1.20:1** |
+| worst colour-blind separation (ΔE) | 11 | **13.6** |
+| tightest text-on-surface margin | 4.5:1 floor met | **4.64:1** (`bad`) |
+| accent distance from nearest tone (ΔE) | 18 floor | **48** |
+
+ADR-074 found that five AA-legal tones on *white* are confined to a narrow band of lightness and the
+worst pair could not be pushed past about 1.13 in a 250k-sample search. On near-black the same five
+span L 0.23–0.61 and reach 1.20 — there is simply more room below white than there is above black,
+because the AA formula's `+0.05` offset compresses the light end and not the dark one.
+
+**The ladder reordered, and `bad` is why.** It is now `ok, warn, human, signal, bad` from lightest to
+darkest, where on white it was `bad, signal, warn, ok, human`. A saturated red has a luminance
+ceiling near 0.21 whatever you do to it, so on white red was the *easiest* tone to keep legible and
+on black it is the hardest — `bad` clears AA at 4.64:1, the narrowest margin in the palette, and
+anything brighter stops being red and becomes pink. The pentagram constraint from ADR-074 still
+holds (the collision cycle `bad–ok–signal–human–warn–bad` needs every edge at least two rungs
+apart), which forces `bad` and `human` to the two ends; which end each takes was then decided by
+that ceiling rather than by preference.
+
+**The accent is the one genuinely new risk.** The brief asked for an orange-red, and orange-red is
+one hue step from `bad` — the single most important signal this product has, and the exact mistake
+ADR-073 was written about. The checker's floor was raised from ΔE 18 to **30** before a colour was
+chosen, and the palette search was run against that floor rather than fitted to a colour picked by
+eye. `accent` lands at ΔE 48 from `bad`, which it reaches by `bad` moving to a crimson-rose
+(`#f92c70`) rather than by the accent backing away from orange. Both ends moved; only one of them
+was the loud one.
+
+**What it costs.** People who prefer light interfaces now get a dark one, which is the same cost
+ADR-072 accepted in the other direction and is not pretended away. `bad` is a rose rather than the
+fire-engine red it was, and its 4.64:1 is a real margin rather than a comfortable one — if a future
+change makes any surface lighter, `bad` is the token that fails first. The 12% badge tint is now
+load-bearing in a way it was not: at 16% `bad` drops to 4.44:1 and fails, which is why the checker
+stopped carrying its own copy of that number.
+
+**Evidence:** `pnpm check:contrast` prints the whole table and passes; `pnpm check:render` passes on
+all 8 routes at 390px and 1280px, with a focus ring on every interactive element and no animation
+under `prefers-reduced-motion`; 441 tests green.
+
+---
+
+### ADR-080 — The tint strength moves into the registry, because the checker's copy had already drifted
+
+**Decided:** `scripts/check-contrast.mjs` reads each tone's badge tint out of
+`components/ui/tone.ts` instead of hardcoding `0.12`, and every tone now tints at the same 12%.
+
+**Why.** They had already disagreed. `warn` tinted its badge ground at 14% while the check measured
+12%, and `ok` / `bad` / `signal` / `human` tinted their *surfaces* at 8% while nothing measured them
+at all. On a white ground that gap was worth nothing — a tint a reader can barely see cannot hurt a
+contrast ratio much either way. On a dark ground it is worth the whole check: `bad` clears AA on a
+12% tint of itself at 4.64:1 and **fails at 16%**, so a designer raising a tint by four points to
+make a badge more visible would have broken AA and been told nothing.
+
+This is the fourth time in this project a number has been written down in two places and the two
+have drifted (ADR-065, ADR-067, ADR-070). The repair is the same every time and it is not
+"be careful": it is to delete one of the copies.
+
+**What it costs.** The checker now parses a TypeScript file with a regular expression, which is
+fragile in the ordinary way — rename the `badge` key or reformat the registry and it stops finding
+the tint. It fails loudly rather than silently when that happens, which is the only property that
+makes the trade acceptable.
+
+**Evidence:** `pnpm check:contrast` prints the tint it used in the failure message for each tone.
+
+---
+
+### ADR-081 — The site header is rendered by the shell, because one of eight routes had no navigation
+
+**Decided:** `PageShell` takes a `current` route and renders `SiteHeader` itself. Pages no longer
+place their own nav. The header is sticky, carries the wordmark and one call to action, and
+`/markets/[id]` has navigation for the first time.
+
+**Why.** The old `SiteNav` was a row of pills placed *inside* each page's content column by seven
+call sites. `/markets/[id]` was the eighth and it had none — not by decision, but because a page
+written later did not copy a line. A component that has to be remembered will eventually not be,
+and the fix is to move it somewhere it cannot be forgotten. This is ADR-071's argument applied one
+level up: that one extracted the components, this one extracts the *placement*.
+
+It also scrolled away, which on a page like `/trust` — nine screens of evidence — meant going back
+to the top to get anywhere.
+
+**What it costs.** `PageShell` now knows about routing, which is a coupling it did not have. The
+alternative was `usePathname()`, which would make every page that renders a header a client
+component and ship React to `/` and `/markets` for the sake of one highlighted link; known gap #14
+is about keeping client code off the pages a visitor lands on first, and this is the same instinct.
+The mobile layout has no menu button for the same reason — a disclosure needs state, state needs a
+client component, and seven short labels fit in a horizontal scroller.
+
+**One special case, written down so it does not look like an oversight:** the header's call to
+action points at `/trust`, and on `/trust` it points at `/audit` instead. A button that reloads the
+page you are on is not a call to action.
+
+**Evidence:** `pnpm check:render` visits all 8 routes; `/markets/13` now reports a header.

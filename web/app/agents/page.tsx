@@ -8,7 +8,6 @@ import {
 } from "@/lib/agents/dashboard";
 import { POLICY_RULES } from "@/lib/policy/policyGate";
 import { Provenance } from "@/components/Provenance";
-import { SiteNav } from "@/components/SiteNav";
 import {
   Counter,
   Field,
@@ -51,8 +50,7 @@ export default async function AgentsPage() {
   ).length;
 
   return (
-    <PageShell>
-      <SiteNav current="/agents" />
+    <PageShell current="/agents">
 
       <PageHeader
         eyebrow="Bounded twice"
@@ -109,7 +107,7 @@ export default async function AgentsPage() {
       </section>
 
       {payload.globalKillSwitch && (
-        <div className="mb-8 rounded-xl border border-bad-500/40 bg-bad-500/5 px-4 py-3">
+        <div className="mb-8 rounded-2xl border border-bad-500/40 bg-bad-500/10 px-4 py-3">
           <p className="font-mono text-sm text-bad-500">
             AGENTS_KILL_SWITCH is on — every agent is halted
           </p>
@@ -123,14 +121,14 @@ export default async function AgentsPage() {
       )}
 
       {payload.dbError !== null && (
-        <div className="mb-8 rounded-xl border border-bad-500/40 bg-bad-500/5 px-4 py-3">
+        <div className="mb-8 rounded-2xl border border-bad-500/40 bg-bad-500/10 px-4 py-3">
           <p className="font-mono text-sm text-bad-500">could not read the database</p>
           <p className="mt-2 font-mono text-xs text-ink-400">{payload.dbError}</p>
         </div>
       )}
 
       {payload.chainError !== null && (
-        <div className="mb-8 rounded-xl border border-warn-500/40 bg-warn-500/5 px-4 py-3">
+        <div className="mb-8 rounded-2xl border border-warn-500/40 bg-warn-500/10 px-4 py-3">
           <p className="font-mono text-xs text-warn-500">
             on-chain caps unavailable — {payload.chainError}
           </p>
@@ -142,7 +140,7 @@ export default async function AgentsPage() {
       )}
 
       {payload.panels.length === 0 && payload.dbError === null && (
-        <div className="rounded-xl border border-ink-700 bg-ink-900 px-4 py-10 text-center">
+        <div className="lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-10 text-center">
           <p className="text-ink-300">No member has an agent wallet yet.</p>
           <p className="mt-2 font-mono text-xs text-ink-400">
             pnpm --filter web agents:register
@@ -159,7 +157,7 @@ export default async function AgentsPage() {
       {/* ---- The gate's rules, from the same module that enforces them ---- */}
       <section className="mt-10">
         <SectionLabel>What the gate checks, in order</SectionLabel>
-        <ol className="mt-3 space-y-1.5 rounded-xl border border-ink-700 bg-ink-900 px-4 py-4">
+        <ol className="mt-3 space-y-1.5 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-4">
           {POLICY_RULES.map((rule, index) => (
             <li key={rule} className="flex gap-3 text-sm text-ink-300">
               <span className="font-mono text-xs text-ink-500">{index + 1}</span>
@@ -187,7 +185,7 @@ export default async function AgentsPage() {
         </div>
 
         {payload.decisions.length === 0 ? (
-          <div className="rounded-xl border border-ink-700 bg-ink-900 px-4 py-10 text-center">
+          <div className="lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-10 text-center">
             <p className="text-ink-300">No decision has been taken yet.</p>
             <p className="mt-2 font-mono text-xs text-ink-400">pnpm --filter web tick</p>
           </div>
@@ -210,7 +208,7 @@ export default async function AgentsPage() {
           confidence threshold, and its caps in any unit. An agent that knew the threshold would
           report it, and an agent that could name an amount could name the wrong one.
         </p>
-        <pre className="overflow-x-auto rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-ink-300">
+        <pre className="overflow-x-auto rounded-2xl border border-ink-700 bg-ink-950 px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-ink-300">
           {agentSystemInstruction()}
         </pre>
       </section>
@@ -255,7 +253,7 @@ function AgentCard({ panel }: { panel: AgentPanel }) {
       : panel.policy.perTxCapWei;
 
   return (
-    <section className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+    <section className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-2.5">
         <span className="font-mono text-sm text-ink-100">{panel.handle}</span>
         {halted ? (
@@ -318,7 +316,7 @@ function AgentCard({ panel }: { panel: AgentPanel }) {
         </div>
 
         {panel.drift !== null && (
-          <p className="mt-3 rounded border border-warn-500/40 bg-warn-500/5 px-2.5 py-1.5 font-mono text-[11px] text-warn-500">
+          <p className="mt-3 rounded border border-warn-500/40 bg-warn-500/10 px-2.5 py-1.5 font-mono text-[11px] text-warn-500">
             registry drift: {panel.drift}
           </p>
         )}
@@ -409,7 +407,7 @@ function DecisionCard({ decision }: { decision: DecisionView }) {
 
   return (
     <li
-      className={`overflow-hidden rounded-xl border bg-ink-900 ${
+      className={`overflow-hidden rounded-2xl border bg-ink-900 ${
         bypassed ? "border-bad-500/40" : "border-ink-700"
       }`}
     >
@@ -524,7 +522,7 @@ function DecisionCard({ decision }: { decision: DecisionView }) {
         </ul>
 
         {decision.revertReason !== null && (
-          <p className="mt-3 rounded border border-bad-500/40 bg-bad-500/5 px-2.5 py-1.5 font-mono text-[11px] break-all text-bad-500">
+          <p className="mt-3 rounded border border-bad-500/40 bg-bad-500/10 px-2.5 py-1.5 font-mono text-[11px] break-all text-bad-500">
             the contract refused this transaction: {decision.revertReason}
           </p>
         )}

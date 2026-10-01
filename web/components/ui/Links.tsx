@@ -31,7 +31,7 @@ export function ExtLink({ href, children, wrap, title, className }: ExtLinkProps
       target="_blank"
       rel="noreferrer"
       title={title}
-      className={`text-signal-500 underline-offset-2 hover:underline ${wrap ? "break-all" : ""} ${className ?? ""}`}
+      className={`text-signal-500 underline-offset-[3px] transition-colors hover:text-ink-100 hover:underline ${wrap ? "break-all" : ""} ${className ?? ""}`}
     >
       {children}
     </a>

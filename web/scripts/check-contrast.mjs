@@ -2,11 +2,16 @@
 /**
  * The colour guard: contrast, and whether the semantic tones are still telling a reader apart.
  *
- * Phase 10 replaced a dark theme with a light one. Every one of the ~1,350 colour-token
- * references in `app/` keeps its name and gets a new value, which is what made the redesign
- * affordable — and also what makes it dangerous, because a single number in `@theme` now decides
- * whether 209 pieces of label text are legible. Eyeballing a palette on one monitor is not a
- * check. This is.
+ * Phase 10 replaced a dark theme with a light one; Phase 13 inverted it back to near-black with
+ * an orange accent. Every one of the ~1,350 colour-token references in `app/` keeps its name
+ * through both and gets a new value, which is what made each redesign affordable — and also what
+ * makes it dangerous, because a single number in `@theme` now decides whether 209 pieces of
+ * label text are legible. Eyeballing a palette on one monitor is not a check. This is.
+ *
+ * Nothing in here knows which direction the theme points. Contrast is symmetric and the tone
+ * separations are measured between tones, so the same file gates a light palette and a dark one.
+ * That was the condition ADR-072 set for ever shipping a second theme, and it is the reason
+ * Phase 13 could take the palette apart without taking the guarantees apart with it.
  *
  * Four things are asserted, and each maps to a Phase 10 exit criterion:
  *
@@ -170,6 +175,29 @@ const TEXT_ON_ALL_SURFACES = [
 
 const TONES = ["ok", "warn", "bad", "signal", "human"];
 
+const TONE_SRC = readFileSync(join(WEB_ROOT, "components/ui/tone.ts"), "utf8");
+
+/**
+ * How strongly a tone tints its own badge ground, read from `components/ui/tone.ts`.
+ *
+ * This used to be the literal `0.12` in the line below, and the two had quietly drifted: `warn`
+ * tinted at 14% while the check measured 12%. On a light ground that gap was harmless. On a dark
+ * one it is not — `bad` clears AA on its own 12% tint at 4.64:1 and fails at 16% — so the number
+ * is now taken from the file that decides it, and a tint raised in the registry is a tint this
+ * check sees.
+ */
+function badgeTint(tone) {
+  const block = TONE_SRC.slice(TONE_SRC.indexOf(`  ${tone}: {`));
+  const slot = block.slice(0, block.indexOf("},"));
+  const match = new RegExp(`badge:\\s*"[^"]*bg-${tone}-500\\/(\\d+)`).exec(slot);
+  if (match === null) {
+    failures.push(`components/ui/tone.ts: cannot read the badge tint for ${tone}.`);
+    return 0.12;
+  }
+  return Number(match[1]) / 100;
+}
+
+
 {
   for (const [token, why] of TEXT_ON_ALL_SURFACES) {
     for (const [name, surface] of Object.entries(SURFACES)) {
@@ -196,12 +224,13 @@ const TONES = ["ok", "warn", "bad", "signal", "human"];
         );
       }
     }
-    const badgeGround = over(COLOR[token], 0.12, COLOR[SURFACES.card]);
+    const badgeGround = over(COLOR[token], badgeTint(tone), COLOR[SURFACES.card]);
     const onBadge = contrast(COLOR[token], badgeGround);
     if (onBadge < 4.5) {
       failures.push(
         `text-${token} on its own 12% tint (${badgeGround}) is ${onBadge.toFixed(2)}:1 — ` +
-          `AA needs 4.5:1. That is the Badge and Callout combination in components/ui.`,
+          `AA needs 4.5:1. That is the Badge and Callout combination in components/ui, at the ` +
+          `${(badgeTint(tone) * 100).toFixed(0)}% tint that tone.ts actually asks for.`,
       );
     }
   }

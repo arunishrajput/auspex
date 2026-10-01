@@ -24,10 +24,11 @@ describe("TONE", () => {
   });
 
   it("gives every claim a non-colour glyph", () => {
-    // The guarantee behind the greyscale and colour-blindness criteria. Five colours cannot all
-    // clear AA on a light ground *and* stay far apart in luminance — the palette gets as close as
-    // the maths allows and the glyph carries the rest. A tone without one is a claim that a
-    // reader with deuteranopia cannot distinguish from its opposite.
+    // The guarantee behind the greyscale and colour-blindness criteria. Colour alone is not
+    // allowed to carry a claim, whichever ground the palette is tuned against: on white the five
+    // could not be pushed past 1.13 in luminance and on near-black they reach 1.20, and neither
+    // number is a margin worth betting legibility on. The glyph carries the rest. A tone without
+    // one is a claim that a reader with deuteranopia cannot distinguish from its opposite.
     for (const tone of CLAIMS) {
       expect(TONE[tone].glyph, `${tone} must carry a mark`).toMatch(/\S/);
     }

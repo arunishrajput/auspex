@@ -146,7 +146,7 @@ Faucet    : https://faucet.masterstroke.academy
 | Contracts | Solidity 0.8.28, Hardhat 3, OpenZeppelin 5 | HH3 is the only one that runs on Node 26 |
 | DB | Neon Postgres + Drizzle ORM | SQL-first, fast cold starts, easy to explain |
 | App | Next.js 16 (App Router) + TypeScript + Tailwind v4 | one deployable, API routes double as workers |
-| Design | light-first tokens in `app/globals.css`; components in `components/ui/` | colour is semantic here — read ADR-071/074 before changing a token |
+| Design | dark, editorial tokens in `app/globals.css`; components in `components/ui/` | colour is semantic here — read ADR-071/074/079 before changing a token |
 | Chain client | ethers v6 | the MST SDK is too thin to trust on the critical path |
 | Wallet | wagmi + viem, `injected()` connector | EIP-1193/6963 standard — works with BridgeKey, no vendor code |
 | LLM | `@google/genai`, Gemini free tier | user's choice; free |

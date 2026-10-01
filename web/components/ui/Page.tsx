@@ -5,28 +5,55 @@
  * three of them wrapped it in a local `Shell` of their own. The column width was the only real
  * difference — dense table pages used `max-w-4xl` and card pages `max-w-5xl` — so that is the
  * one prop.
+ *
+ * `PageShell` also renders the site header now. It used to be the page's job, which is exactly
+ * why `/markets/[id]` never had one: seven call sites remembered and one did not. A route gets
+ * the header by existing.
  */
 
 import type { ReactNode } from "react";
+import { SiteHeader, type RouteHref } from "@/components/SiteHeader";
 
 const WIDTH = {
-  /** Reading column. Long prose, single-column tables, forms. */
-  text: "max-w-4xl",
-  /** Card grids and anything with four columns of numbers. */
-  wide: "max-w-5xl",
+  /**
+   * Reading column. Long prose, single-column tables, forms.
+   *
+   * Narrower than `wide` but no longer narrow enough to look misaligned against the header's
+   * column, which is what `max-w-4xl` did: the wordmark sat 128px to the left of the page's own
+   * `h1`, and that reads as a mistake rather than as a measure. The prose that actually needs a
+   * short line — the lede — caps itself at `max-w-2xl` inside `PageHeader`.
+   */
+  text: "max-w-5xl",
+  /** Card grids and anything with four columns of numbers. Matches the header's own column. */
+  wide: "max-w-6xl",
 } as const;
 
 export type PageShellProps = {
   width?: keyof typeof WIDTH;
+  /** Which route this is, for the header. Omitted only by a page that renders its own chrome. */
+  current?: RouteHref;
+  /** Counts beside a route in the header. Only `/` passes these. */
+  alerts?: Partial<Record<RouteHref, string>>;
   children: ReactNode;
 };
 
-export function PageShell({ width = "wide", children }: PageShellProps) {
+export function PageShell({ width = "wide", current, alerts, children }: PageShellProps) {
   return (
-    <main className="grid-backdrop min-h-dvh">
-      <div className={`mx-auto ${WIDTH[width]} px-4 py-12 sm:px-6 sm:py-16`}>{children}</div>
-    </main>
+    <>
+      {current !== undefined && <SiteHeader current={current} alerts={alerts} />}
+      <main className="grid-backdrop min-h-dvh">
+        <div className={`mx-auto ${WIDTH[width]} px-4 py-12 sm:px-6 sm:py-16`}>{children}</div>
+      </main>
+    </>
   );
+}
+
+/**
+ * The small accent mark that opens an eyebrow. A filled square rather than a bullet, because at
+ * 11px a bullet is a smudge and a square still reads as a deliberate mark.
+ */
+function Tick() {
+  return <span aria-hidden="true" className="inline-block size-1.5 shrink-0 bg-accent-500" />;
 }
 
 export type PageHeaderProps = {
@@ -45,19 +72,22 @@ export type PageHeaderProps = {
 
 export function PageHeader({ title, eyebrow, lede, children }: PageHeaderProps) {
   return (
-    <header className="mb-10">
+    <header className="mb-12 border-b border-ink-800 pb-10">
       {eyebrow !== undefined && (
-        <p className="font-mono text-[11px] tracking-[0.18em] text-accent-600 uppercase">
+        <p className="flex items-center gap-2 font-mono text-[11px] tracking-[0.22em] text-accent-600 uppercase">
+          <Tick />
           {eyebrow}
         </p>
       )}
-      <h1 className="mt-2 font-display text-4xl leading-[1.05] font-semibold tracking-tight text-ink-100 sm:text-5xl">
+      <h1 className="mt-4 font-display text-[2.6rem] leading-[0.95] font-extrabold tracking-[-0.03em] text-ink-100 sm:text-6xl">
         {title}
       </h1>
       {lede !== undefined && (
-        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-300">{lede}</p>
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-300 sm:text-[17px]">
+          {lede}
+        </p>
       )}
-      {children !== undefined && <div className="mt-4">{children}</div>}
+      {children !== undefined && <div className="mt-5">{children}</div>}
     </header>
   );
 }
@@ -78,8 +108,9 @@ export type SectionLabelProps = {
 export function SectionLabel({ children, className }: SectionLabelProps) {
   return (
     <h2
-      className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 font-mono text-[11px] tracking-[0.16em] text-ink-400 uppercase ${className ?? ""}`}
+      className={`flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tracking-[0.2em] text-ink-400 uppercase ${className ?? ""}`}
     >
+      <Tick />
       {children}
     </h2>
   );
@@ -96,9 +127,49 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={`mb-10 ${className ?? ""}`}>
+    <section className={`mb-12 ${className ?? ""}`}>
       <SectionLabel className="mb-3">{label}</SectionLabel>
       {children}
     </section>
+  );
+}
+
+/**
+ * The large section opener used where a page is read top to bottom rather than scanned — the
+ * numbered chapters on `/`. The number is decorative and marked `aria-hidden`: it tells a reader
+ * where they are in a sequence, and a screen reader already has the heading.
+ */
+export function SectionHead({
+  index,
+  title,
+  note,
+  children,
+}: {
+  /** "01", "02" — the chapter number, rendered large and faint. */
+  index: string;
+  title: ReactNode;
+  /** One line to the right of the title: a provenance badge, a timestamp. */
+  note?: ReactNode;
+  /** A sentence under the title. */
+  children?: ReactNode;
+}) {
+  return (
+    <div className="mb-5 border-t border-ink-800 pt-5">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <span
+          aria-hidden="true"
+          className="font-mono text-[11px] font-semibold tracking-[0.2em] text-accent-600 tabular-nums"
+        >
+          {index}
+        </span>
+        <h2 className="font-display text-2xl leading-tight font-bold tracking-[-0.02em] text-ink-100 sm:text-[28px]">
+          {title}
+        </h2>
+        {note !== undefined && <div className="ml-auto flex items-center gap-2">{note}</div>}
+      </div>
+      {children !== undefined && (
+        <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-ink-400">{children}</p>
+      )}
+    </div>
   );
 }

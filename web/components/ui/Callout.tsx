@@ -21,8 +21,8 @@ export type CalloutProps = {
 export function Callout({ tone = "quiet", title, children, className }: CalloutProps) {
   const meta = TONE[tone];
   return (
-    <div className={`rounded-xl border px-4 py-3 ${meta.surface} ${className ?? ""}`}>
-      <p className={`flex items-baseline gap-1.5 font-mono text-sm ${meta.text}`}>
+    <div className={`lit-edge rounded-2xl border px-4 py-3.5 ${meta.surface} ${className ?? ""}`}>
+      <p className={`flex items-baseline gap-2 font-mono text-sm font-medium ${meta.text}`}>
         {meta.glyph !== "" && (
           <span aria-hidden="true" className="text-[11px]">
             {meta.glyph}

@@ -4,14 +4,68 @@ All notable changes to AuspeX. Written from the real commit history — every ve
 measurement below came from `git log`, the chain, or a command whose output is recorded in
 [`PROGRESS.md`](./PROGRESS.md).
 
-This project was built in twelve numbered phases, one per working session, and the phase boundaries
+This project was built in twelve numbered phases, one per working session, plus a thirteenth added
+after the release, and the phase boundaries
 are the only meaningful unit of change in it — so that is how this file is organised. The full
 build record, including the defects and what each one cost, is
 [`docs/BUILD_RECORD.md`](./docs/BUILD_RECORD.md) and
-[`docs/DECISIONS.md`](./docs/DECISIONS.md) (79 ADRs).
+[`docs/DECISIONS.md`](./docs/DECISIONS.md) (82 ADRs).
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) exactly.
+
+---
+
+## [1.1.0] — 2026-10-01
+
+**Phase 13 — the dark edition.** A complete visual redesign, requested after the release: the
+palette inverted from light to near-black, the accent moved from teal to orange, display type
+roughly doubled, and the navigation became a sticky site header. Eight routes changed appearance.
+
+**No measured fact, address, hash or limitation changed.** This is a `MINOR` rather than a `MAJOR`
+for that reason — nothing a reader could have checked before has a different answer now, and the
+three defects it fixed were all cosmetic or structural.
+
+### Changed
+
+- **The theme is dark.** ~20 values in `app/globals.css`; not one of the ~1,350 colour-token call
+  sites was renamed, because the ramp is role-pure — surfaces, borders and text never cross over.
+  That property has now survived two inversions in opposite directions (ADR-079).
+- **The palette was searched against the existing contrast gate, not chosen by eye.** The gate
+  turned out to be genuinely theme-agnostic, which is the condition ADR-072 set for ever shipping a
+  second palette. Measured after: worst greyscale separation between the five semantic tones
+  **1.20:1** (was 1.19), worst colour-blind separation **ΔE 13.6** (was 11), accent distance from
+  the nearest tone **ΔE 48** against a floor raised to 30 for this change.
+- **The tone ladder reordered** to `ok, warn, human, signal, bad`, lightest to darkest. A saturated
+  red is luminance-capped near 0.21, which makes it the easiest tone to keep legible on white and
+  the hardest on black; `bad` clears AA at **4.64:1**, the narrowest margin in the palette.
+- **`bad` moved to a crimson-rose** so the new orange accent could not be mistaken for a refusal.
+  The accent did not back away from orange; the tone moved (ADR-073's rule, applied).
+- **The site header is sticky and rendered by `PageShell`** rather than placed by each page
+  (ADR-081). The two content column widths now match the header's.
+- The hero `h1` is the product's argument rather than its name, with four live numbers under it;
+  sections on `/` are numbered chapters; sections reveal on scroll via `animation-timeline: view()`
+  — no JavaScript, no observer, and no effect at all under `prefers-reduced-motion`.
+
+### Fixed
+
+- **`/markets/[id]` had no navigation.** Seven routes placed the nav by hand; the eighth was written
+  later and did not copy the line. Rendering it from the shell makes that class of omission
+  impossible (ADR-081).
+- **`app/icon.svg` was a whole theme out of date.** It carries literal hexes because an SVG served as
+  a file cannot read a CSS variable, and Phase 10 missed them — the tab icon had been showing the
+  *original* dark palette's colours throughout the light era.
+- **The contrast checker and the tone registry disagreed about the badge tint.** `warn` tinted at
+  14% while the check measured 12%. Harmless on white; on black `bad` passes at 12% and fails at
+  16%, so the checker now reads the number out of `tone.ts` instead of keeping a copy (ADR-080).
+- Two numbers of the same kind on `/` were formatted two different ways (`1,289` beside `1093`).
+
+### Verified
+
+`check:contrast` passed · `check:render` passed on all 8 routes at 390px and 1280px, focus ring on
+every interactive element, zero animating elements under reduced motion · 441 tests green ·
+`check:provenance` passed on 152 files · `eslint` and `tsc --noEmit` clean · every route read in a
+browser rather than inferred from the JSX.
 
 ---
 

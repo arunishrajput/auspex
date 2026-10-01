@@ -5,7 +5,6 @@ import { getIndexerStatus, getMarketsForDisplay, type MarketView } from "@/lib/m
 import { humanAuthorityAddress } from "@/lib/approval/authority";
 import { formatIds, marketOrigins } from "@/lib/trust/signers";
 import { Provenance } from "@/components/Provenance";
-import { SiteNav } from "@/components/SiteNav";
 import {
   AddressLink,
   Badge,
@@ -45,8 +44,7 @@ export default async function MarketsPage() {
   const origin = marketOrigins(payload.markets, humanAuthorityAddress());
 
   return (
-    <PageShell>
-      <SiteNav current="/markets" />
+    <PageShell current="/markets">
 
       <PageHeader
         eyebrow="On chain"
@@ -65,7 +63,7 @@ export default async function MarketsPage() {
 
       {/* Indexer status. Separate from the market data on purpose: it is a claim about OUR
           plumbing, not about the chain, and the two must not be confused. */}
-      <section className="mb-8 rounded-xl border border-ink-700 bg-ink-900 px-4 py-3">
+      <section className="mb-8 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-xs">
           <span className="text-ink-400">indexer</span>
           <Provenance origin="DB" detail="indexer_cursors · chain_events" />
@@ -118,7 +116,7 @@ export default async function MarketsPage() {
           because these rows are NOT on chain, and a page that mixed them would be claiming
           something the chain has not said. */}
       {payload.pending.length > 0 && (
-        <section className="mb-8 overflow-hidden rounded-xl border border-warn-500/50 bg-warn-500/10">
+        <section className="mb-8 overflow-hidden rounded-2xl border border-warn-500/50 bg-warn-500/10">
           <div className="flex flex-wrap items-center gap-2 border-b border-warn-500/25 px-4 py-2.5">
             <Badge tone="warn">off chain</Badge>
             <span className="font-mono text-[11px] text-ink-300">
@@ -315,7 +313,7 @@ function MarketCard({ market }: { market: MarketView }) {
         </dl>
 
         {market.projectionDrift !== null && (
-          <p className="mt-3 flex items-baseline gap-1.5 rounded-xl border border-warn-500/50 bg-warn-500/10 px-2.5 py-1.5 font-mono text-[11px] text-warn-500">
+          <p className="mt-3 flex items-baseline gap-1.5 rounded-2xl border border-warn-500/50 bg-warn-500/10 px-2.5 py-1.5 font-mono text-[11px] text-warn-500">
             <span aria-hidden="true">{TONE.warn.glyph}</span>
             <span>
               indexer drift: {market.projectionDrift} — the chain figures above are the correct

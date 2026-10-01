@@ -7,7 +7,7 @@
 > Session protocol and hard rules live in `CLAUDE.md`. Phase tasks and exit criteria live in
 > `docs/BUILD_PLAN.md`. Manual setup state lives in `docs/RUNBOOK.md`.
 
-**Last updated:** 2026-09-30 (Phase 12)
+**Last updated:** 2026-10-01 (Phase 13)
 **Current status:** ✅ **Phase 12 complete. Released as `v1.0.0`.** Nothing new was built. **Sixteen
 command runs across thirteen distinct checks**, all passing, with their numbers recorded below rather
 than their adjectives. The sweep's job was to catch **drift** — a sentence true when it was written that a
@@ -21,8 +21,9 @@ its own resolve deadline. All five are corrected. Two of them needed a second pa
 percentage fix missed `docs/ARCHITECTURE.md`, and the first rewrite of the market #11 paragraph was
 itself incomplete. `check:render` ran for the first time in the project's history — 8 routes, clean.
 No chain data, address or hash changed.
-**Next phase:** none. Part II is finished and the build is released. What a future session should
-read first is "After v1.0.0" at the end of this file.
+**Next phase:** none planned. Part II finished at `v1.0.0`; **Phase 13 is a visual redesign
+requested after the release** and is recorded below. What a future session should read first is
+"After v1.0.0" at the end of this file.
 
 ---
 
@@ -64,6 +65,12 @@ reported 84 minutes for a system whose unattended mean is 5h07m. `audit_log` now
 | 10 | The new look — light, modern, funky, professional | ✅ Complete |
 | 11 | Operational truth — fix what makes a claim false | ✅ Complete |
 | 12 | v1.0.0 — verify everything once, tag, release | ✅ Complete — **released `v1.0.0`** |
+
+**Phase 13 — asked for after the release.**
+
+| Phase | Name | Status |
+|:--|:--|:--|
+| 13 | The dark edition — invert the theme, rebuild the chrome | ✅ Complete |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ complete with known gaps
 
@@ -2529,6 +2536,89 @@ confirmed log. Lowering it trades the exit criterion for 7 seconds.
 **Still open:** nothing makes GitHub honour a `*/5`. Delivery is the request that caused the market;
 the cron repairs misses in hours. If a notification is ever missing, run the `Chain sync` workflow
 from the Actions tab — RUNBOOK §"Notifications are not delivered by the cron".
+
+## Phase 13 — the dark edition
+
+**Asked for:** *"completely redesign the website, right now it's too boring"*, with three reference
+screenshots of a dark agency-portfolio template — near-black ground, orange-red accent, very large
+display type.
+
+**What shipped.** The palette inverted from light to near-black, the accent moved from teal to
+orange, display type roughly doubled, and the navigation became a sticky site header. Eight routes
+changed appearance; **no measured fact, address, hash or limitation changed.** The reference designs
+are marketing sites with photography and empty heroes; this is a dense evidence dashboard, so what
+was taken from them is the visual language — dark ground, one loud accent, huge tight headlines,
+numbered chapters, large numbers, generous rhythm — and not the removal of content.
+
+**It was affordable for exactly one reason.** ADR-071's component extraction and the role-pure token
+ramp meant the whole theme is ~20 values in `@theme`: `ink-950…850` are only ever surfaces,
+`ink-800…600` only ever borders, `ink-500…100` only ever text, and nothing crosses over. That
+property has now survived two inversions in opposite directions without a single rename across ~1,350
+call sites.
+
+**The palette was searched, not picked.** `scripts/check-contrast.mjs` turned out to be genuinely
+theme-agnostic, so the constraints were known before anything was drawn: AA on four surfaces, AA on
+each tone's own badge tint, 3:1 for dots and rings, ≥1.18 greyscale separation and ≥9 ΔE under three
+kinds of colour blindness between all ten pairs of the five tones, and a floor on the accent's
+distance from every tone. A search over hue, chroma and all 120 ladder orderings produced the values
+in `app/globals.css`. Three findings came out of it that were not expected going in:
+
+| | light (Phase 10) | dark (Phase 13) |
+|:--|--:|--:|
+| worst greyscale separation | 1.19:1 | **1.20:1** |
+| worst colour-blind separation | ΔE 11 | **ΔE 13.6** |
+| accent distance from nearest tone | ΔE 18 floor | **ΔE 48** |
+| tightest text margin | — | **4.64:1** (`bad`) |
+
+- **There is more room on black than on white.** ADR-074 measured a hard ceiling near 1.13 for five
+  AA-legal tones on white. On near-black the same five reach 1.20 and separate better under
+  dichromacy, because the AA formula's `+0.05` offset compresses the light end and not the dark one.
+- **The tone ladder reordered.** `ok, warn, human, signal, bad` lightest to darkest, where on white
+  it was `bad, signal, warn, ok, human`. A saturated red is luminance-capped near 0.21, so red is
+  the easiest tone to keep legible on white and the hardest on black.
+- **The orange accent forced `bad` to move.** Orange-red is one hue step from the refusal colour —
+  precisely the mistake ADR-073 exists to name. The checker's accent floor was raised from ΔE 18 to
+  30 *before* a colour was chosen, and `bad` moved to a crimson-rose to clear it. The accent did not
+  back away from orange; the tone moved.
+
+**Three defects fixed that were not part of the brief, and all three were found by reading the
+rendered page rather than the source — the fifth, sixth and seventh time that has happened here:**
+
+1. **`/markets/[id]` had no navigation at all.** Seven routes placed `SiteNav` by hand and the
+   eighth did not. The header is now rendered by `PageShell`, so a route gets it by existing
+   (ADR-081).
+2. **The favicon was a whole theme out of date.** `app/icon.svg` carries hardcoded hexes because an
+   SVG served as a file cannot read a CSS variable, and Phase 10 missed them — it had been showing
+   the *original* dark palette's blues through the entire light era. Retuned, and the header
+   wordmark now draws the same mark from the tokens so a future drift has a witness.
+3. **The checker and the registry disagreed about the badge tint.** `warn` tinted at 14%, the check
+   measured 12%, and the tone surfaces tinted at 8% with nothing measuring them. Harmless on white;
+   not on black, where `bad` passes at 12% and **fails at 16%**. The checker now reads the number out
+   of `tone.ts` (ADR-080).
+
+**Two smaller things the rendered page showed:** the header column was `max-w-6xl` and the content
+column `max-w-5xl`, so the wordmark sat 64px left of every `h1` — one width now; and `1,289 articles`
+sat beside `1093 events`, the same kind of number formatted two ways.
+
+**What is new rather than restyled:** a sticky header with a wordmark and one call to action; a hero
+whose `h1` is the product's argument rather than its name, with four live numbers under it; a
+scrolling rule of the five constraints; numbered chapters on `/`; and scroll-reveal on sections,
+done with `animation-timeline: view()` so there is no JavaScript, no observer and no hydration cost
+— wrapped in `@supports` and `prefers-reduced-motion`, so where it is unavailable the content is
+simply visible.
+
+**Verification run:** `check:contrast` passed with the table above; `check:render` passed on all 8
+routes at 390px and 1280px, with a focus ring on every interactive element and zero animating
+elements under reduced motion; 441 tests green; `check:provenance` passed on 152 files; `eslint`
+clean; `tsc --noEmit` clean; production build clean. Every route was read in a browser at 1440px and
+390px, not inferred from the JSX.
+
+**Known gaps unchanged.** Nothing in this phase touched the pipeline, the contract, the database or
+any claim. The dark theme is now the only theme, which is the same single-palette decision ADR-072
+made in the other direction, for the same reason, and at the same cost to the people who prefer the
+other one.
+
+---
 
 ## After v1.0.0 — the closing summary
 

@@ -1,5 +1,4 @@
 import { Provenance } from "@/components/Provenance";
-import { SiteNav } from "@/components/SiteNav";
 import {
   Callout,
   PageHeader,
@@ -112,7 +111,7 @@ export default async function ReviewPage() {
       ) : (
         <>
           <section className="mb-10">
-            <dl className="grid grid-cols-2 divide-ink-800 overflow-hidden rounded-xl border border-ink-700 bg-ink-900 sm:grid-cols-5 sm:divide-x">
+            <dl className="grid grid-cols-2 divide-ink-800 overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900 sm:grid-cols-5 sm:divide-x">
               <Stat label="Awaiting you" value={String(counts.pendingReview)} tone="warn" />
               <Stat label="Approved" value={String(counts.approved)} tone="ok" />
               <Stat label="Rejected by you" value={String(counts.rejected)} />
@@ -207,7 +206,7 @@ function WorkedExample() {
   return (
     <section className="mb-10">
       <SectionLabel className="mb-3">The gate, run on a deliberately bad draft</SectionLabel>
-      <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+      <div className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
         <div className="flex flex-wrap items-center gap-2 border-b border-ink-800 px-4 py-2.5">
           <span className="rounded border border-warn-500/40 bg-warn-500/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wide text-warn-500 uppercase">
             constructed input
@@ -247,7 +246,7 @@ function WorkedExample() {
             {reasons.map((reason) => (
               <li
                 key={reason}
-                className="rounded border border-bad-500/30 bg-bad-500/5 px-2 py-1.5 font-mono text-[11px] break-words text-bad-500"
+                className="rounded border border-bad-500/30 bg-bad-500/10 px-2 py-1.5 font-mono text-[11px] break-words text-bad-500"
               >
                 {reason}
               </li>
@@ -287,7 +286,7 @@ function ProposalCard({
           : "border-warn-500/40 bg-warn-500/10 text-warn-500";
 
   return (
-    <li className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+    <li className="overflow-hidden lit-edge rounded-2xl border border-ink-700 bg-ink-900">
       <div className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-ink-800 px-4 py-3">
         <span
           className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] tracking-wide uppercase ${statusTone}`}
@@ -345,7 +344,7 @@ function ProposalCard({
 
       {/* Why a draft never reached a human. The interesting half of the log. */}
       {proposal.rejectionReason !== null && (
-        <div className="border-t border-ink-800 bg-bad-500/5 px-4 py-3">
+        <div className="border-t border-ink-800 bg-bad-500/10 px-4 py-3">
           <p className="mb-1 font-mono text-[10px] tracking-wide text-bad-500 uppercase">
             {proposal.status === "SCHEMA_REJECTED"
               ? "refused by deterministic code, before any human saw it"
@@ -358,7 +357,7 @@ function ProposalCard({
       )}
 
       {proposal.warnings.length > 0 && (
-        <div className="border-t border-warn-500/30 bg-warn-500/5 px-4 py-3">
+        <div className="border-t border-warn-500/30 bg-warn-500/10 px-4 py-3">
           <p className="mb-1.5 font-mono text-[10px] tracking-wide text-warn-500 uppercase">
             flagged for your attention — advisory, never a block
           </p>
@@ -508,8 +507,7 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <PageShell width="text">
-      <SiteNav current="/review" />
+    <PageShell width="text" current="/review">
 
       <PageHeader
       eyebrow="The gate"

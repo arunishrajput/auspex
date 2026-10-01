@@ -549,3 +549,37 @@ behaviour that makes an existing claim untrue, and is bounded to exactly the fou
 competition rules that could disqualify the project. Those rules no longer apply and the standard is
 now higher, not lower: the product's entire proposition is that its claims can be checked. A false
 sentence in the README is not a rule violation any more — it is the product failing.
+
+
+---
+
+# Phase 13 — The dark edition (added after `v1.0.0`)
+
+Phase 10's brief said *"not dark"*, and this phase reverses it at the owner's request, with three
+reference screenshots of a dark agency-portfolio template. It is recorded here rather than folded
+into Phase 10 because the plan is part of the build record: **Phase 10's brief is not edited to
+match what was eventually built.** See ADR-068.
+
+**The brief:** near-black ground, orange-red accent, very large display type, generous rhythm. The
+references are marketing sites with photography and empty heroes; AuspeX is a dense evidence
+dashboard, so the visual *language* transfers and the removal of content does not.
+
+**The constraint, unchanged from Phase 10 and repeated because it is the whole risk:** colour here
+is semantic. `ok` / `warn` / `bad` / `human` / `signal` encode trust claims. A redesign that makes
+them prettier but less distinguishable has damaged the product, however good it looks. The new risk
+specific to *this* brief is that orange-red sits one hue step from `bad`.
+
+**Exit criteria**
+
+1. `pnpm check:contrast` passes — unchanged thresholds, plus the accent's distance floor raised from
+   ΔE 18 to 30 before any colour is chosen.
+2. `pnpm check:render` passes on all 8 routes at 390px and 1280px: no horizontal scroll, a visible
+   focus ring on every interactive element, nothing animating under `prefers-reduced-motion`.
+3. Every route is read **in a browser**, not in the JSX, at both widths.
+4. `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm check:provenance`, `next build` all clean.
+5. No address, hash, measurement or limitation differs from `v1.0.0`.
+6. Any sentence anywhere in the repository that the inversion makes false is corrected; any
+   superseded decision is marked superseded rather than rewritten.
+
+**Status:** ✅ complete. Outcome and measurements in `PROGRESS.md` under "Phase 13 — the dark
+edition"; decisions in ADR-079, ADR-080 and ADR-081.

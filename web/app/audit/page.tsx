@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Provenance } from "@/components/Provenance";
-import { SiteNav } from "@/components/SiteNav";
 import {
   Badge,
   Callout,
@@ -111,7 +110,7 @@ export default async function AuditPage({
   if (!hasDatabase()) {
     return (
       <Shell group={group} total={0} matching={0} reasonless={0} tick={null} cadence={null}>
-        <div className="rounded-xl border border-warn-500/40 bg-warn-500/5 px-4 py-3">
+        <div className="rounded-2xl border border-warn-500/40 bg-warn-500/10 px-4 py-3">
           <p className="font-mono text-sm text-warn-500">
             DATABASE_URL is not configured on this deployment.
           </p>
@@ -193,7 +192,7 @@ export default async function AuditPage({
                 {page.entries.map((entry) => (
                   <li
                     key={entry.id}
-                    className="rounded-xl border border-ink-800 bg-ink-900 px-4 py-2.5"
+                    className="rounded-2xl border border-ink-800 bg-ink-900 px-4 py-2.5"
                   >
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <span className="font-mono text-[10px] text-ink-500 tabular-nums">
@@ -274,7 +273,7 @@ function Cadence({ cadence }: { cadence: CadenceReport }) {
   const haveUnattended = unattended.ticks >= 2 && unattended.meanGapMs !== null;
 
   return (
-    <div className="mt-2 rounded-xl border border-ink-700 bg-ink-900">
+    <div className="mt-2 lit-edge rounded-2xl border border-ink-700 bg-ink-900">
       <div className="border-b border-ink-800 px-4 pt-3 pb-2">
         <SectionLabel>Measured cadence — counted from this log, not from the cron expression</SectionLabel>
       </div>
@@ -360,8 +359,7 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <PageShell width="text">
-      <SiteNav current="/audit" />
+    <PageShell width="text" current="/audit">
 
       <PageHeader
         eyebrow="Append-only"
@@ -402,7 +400,7 @@ function Shell({
           ))}
         </nav>
 
-        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 font-mono text-[11px]">
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 lit-edge rounded-2xl border border-ink-700 bg-ink-900 px-4 py-2.5 font-mono text-[11px]">
           <span className="text-ink-400">
             <span className="text-ink-100 tabular-nums">{total.toLocaleString("en-US")}</span>{" "}
             entries total
@@ -419,7 +417,7 @@ function Shell({
         </div>
 
         {tick !== null && (
-          <div className="mt-2 rounded-xl border border-ink-800 bg-ink-850 px-4 py-2.5">
+          <div className="mt-2 rounded-2xl border border-ink-800 bg-ink-850 px-4 py-2.5">
             <p className="font-mono text-[10px] tracking-wide text-ink-500 uppercase">
               last pipeline tick — {tick.createdAt.toISOString()}
             </p>

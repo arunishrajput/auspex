@@ -8,13 +8,19 @@
   The mark is a gate with something passing through it — three bars narrowing to one, on the
   signal blue used for chain reads. It is drawn rather than lettered because a favicon is 16px
   wide on the tab a reader actually looks at, where a glyph of an "A" is a grey smudge.
+
+  The hex values here are copies of the tokens in `app/globals.css`, because an SVG served as a
+  file cannot read a CSS variable. They were missed when Phase 10 inverted the palette and sat a
+  whole theme out of date; Phase 13 brought them back in line. The same mark is drawn again in
+  `components/SiteHeader.tsx` as the wordmark, and that one does use the tokens — if these two
+  ever disagree, this file is the one that drifted.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="7" fill="#0b0e14" />
-  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#212837" />
+  <rect width="32" height="32" rx="7" fill="#101014" />
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#26262e" />
   <!-- three proposals in, one decision out -->
-  <path d="M7 9h8M7 16h12M7 23h8" stroke="#3ba1ff" stroke-width="2.5" stroke-linecap="round" />
+  <path d="M7 9h8M7 16h12M7 23h8" stroke="#688cfb" stroke-width="2.5" stroke-linecap="round" />
   <!-- the gate -->
-  <path d="M23 6v20" stroke="#a97bff" stroke-width="2.5" stroke-linecap="round" />
-  <circle cx="23" cy="16" r="3.5" fill="#26c281" />
+  <path d="M23 6v20" stroke="#da82ef" stroke-width="2.5" stroke-linecap="round" />
+  <circle cx="23" cy="16" r="3.5" fill="#0dea81" />
 </svg>
