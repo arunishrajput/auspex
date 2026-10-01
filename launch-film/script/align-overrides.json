@@ -1,0 +1,4 @@
+{
+  "_why": "revert: two long pauses made the automatic snap shift every phrase after 'The bet:' by one. These bounds are read off the measured silences by hand.",
+  "revert": [[0, 0.45], [0.94, 3.30], [4.23, 4.52], [4.99, 5.69], [6.51, 6.97], [7.54, 9.24], [9.54, 10.85], [11.22, 13.96], [14.95, 16.16], [16.52, 17.32]]
+}

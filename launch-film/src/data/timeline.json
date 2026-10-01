@@ -1,0 +1,118 @@
+{
+ "fps": 30,
+ "durationInFrames": 6813,
+ "scenes": [
+  {
+   "id": "hook",
+   "from": 0,
+   "durationInFrames": 412,
+   "voFrom": 42,
+   "voDuration": 11.424
+  },
+  {
+   "id": "title",
+   "from": 412,
+   "durationInFrames": 229,
+   "voFrom": 27,
+   "voDuration": 5.736
+  },
+  {
+   "id": "overview",
+   "from": 641,
+   "durationInFrames": 618,
+   "voFrom": 12,
+   "voDuration": 19.584
+  },
+  {
+   "id": "pipeline",
+   "from": 1259,
+   "durationInFrames": 554,
+   "voFrom": 12,
+   "voDuration": 17.064
+  },
+  {
+   "id": "review",
+   "from": 1813,
+   "durationInFrames": 408,
+   "voFrom": 12,
+   "voDuration": 12.6
+  },
+  {
+   "id": "injection",
+   "from": 2221,
+   "durationInFrames": 379,
+   "voFrom": 12,
+   "voDuration": 11.52
+  },
+  {
+   "id": "agents",
+   "from": 2600,
+   "durationInFrames": 467,
+   "voFrom": 12,
+   "voDuration": 14.568
+  },
+  {
+   "id": "layers",
+   "from": 3067,
+   "durationInFrames": 384,
+   "voFrom": 12,
+   "voDuration": 11.496
+  },
+  {
+   "id": "probe",
+   "from": 3451,
+   "durationInFrames": 505,
+   "voFrom": 12,
+   "voDuration": 16.032
+  },
+  {
+   "id": "revert",
+   "from": 3956,
+   "durationInFrames": 565,
+   "voFrom": 9,
+   "voDuration": 17.64
+  },
+  {
+   "id": "honest",
+   "from": 4521,
+   "durationInFrames": 288,
+   "voFrom": 12,
+   "voDuration": 8.592
+  },
+  {
+   "id": "roles",
+   "from": 4809,
+   "durationInFrames": 422,
+   "voFrom": 12,
+   "voDuration": 13.056
+  },
+  {
+   "id": "resolution",
+   "from": 5231,
+   "durationInFrames": 482,
+   "voFrom": 12,
+   "voDuration": 15.072
+  },
+  {
+   "id": "market8",
+   "from": 5713,
+   "durationInFrames": 260,
+   "voFrom": 9,
+   "voDuration": 7.752
+  },
+  {
+   "id": "audit",
+   "from": 5973,
+   "durationInFrames": 281,
+   "voFrom": 12,
+   "voDuration": 8.256
+  },
+  {
+   "id": "close",
+   "from": 6254,
+   "durationInFrames": 559,
+   "voFrom": 21,
+   "voDuration": 13.44
+  }
+ ]
+}

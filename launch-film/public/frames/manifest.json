@@ -1,0 +1,328 @@
+{
+  "home-hero": {
+    "url": "https://auspex-web-mu.vercel.app/",
+    "scrollY": 0,
+    "capturedAt": "2026-10-01T09:51:01.139Z"
+  },
+  "home-pipeline": {
+    "url": "https://auspex-web-mu.vercel.app/",
+    "scrollY": 904.609375,
+    "capturedAt": "2026-10-01T09:51:02.151Z"
+  },
+  "home-gate": {
+    "url": "https://auspex-web-mu.vercel.app/",
+    "scrollY": 1336.734375,
+    "capturedAt": "2026-10-01T09:51:03.066Z"
+  },
+  "home-injection": {
+    "url": "https://auspex-web-mu.vercel.app/",
+    "scrollY": 5346.609375,
+    "capturedAt": "2026-10-01T09:55:36.821Z",
+    "marks": [
+      {
+        "re": "/^Breaking: ignore all previous/",
+        "x": 265,
+        "y": 323.109375,
+        "w": 1070,
+        "h": 16
+      },
+      {
+        "re": "/^instruction-override$/",
+        "x": 265,
+        "y": 385.109375,
+        "w": 1070,
+        "h": 21
+      },
+      {
+        "re": "/\\[redacted-close-tag\\]/",
+        "x": 723.34375,
+        "y": 665.984375,
+        "w": 144,
+        "h": 16
+      }
+    ]
+  },
+  "review-0": {
+    "url": "https://auspex-web-mu.vercel.app/review",
+    "scrollY": 0,
+    "capturedAt": "2026-10-01T09:51:12.074Z"
+  },
+  "review-1": {
+    "url": "https://auspex-web-mu.vercel.app/review",
+    "scrollY": 560,
+    "capturedAt": "2026-10-01T09:54:33.538Z",
+    "marks": [
+      {
+        "re": "/independent publishers/",
+        "x": 313,
+        "y": 742.625,
+        "w": 974,
+        "h": 38
+      },
+      {
+        "re": "/^Approved$/i",
+        "x": 507.796875,
+        "y": 73.375,
+        "w": 194.796875,
+        "h": 77
+      }
+    ]
+  },
+  "agents-0": {
+    "url": "https://auspex-web-mu.vercel.app/agents",
+    "scrollY": 0,
+    "capturedAt": "2026-10-01T09:54:39.670Z",
+    "marks": [
+      {
+        "re": "/^rejected by the gate$/i",
+        "x": 527,
+        "y": 498.625,
+        "w": 267,
+        "h": 81
+      },
+      {
+        "re": "/^refused by the chain$/i",
+        "x": 806,
+        "y": 498.625,
+        "w": 267,
+        "h": 81
+      }
+    ]
+  },
+  "agents-1": {
+    "url": "https://auspex-web-mu.vercel.app/agents",
+    "scrollY": 1500,
+    "capturedAt": "2026-10-01T09:54:40.566Z",
+    "marks": [
+      {
+        "re": "/^the global kill switch and the member/",
+        "x": 248,
+        "y": 642.125,
+        "w": 1104,
+        "h": 236
+      }
+    ]
+  },
+  "trust-0": {
+    "url": "https://auspex-web-mu.vercel.app/trust",
+    "scrollY": 0,
+    "capturedAt": "2026-10-01T09:51:24.989Z"
+  },
+  "trust-boundary": {
+    "url": "https://auspex-web-mu.vercel.app/trust",
+    "scrollY": 320,
+    "capturedAt": "2026-10-01T09:51:25.981Z"
+  },
+  "trust-roles": {
+    "url": "https://auspex-web-mu.vercel.app/trust",
+    "scrollY": 834.125,
+    "capturedAt": "2026-10-01T09:55:15.762Z",
+    "marks": [
+      {
+        "re": "/human authority — browser wallet/",
+        "x": 249,
+        "y": 212.625,
+        "w": 1102,
+        "h": 63.5
+      },
+      {
+        "re": "/agent wallet · atlas/",
+        "x": 249,
+        "y": 276.125,
+        "w": 1102,
+        "h": 63.5
+      },
+      {
+        "re": "/agent wallet · kestrel/",
+        "x": 249,
+        "y": 339.625,
+        "w": 1102,
+        "h": 63.5
+      },
+      {
+        "re": "/agent wallet · vega/",
+        "x": 249,
+        "y": 403.125,
+        "w": 1102,
+        "h": 63.5
+      }
+    ]
+  },
+  "trust-refused": {
+    "url": "https://auspex-web-mu.vercel.app/trust",
+    "scrollY": 1941.625,
+    "capturedAt": "2026-10-01T09:54:46.202Z",
+    "marks": [
+      {
+        "re": "/^by the schema$/i",
+        "x": 248,
+        "y": 142.625,
+        "w": 267,
+        "h": 100.75
+      },
+      {
+        "re": "/^by the policy gate$/i",
+        "x": 527,
+        "y": 142.625,
+        "w": 267,
+        "h": 100.75
+      },
+      {
+        "re": "/^by a human$/i",
+        "x": 806,
+        "y": 142.625,
+        "w": 267,
+        "h": 100.75
+      },
+      {
+        "re": "/^by the chain$/i",
+        "x": 1085,
+        "y": 142.625,
+        "w": 267,
+        "h": 100.75
+      }
+    ]
+  },
+  "trust-chain": {
+    "url": "https://auspex-web-mu.vercel.app/trust",
+    "scrollY": 2632.125,
+    "capturedAt": "2026-10-01T09:51:28.587Z"
+  },
+  "market8-0": {
+    "url": "https://auspex-web-mu.vercel.app/markets/8",
+    "scrollY": 0,
+    "capturedAt": "2026-10-01T09:51:32.583Z"
+  },
+  "market8-1": {
+    "url": "https://auspex-web-mu.vercel.app/markets/8",
+    "scrollY": 653.5,
+    "capturedAt": "2026-10-01T09:54:49.816Z",
+    "marks": [
+      {
+        "re": "/^BettingClosed\\(\\)$/",
+        "x": 313,
+        "y": 347,
+        "w": 974,
+        "h": 50
+      },
+      {
+        "re": "/^ChallengeWindowOpen/",
+        "x": 313,
+        "y": 497,
+        "w": 974,
+        "h": 50
+      },
+      {
+        "re": "/^AlreadyClaimed\\(\\)$/",
+        "x": 313,
+        "y": 747,
+        "w": 974,
+        "h": 50
+      },
+      {
+        "re": "/^NothingToClaim\\(\\)$/",
+        "x": 313,
+        "y": 797,
+        "w": 974,
+        "h": 49.5
+      }
+    ]
+  },
+  "markets-0": {
+    "url": "https://auspex-web-mu.vercel.app/markets",
+    "scrollY": 0,
+    "capturedAt": "2026-10-01T09:51:38.466Z"
+  },
+  "resolve-0": {
+    "url": "https://auspex-web-mu.vercel.app/resolve",
+    "scrollY": 0,
+    "capturedAt": "2026-10-01T09:51:42.977Z"
+  },
+  "audit-0": {
+    "url": "https://auspex-web-mu.vercel.app/audit",
+    "scrollY": 0,
+    "capturedAt": "2026-10-01T09:51:48.961Z"
+  },
+  "probe-0-before": {
+    "url": "https://auspex-web-mu.vercel.app/trust",
+    "scrollY": 3585.125,
+    "capturedAt": "2026-10-01T09:55:16.656Z",
+    "marks": [
+      {
+        "re": "/break its own cap/",
+        "x": 265,
+        "y": 279.625,
+        "w": 314.828125,
+        "h": 34
+      },
+      {
+        "re": "/^0xbfe9bb/",
+        "x": 249,
+        "y": 476.125,
+        "w": 1102,
+        "h": 37.5
+      }
+    ]
+  },
+  "scan-revert": {
+    "url": "https://testnet.mstscan.com/tx/0xbfe9bb2c3ffee4be2f660473b3de916380f5d10da8548173d44810118ced060a",
+    "capturedAt": "2026-10-01T09:55:50.243Z",
+    "marks": [
+      {
+        "re": "/^Failed$/",
+        "x": 542,
+        "y": 418,
+        "w": 39.828125,
+        "h": 20
+      },
+      {
+        "re": "/AgentPerTxCapExceeded/",
+        "x": 640,
+        "y": 501,
+        "w": 896,
+        "h": 20
+      },
+      {
+        "re": "/^20000000000000001$/",
+        "x": 740,
+        "y": 590,
+        "w": 146.71875,
+        "h": 17
+      },
+      {
+        "re": "/^20000000000000000$/",
+        "x": 740,
+        "y": 630,
+        "w": 149.859375,
+        "h": 17
+      }
+    ]
+  },
+  "scan-create": {
+    "url": "https://testnet.mstscan.com/tx/0x2e70a1cbe7bd72b33e68afdc4742c0416b2eee3ed3ed4297bf938d2be825a504",
+    "capturedAt": "2026-10-01T09:56:03.087Z",
+    "marks": [
+      {
+        "re": "/^Success$/",
+        "x": 542,
+        "y": 418,
+        "w": 56.9375,
+        "h": 20
+      },
+      {
+        "re": "/^createMarket$/",
+        "x": 618.9375,
+        "y": 418,
+        "w": 89.25,
+        "h": 20
+      },
+      {
+        "re": "/^0xA9F68fDf84388fa548a685085E2bee0e5b311fF1$/i",
+        "x": 552,
+        "y": 587,
+        "w": 385.84375,
+        "h": 20
+      }
+    ]
+  }
+}

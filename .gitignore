@@ -55,15 +55,3 @@ tmp/
 # Playwright MCP scratch output (screenshots, snapshots, console logs)
 .playwright-mcp/
 
-# video/ — the demo film. Source is tracked; captures, audio and renders are not.
-# It is deliberately NOT a pnpm workspace package (see pnpm-workspace.yaml), so
-# CI never sees it: every CI step is --filter contracts or --filter web.
-video/node_modules/
-video/.venv/
-video/out/
-video/public/
-video/assets/captured/
-video/audio/vo/
-video/audio/samples/
-video/audio/*.wav
-video/package-lock.json

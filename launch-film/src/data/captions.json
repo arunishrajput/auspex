@@ -1,0 +1,3896 @@
+{
+ "hook": {
+  "duration": 11.424,
+  "phrases": [
+   {
+    "text": "AI agents are getting good.",
+    "start": 0,
+    "end": 1.343,
+    "words": [
+     {
+      "w": "AI",
+      "start": 0,
+      "end": 0.144
+     },
+     {
+      "w": "agents",
+      "start": 0.144,
+      "end": 0.48
+     },
+     {
+      "w": "are",
+      "start": 0.48,
+      "end": 0.671
+     },
+     {
+      "w": "getting",
+      "start": 0.671,
+      "end": 1.055
+     },
+     {
+      "w": "good.",
+      "start": 1.055,
+      "end": 1.343
+     }
+    ]
+   },
+   {
+    "text": "Good enough to read the news,",
+    "start": 1.914,
+    "end": 3.021,
+    "words": [
+     {
+      "w": "Good",
+      "start": 1.914,
+      "end": 2.099
+     },
+     {
+      "w": "enough",
+      "start": 2.099,
+      "end": 2.357
+     },
+     {
+      "w": "to",
+      "start": 2.357,
+      "end": 2.467
+     },
+     {
+      "w": "read",
+      "start": 2.467,
+      "end": 2.652
+     },
+     {
+      "w": "the",
+      "start": 2.652,
+      "end": 2.8
+     },
+     {
+      "w": "news,",
+      "start": 2.8,
+      "end": 3.021
+     }
+    ]
+   },
+   {
+    "text": "size a bet,",
+    "start": 3.295,
+    "end": 3.888,
+    "words": [
+     {
+      "w": "size",
+      "start": 3.295,
+      "end": 3.542
+     },
+     {
+      "w": "a",
+      "start": 3.542,
+      "end": 3.641
+     },
+     {
+      "w": "bet,",
+      "start": 3.641,
+      "end": 3.888
+     }
+    ]
+   },
+   {
+    "text": "and move real money.",
+    "start": 4.145,
+    "end": 5.041,
+    "words": [
+     {
+      "w": "and",
+      "start": 4.145,
+      "end": 4.316
+     },
+     {
+      "w": "move",
+      "start": 4.316,
+      "end": 4.529
+     },
+     {
+      "w": "real",
+      "start": 4.529,
+      "end": 4.742
+     },
+     {
+      "w": "money.",
+      "start": 4.742,
+      "end": 5.041
+     }
+    ]
+   },
+   {
+    "text": "But here's the catch.",
+    "start": 5.858,
+    "end": 6.687,
+    "words": [
+     {
+      "w": "But",
+      "start": 5.858,
+      "end": 6.009
+     },
+     {
+      "w": "here's",
+      "start": 6.009,
+      "end": 6.272
+     },
+     {
+      "w": "the",
+      "start": 6.272,
+      "end": 6.423
+     },
+     {
+      "w": "catch.",
+      "start": 6.423,
+      "end": 6.687
+     }
+    ]
+   },
+   {
+    "text": "An agent with the authority to spend is one poisoned headline away from a drained wallet.",
+    "start": 7.284,
+    "end": 11.094,
+    "words": [
+     {
+      "w": "An",
+      "start": 7.284,
+      "end": 7.411
+     },
+     {
+      "w": "agent",
+      "start": 7.411,
+      "end": 7.665
+     },
+     {
+      "w": "with",
+      "start": 7.665,
+      "end": 7.877
+     },
+     {
+      "w": "the",
+      "start": 7.877,
+      "end": 8.046
+     },
+     {
+      "w": "authority",
+      "start": 8.046,
+      "end": 8.469
+     },
+     {
+      "w": "to",
+      "start": 8.469,
+      "end": 8.596
+     },
+     {
+      "w": "spend",
+      "start": 8.596,
+      "end": 8.85
+     },
+     {
+      "w": "is",
+      "start": 8.85,
+      "end": 8.977
+     },
+     {
+      "w": "one",
+      "start": 8.977,
+      "end": 9.147
+     },
+     {
+      "w": "poisoned",
+      "start": 9.147,
+      "end": 9.528
+     },
+     {
+      "w": "headline",
+      "start": 9.528,
+      "end": 9.909
+     },
+     {
+      "w": "away",
+      "start": 9.909,
+      "end": 10.12
+     },
+     {
+      "w": "from",
+      "start": 10.12,
+      "end": 10.332
+     },
+     {
+      "w": "a",
+      "start": 10.332,
+      "end": 10.417
+     },
+     {
+      "w": "drained",
+      "start": 10.417,
+      "end": 10.755
+     },
+     {
+      "w": "wallet.",
+      "start": 10.755,
+      "end": 11.094
+     }
+    ]
+   }
+  ]
+ },
+ "title": {
+  "duration": 5.736,
+  "phrases": [
+   {
+    "text": "This is AuspeX.",
+    "start": 0,
+    "end": 0.874,
+    "words": [
+     {
+      "w": "This",
+      "start": 0,
+      "end": 0.273
+     },
+     {
+      "w": "is",
+      "start": 0.273,
+      "end": 0.437
+     },
+     {
+      "w": "AuspeX.",
+      "start": 0.437,
+      "end": 0.874
+     }
+    ]
+   },
+   {
+    "text": "A prediction market where AI does all of the reading,",
+    "start": 1.436,
+    "end": 3.832,
+    "words": [
+     {
+      "w": "A",
+      "start": 1.436,
+      "end": 1.525
+     },
+     {
+      "w": "prediction",
+      "start": 1.525,
+      "end": 2.013
+     },
+     {
+      "w": "market",
+      "start": 2.013,
+      "end": 2.323
+     },
+     {
+      "w": "where",
+      "start": 2.323,
+      "end": 2.59
+     },
+     {
+      "w": "AI",
+      "start": 2.59,
+      "end": 2.723
+     },
+     {
+      "w": "does",
+      "start": 2.723,
+      "end": 2.945
+     },
+     {
+      "w": "all",
+      "start": 2.945,
+      "end": 3.122
+     },
+     {
+      "w": "of",
+      "start": 3.122,
+      "end": 3.255
+     },
+     {
+      "w": "the",
+      "start": 3.255,
+      "end": 3.433
+     },
+     {
+      "w": "reading,",
+      "start": 3.433,
+      "end": 3.832
+     }
+    ]
+   },
+   {
+    "text": "and none of the deciding.",
+    "start": 4.41,
+    "end": 5.437,
+    "words": [
+     {
+      "w": "and",
+      "start": 4.41,
+      "end": 4.568
+     },
+     {
+      "w": "none",
+      "start": 4.568,
+      "end": 4.766
+     },
+     {
+      "w": "of",
+      "start": 4.766,
+      "end": 4.884
+     },
+     {
+      "w": "the",
+      "start": 4.884,
+      "end": 5.042
+     },
+     {
+      "w": "deciding.",
+      "start": 5.042,
+      "end": 5.437
+     }
+    ]
+   }
+  ]
+ },
+ "overview": {
+  "duration": 19.584,
+  "phrases": [
+   {
+    "text": "Three AI agents do the work.",
+    "start": 0,
+    "end": 1.597,
+    "words": [
+     {
+      "w": "Three",
+      "start": 0,
+      "end": 0.33
+     },
+     {
+      "w": "AI",
+      "start": 0.33,
+      "end": 0.496
+     },
+     {
+      "w": "agents",
+      "start": 0.496,
+      "end": 0.881
+     },
+     {
+      "w": "do",
+      "start": 0.881,
+      "end": 1.046
+     },
+     {
+      "w": "the",
+      "start": 1.046,
+      "end": 1.267
+     },
+     {
+      "w": "work.",
+      "start": 1.267,
+      "end": 1.597
+     }
+    ]
+   },
+   {
+    "text": "One drafts market questions from confirmed news.",
+    "start": 1.991,
+    "end": 4.452,
+    "words": [
+     {
+      "w": "One",
+      "start": 1.991,
+      "end": 2.192
+     },
+     {
+      "w": "drafts",
+      "start": 2.192,
+      "end": 2.543
+     },
+     {
+      "w": "market",
+      "start": 2.543,
+      "end": 2.895
+     },
+     {
+      "w": "questions",
+      "start": 2.895,
+      "end": 3.397
+     },
+     {
+      "w": "from",
+      "start": 3.397,
+      "end": 3.648
+     },
+     {
+      "w": "confirmed",
+      "start": 3.648,
+      "end": 4.151
+     },
+     {
+      "w": "news.",
+      "start": 4.151,
+      "end": 4.452
+     }
+    ]
+   },
+   {
+    "text": "One researches each market and proposes bets.",
+    "start": 4.803,
+    "end": 7.084,
+    "words": [
+     {
+      "w": "One",
+      "start": 4.803,
+      "end": 5.001
+     },
+     {
+      "w": "researches",
+      "start": 5.001,
+      "end": 5.547
+     },
+     {
+      "w": "each",
+      "start": 5.547,
+      "end": 5.795
+     },
+     {
+      "w": "market",
+      "start": 5.795,
+      "end": 6.142
+     },
+     {
+      "w": "and",
+      "start": 6.142,
+      "end": 6.34
+     },
+     {
+      "w": "proposes",
+      "start": 6.34,
+      "end": 6.786
+     },
+     {
+      "w": "bets.",
+      "start": 6.786,
+      "end": 7.084
+     }
+    ]
+   },
+   {
+    "text": "One proposes how a market resolved.",
+    "start": 7.445,
+    "end": 9.283,
+    "words": [
+     {
+      "w": "One",
+      "start": 7.445,
+      "end": 7.649
+     },
+     {
+      "w": "proposes",
+      "start": 7.649,
+      "end": 8.109
+     },
+     {
+      "w": "how",
+      "start": 8.109,
+      "end": 8.313
+     },
+     {
+      "w": "a",
+      "start": 8.313,
+      "end": 8.415
+     },
+     {
+      "w": "market",
+      "start": 8.415,
+      "end": 8.772
+     },
+     {
+      "w": "resolved.",
+      "start": 8.772,
+      "end": 9.283
+     }
+    ]
+   },
+   {
+    "text": "But not one of them can create a market,",
+    "start": 10.012,
+    "end": 11.805,
+    "words": [
+     {
+      "w": "But",
+      "start": 10.012,
+      "end": 10.187
+     },
+     {
+      "w": "not",
+      "start": 10.187,
+      "end": 10.362
+     },
+     {
+      "w": "one",
+      "start": 10.362,
+      "end": 10.537
+     },
+     {
+      "w": "of",
+      "start": 10.537,
+      "end": 10.668
+     },
+     {
+      "w": "them",
+      "start": 10.668,
+      "end": 10.887
+     },
+     {
+      "w": "can",
+      "start": 10.887,
+      "end": 11.062
+     },
+     {
+      "w": "create",
+      "start": 11.062,
+      "end": 11.368
+     },
+     {
+      "w": "a",
+      "start": 11.368,
+      "end": 11.455
+     },
+     {
+      "w": "market,",
+      "start": 11.455,
+      "end": 11.805
+     }
+    ]
+   },
+   {
+    "text": "bet over its limit,",
+    "start": 12.131,
+    "end": 12.944,
+    "words": [
+     {
+      "w": "bet",
+      "start": 12.131,
+      "end": 12.294
+     },
+     {
+      "w": "over",
+      "start": 12.294,
+      "end": 12.497
+     },
+     {
+      "w": "its",
+      "start": 12.497,
+      "end": 12.659
+     },
+     {
+      "w": "limit,",
+      "start": 12.659,
+      "end": 12.944
+     }
+    ]
+   },
+   {
+    "text": "or resolve anything.",
+    "start": 13.237,
+    "end": 14.281,
+    "words": [
+     {
+      "w": "or",
+      "start": 13.237,
+      "end": 13.386
+     },
+     {
+      "w": "resolve",
+      "start": 13.386,
+      "end": 13.784
+     },
+     {
+      "w": "anything.",
+      "start": 13.784,
+      "end": 14.281
+     }
+    ]
+   },
+   {
+    "text": "Those decisions belong to a person,",
+    "start": 14.802,
+    "end": 16.506,
+    "words": [
+     {
+      "w": "Those",
+      "start": 14.802,
+      "end": 15.086
+     },
+     {
+      "w": "decisions",
+      "start": 15.086,
+      "end": 15.559
+     },
+     {
+      "w": "belong",
+      "start": 15.559,
+      "end": 15.891
+     },
+     {
+      "w": "to",
+      "start": 15.891,
+      "end": 16.033
+     },
+     {
+      "w": "a",
+      "start": 16.033,
+      "end": 16.127
+     },
+     {
+      "w": "person,",
+      "start": 16.127,
+      "end": 16.506
+     }
+    ]
+   },
+   {
+    "text": "and to a smart contract on MST Blockchain.",
+    "start": 16.841,
+    "end": 19.241,
+    "words": [
+     {
+      "w": "and",
+      "start": 16.841,
+      "end": 17.064
+     },
+     {
+      "w": "to",
+      "start": 17.064,
+      "end": 17.232
+     },
+     {
+      "w": "a",
+      "start": 17.232,
+      "end": 17.343
+     },
+     {
+      "w": "smart",
+      "start": 17.343,
+      "end": 17.678
+     },
+     {
+      "w": "contract",
+      "start": 17.678,
+      "end": 18.181
+     },
+     {
+      "w": "on",
+      "start": 18.181,
+      "end": 18.348
+     },
+     {
+      "w": "MST",
+      "start": 18.348,
+      "end": 18.571
+     },
+     {
+      "w": "Blockchain.",
+      "start": 18.571,
+      "end": 19.241
+     }
+    ]
+   }
+  ]
+ },
+ "pipeline": {
+  "duration": 17.064,
+  "phrases": [
+   {
+    "text": "Here's the flow.",
+    "start": 0,
+    "end": 0.788,
+    "words": [
+     {
+      "w": "Here's",
+      "start": 0,
+      "end": 0.324
+     },
+     {
+      "w": "the",
+      "start": 0.324,
+      "end": 0.51
+     },
+     {
+      "w": "flow.",
+      "start": 0.51,
+      "end": 0.788
+     }
+    ]
+   },
+   {
+    "text": "News arrives as untrusted text,",
+    "start": 1.367,
+    "end": 3.127,
+    "words": [
+     {
+      "w": "News",
+      "start": 1.367,
+      "end": 1.642
+     },
+     {
+      "w": "arrives",
+      "start": 1.642,
+      "end": 2.082
+     },
+     {
+      "w": "as",
+      "start": 2.082,
+      "end": 2.247
+     },
+     {
+      "w": "untrusted",
+      "start": 2.247,
+      "end": 2.797
+     },
+     {
+      "w": "text,",
+      "start": 2.797,
+      "end": 3.127
+     }
+    ]
+   },
+   {
+    "text": "and a story needs two independent publishers before anything happens.",
+    "start": 3.471,
+    "end": 6.563,
+    "words": [
+     {
+      "w": "and",
+      "start": 3.471,
+      "end": 3.648
+     },
+     {
+      "w": "a",
+      "start": 3.648,
+      "end": 3.736
+     },
+     {
+      "w": "story",
+      "start": 3.736,
+      "end": 4.001
+     },
+     {
+      "w": "needs",
+      "start": 4.001,
+      "end": 4.266
+     },
+     {
+      "w": "two",
+      "start": 4.266,
+      "end": 4.443
+     },
+     {
+      "w": "independent",
+      "start": 4.443,
+      "end": 4.973
+     },
+     {
+      "w": "publishers",
+      "start": 4.973,
+      "end": 5.459
+     },
+     {
+      "w": "before",
+      "start": 5.459,
+      "end": 5.768
+     },
+     {
+      "w": "anything",
+      "start": 5.768,
+      "end": 6.165
+     },
+     {
+      "w": "happens.",
+      "start": 6.165,
+      "end": 6.563
+     }
+    ]
+   },
+   {
+    "text": "The proposer agent drafts a market,",
+    "start": 6.891,
+    "end": 8.5,
+    "words": [
+     {
+      "w": "The",
+      "start": 6.891,
+      "end": 7.07
+     },
+     {
+      "w": "proposer",
+      "start": 7.07,
+      "end": 7.472
+     },
+     {
+      "w": "agent",
+      "start": 7.472,
+      "end": 7.74
+     },
+     {
+      "w": "drafts",
+      "start": 7.74,
+      "end": 8.053
+     },
+     {
+      "w": "a",
+      "start": 8.053,
+      "end": 8.142
+     },
+     {
+      "w": "market,",
+      "start": 8.142,
+      "end": 8.5
+     }
+    ]
+   },
+   {
+    "text": "but a draft is only a suggestion.",
+    "start": 8.807,
+    "end": 10.325,
+    "words": [
+     {
+      "w": "but",
+      "start": 8.807,
+      "end": 8.986
+     },
+     {
+      "w": "a",
+      "start": 8.986,
+      "end": 9.075
+     },
+     {
+      "w": "draft",
+      "start": 9.075,
+      "end": 9.343
+     },
+     {
+      "w": "is",
+      "start": 9.343,
+      "end": 9.477
+     },
+     {
+      "w": "only",
+      "start": 9.477,
+      "end": 9.7
+     },
+     {
+      "w": "a",
+      "start": 9.7,
+      "end": 9.789
+     },
+     {
+      "w": "suggestion.",
+      "start": 9.789,
+      "end": 10.325
+     }
+    ]
+   },
+   {
+    "text": "Strict schema validation throws out anything malformed.",
+    "start": 10.702,
+    "end": 13.586,
+    "words": [
+     {
+      "w": "Strict",
+      "start": 10.702,
+      "end": 11.063
+     },
+     {
+      "w": "schema",
+      "start": 11.063,
+      "end": 11.423
+     },
+     {
+      "w": "validation",
+      "start": 11.423,
+      "end": 11.989
+     },
+     {
+      "w": "throws",
+      "start": 11.989,
+      "end": 12.35
+     },
+     {
+      "w": "out",
+      "start": 12.35,
+      "end": 12.556
+     },
+     {
+      "w": "anything",
+      "start": 12.556,
+      "end": 13.02
+     },
+     {
+      "w": "malformed.",
+      "start": 13.02,
+      "end": 13.586
+     }
+    ]
+   },
+   {
+    "text": "Then a human reads it as a checklist,",
+    "start": 14.109,
+    "end": 15.703,
+    "words": [
+     {
+      "w": "Then",
+      "start": 14.109,
+      "end": 14.319
+     },
+     {
+      "w": "a",
+      "start": 14.319,
+      "end": 14.403
+     },
+     {
+      "w": "human",
+      "start": 14.403,
+      "end": 14.654
+     },
+     {
+      "w": "reads",
+      "start": 14.654,
+      "end": 14.906
+     },
+     {
+      "w": "it",
+      "start": 14.906,
+      "end": 15.032
+     },
+     {
+      "w": "as",
+      "start": 15.032,
+      "end": 15.158
+     },
+     {
+      "w": "a",
+      "start": 15.158,
+      "end": 15.242
+     },
+     {
+      "w": "checklist,",
+      "start": 15.242,
+      "end": 15.703
+     }
+    ]
+   },
+   {
+    "text": "and signs.",
+    "start": 16.176,
+    "end": 16.763,
+    "words": [
+     {
+      "w": "and",
+      "start": 16.176,
+      "end": 16.389
+     },
+     {
+      "w": "signs.",
+      "start": 16.389,
+      "end": 16.763
+     }
+    ]
+   }
+  ]
+ },
+ "review": {
+  "duration": 12.6,
+  "phrases": [
+   {
+    "text": "That's the review queue.",
+    "start": 0,
+    "end": 0.994,
+    "words": [
+     {
+      "w": "That's",
+      "start": 0,
+      "end": 0.278
+     },
+     {
+      "w": "the",
+      "start": 0.278,
+      "end": 0.437
+     },
+     {
+      "w": "review",
+      "start": 0.437,
+      "end": 0.716
+     },
+     {
+      "w": "queue.",
+      "start": 0.716,
+      "end": 0.994
+     }
+    ]
+   },
+   {
+    "text": "The source text is fenced off as untrusted,",
+    "start": 1.332,
+    "end": 3.473,
+    "words": [
+     {
+      "w": "The",
+      "start": 1.332,
+      "end": 1.527
+     },
+     {
+      "w": "source",
+      "start": 1.527,
+      "end": 1.867
+     },
+     {
+      "w": "text",
+      "start": 1.867,
+      "end": 2.111
+     },
+     {
+      "w": "is",
+      "start": 2.111,
+      "end": 2.257
+     },
+     {
+      "w": "fenced",
+      "start": 2.257,
+      "end": 2.597
+     },
+     {
+      "w": "off",
+      "start": 2.597,
+      "end": 2.792
+     },
+     {
+      "w": "as",
+      "start": 2.792,
+      "end": 2.938
+     },
+     {
+      "w": "untrusted,",
+      "start": 2.938,
+      "end": 3.473
+     }
+    ]
+   },
+   {
+    "text": "right on the page.",
+    "start": 3.767,
+    "end": 4.481,
+    "words": [
+     {
+      "w": "right",
+      "start": 3.767,
+      "end": 3.992
+     },
+     {
+      "w": "on",
+      "start": 3.992,
+      "end": 4.105
+     },
+     {
+      "w": "the",
+      "start": 4.105,
+      "end": 4.256
+     },
+     {
+      "w": "page.",
+      "start": 4.256,
+      "end": 4.481
+     }
+    ]
+   },
+   {
+    "text": "And the key that signs for a market lives only in a browser wallet.",
+    "start": 4.745,
+    "end": 7.498,
+    "words": [
+     {
+      "w": "And",
+      "start": 4.745,
+      "end": 4.907
+     },
+     {
+      "w": "the",
+      "start": 4.907,
+      "end": 5.069
+     },
+     {
+      "w": "key",
+      "start": 5.069,
+      "end": 5.231
+     },
+     {
+      "w": "that",
+      "start": 5.231,
+      "end": 5.433
+     },
+     {
+      "w": "signs",
+      "start": 5.433,
+      "end": 5.676
+     },
+     {
+      "w": "for",
+      "start": 5.676,
+      "end": 5.838
+     },
+     {
+      "w": "a",
+      "start": 5.838,
+      "end": 5.919
+     },
+     {
+      "w": "market",
+      "start": 5.919,
+      "end": 6.202
+     },
+     {
+      "w": "lives",
+      "start": 6.202,
+      "end": 6.445
+     },
+     {
+      "w": "only",
+      "start": 6.445,
+      "end": 6.648
+     },
+     {
+      "w": "in",
+      "start": 6.648,
+      "end": 6.769
+     },
+     {
+      "w": "a",
+      "start": 6.769,
+      "end": 6.85
+     },
+     {
+      "w": "browser",
+      "start": 6.85,
+      "end": 7.174
+     },
+     {
+      "w": "wallet.",
+      "start": 7.174,
+      "end": 7.498
+     }
+    ]
+   },
+   {
+    "text": "No server has ever seen it.",
+    "start": 7.821,
+    "end": 9.076,
+    "words": [
+     {
+      "w": "No",
+      "start": 7.821,
+      "end": 7.955
+     },
+     {
+      "w": "server",
+      "start": 7.955,
+      "end": 8.269
+     },
+     {
+      "w": "has",
+      "start": 8.269,
+      "end": 8.448
+     },
+     {
+      "w": "ever",
+      "start": 8.448,
+      "end": 8.673
+     },
+     {
+      "w": "seen",
+      "start": 8.673,
+      "end": 8.897
+     },
+     {
+      "w": "it.",
+      "start": 8.897,
+      "end": 9.076
+     }
+    ]
+   },
+   {
+    "text": "Nine markets on chain were created exactly this way.",
+    "start": 9.581,
+    "end": 12.183,
+    "words": [
+     {
+      "w": "Nine",
+      "start": 9.581,
+      "end": 9.826
+     },
+     {
+      "w": "markets",
+      "start": 9.826,
+      "end": 10.219
+     },
+     {
+      "w": "on",
+      "start": 10.219,
+      "end": 10.367
+     },
+     {
+      "w": "chain",
+      "start": 10.367,
+      "end": 10.661
+     },
+     {
+      "w": "were",
+      "start": 10.661,
+      "end": 10.907
+     },
+     {
+      "w": "created",
+      "start": 10.907,
+      "end": 11.299
+     },
+     {
+      "w": "exactly",
+      "start": 11.299,
+      "end": 11.692
+     },
+     {
+      "w": "this",
+      "start": 11.692,
+      "end": 11.938
+     },
+     {
+      "w": "way.",
+      "start": 11.938,
+      "end": 12.183
+     }
+    ]
+   }
+  ]
+ },
+ "injection": {
+  "duration": 11.52,
+  "phrases": [
+   {
+    "text": "And because news is untrusted,",
+    "start": 0,
+    "end": 1.478,
+    "words": [
+     {
+      "w": "And",
+      "start": 0,
+      "end": 0.191
+     },
+     {
+      "w": "because",
+      "start": 0.191,
+      "end": 0.572
+     },
+     {
+      "w": "news",
+      "start": 0.572,
+      "end": 0.811
+     },
+     {
+      "w": "is",
+      "start": 0.811,
+      "end": 0.954
+     },
+     {
+      "w": "untrusted,",
+      "start": 0.954,
+      "end": 1.478
+     }
+    ]
+   },
+   {
+    "text": "it's treated like an attack.",
+    "start": 1.796,
+    "end": 2.966,
+    "words": [
+     {
+      "w": "it's",
+      "start": 1.796,
+      "end": 1.998
+     },
+     {
+      "w": "treated",
+      "start": 1.998,
+      "end": 2.32
+     },
+     {
+      "w": "like",
+      "start": 2.32,
+      "end": 2.522
+     },
+     {
+      "w": "an",
+      "start": 2.522,
+      "end": 2.643
+     },
+     {
+      "w": "attack.",
+      "start": 2.643,
+      "end": 2.966
+     }
+    ]
+   },
+   {
+    "text": "Here's a hostile headline trying to break out of its delimiters.",
+    "start": 3.306,
+    "end": 5.838,
+    "words": [
+     {
+      "w": "Here's",
+      "start": 3.306,
+      "end": 3.579
+     },
+     {
+      "w": "a",
+      "start": 3.579,
+      "end": 3.657
+     },
+     {
+      "w": "hostile",
+      "start": 3.657,
+      "end": 3.968
+     },
+     {
+      "w": "headline",
+      "start": 3.968,
+      "end": 4.319
+     },
+     {
+      "w": "trying",
+      "start": 4.319,
+      "end": 4.591
+     },
+     {
+      "w": "to",
+      "start": 4.591,
+      "end": 4.708
+     },
+     {
+      "w": "break",
+      "start": 4.708,
+      "end": 4.942
+     },
+     {
+      "w": "out",
+      "start": 4.942,
+      "end": 5.098
+     },
+     {
+      "w": "of",
+      "start": 5.098,
+      "end": 5.215
+     },
+     {
+      "w": "its",
+      "start": 5.215,
+      "end": 5.371
+     },
+     {
+      "w": "delimiters.",
+      "start": 5.371,
+      "end": 5.838
+     }
+    ]
+   },
+   {
+    "text": "It's flagged,",
+    "start": 6.191,
+    "end": 6.815,
+    "words": [
+     {
+      "w": "It's",
+      "start": 6.191,
+      "end": 6.414
+     },
+     {
+      "w": "flagged,",
+      "start": 6.414,
+      "end": 6.815
+     }
+    ]
+   },
+   {
+    "text": "and the closing tag it tried to smuggle in is redacted from the message the model receives.",
+    "start": 7.113,
+    "end": 11.209,
+    "words": [
+     {
+      "w": "and",
+      "start": 7.113,
+      "end": 7.291
+     },
+     {
+      "w": "the",
+      "start": 7.291,
+      "end": 7.469
+     },
+     {
+      "w": "closing",
+      "start": 7.469,
+      "end": 7.825
+     },
+     {
+      "w": "tag",
+      "start": 7.825,
+      "end": 8.003
+     },
+     {
+      "w": "it",
+      "start": 8.003,
+      "end": 8.137
+     },
+     {
+      "w": "tried",
+      "start": 8.137,
+      "end": 8.404
+     },
+     {
+      "w": "to",
+      "start": 8.404,
+      "end": 8.538
+     },
+     {
+      "w": "smuggle",
+      "start": 8.538,
+      "end": 8.894
+     },
+     {
+      "w": "in",
+      "start": 8.894,
+      "end": 9.027
+     },
+     {
+      "w": "is",
+      "start": 9.027,
+      "end": 9.161
+     },
+     {
+      "w": "redacted",
+      "start": 9.161,
+      "end": 9.562
+     },
+     {
+      "w": "from",
+      "start": 9.562,
+      "end": 9.784
+     },
+     {
+      "w": "the",
+      "start": 9.784,
+      "end": 9.962
+     },
+     {
+      "w": "message",
+      "start": 9.962,
+      "end": 10.319
+     },
+     {
+      "w": "the",
+      "start": 10.319,
+      "end": 10.497
+     },
+     {
+      "w": "model",
+      "start": 10.497,
+      "end": 10.764
+     },
+     {
+      "w": "receives.",
+      "start": 10.764,
+      "end": 11.209
+     }
+    ]
+   }
+  ]
+ },
+ "agents": {
+  "duration": 14.568,
+  "phrases": [
+   {
+    "text": "Members get their own agents.",
+    "start": 0,
+    "end": 1.325,
+    "words": [
+     {
+      "w": "Members",
+      "start": 0,
+      "end": 0.353
+     },
+     {
+      "w": "get",
+      "start": 0.353,
+      "end": 0.53
+     },
+     {
+      "w": "their",
+      "start": 0.53,
+      "end": 0.795
+     },
+     {
+      "w": "own",
+      "start": 0.795,
+      "end": 0.972
+     },
+     {
+      "w": "agents.",
+      "start": 0.972,
+      "end": 1.325
+     }
+    ]
+   },
+   {
+    "text": "Each one proposes a side,",
+    "start": 1.673,
+    "end": 3.135,
+    "words": [
+     {
+      "w": "Each",
+      "start": 1.673,
+      "end": 1.954
+     },
+     {
+      "w": "one",
+      "start": 1.954,
+      "end": 2.179
+     },
+     {
+      "w": "proposes",
+      "start": 2.179,
+      "end": 2.685
+     },
+     {
+      "w": "a",
+      "start": 2.685,
+      "end": 2.798
+     },
+     {
+      "w": "side,",
+      "start": 2.798,
+      "end": 3.135
+     }
+    ]
+   },
+   {
+    "text": "a confidence,",
+    "start": 3.502,
+    "end": 4.176,
+    "words": [
+     {
+      "w": "a",
+      "start": 3.502,
+      "end": 3.598
+     },
+     {
+      "w": "confidence,",
+      "start": 3.598,
+      "end": 4.176
+     }
+    ]
+   },
+   {
+    "text": "and a stake.",
+    "start": 4.426,
+    "end": 4.966,
+    "words": [
+     {
+      "w": "and",
+      "start": 4.426,
+      "end": 4.592
+     },
+     {
+      "w": "a",
+      "start": 4.592,
+      "end": 4.675
+     },
+     {
+      "w": "stake.",
+      "start": 4.675,
+      "end": 4.966
+     }
+    ]
+   },
+   {
+    "text": "A deterministic policy gate,",
+    "start": 5.481,
+    "end": 6.989,
+    "words": [
+     {
+      "w": "A",
+      "start": 5.481,
+      "end": 5.585
+     },
+     {
+      "w": "deterministic",
+      "start": 5.585,
+      "end": 6.313
+     },
+     {
+      "w": "policy",
+      "start": 6.313,
+      "end": 6.677
+     },
+     {
+      "w": "gate,",
+      "start": 6.677,
+      "end": 6.989
+     }
+    ]
+   },
+   {
+    "text": "with no model and no network,",
+    "start": 7.256,
+    "end": 8.686,
+    "words": [
+     {
+      "w": "with",
+      "start": 7.256,
+      "end": 7.494
+     },
+     {
+      "w": "no",
+      "start": 7.494,
+      "end": 7.637
+     },
+     {
+      "w": "model",
+      "start": 7.637,
+      "end": 7.923
+     },
+     {
+      "w": "and",
+      "start": 7.923,
+      "end": 8.114
+     },
+     {
+      "w": "no",
+      "start": 8.114,
+      "end": 8.257
+     },
+     {
+      "w": "network,",
+      "start": 8.257,
+      "end": 8.686
+     }
+    ]
+   },
+   {
+    "text": "checks that against eight rules in order,",
+    "start": 8.952,
+    "end": 10.689,
+    "words": [
+     {
+      "w": "checks",
+      "start": 8.952,
+      "end": 9.242
+     },
+     {
+      "w": "that",
+      "start": 9.242,
+      "end": 9.448
+     },
+     {
+      "w": "against",
+      "start": 9.448,
+      "end": 9.779
+     },
+     {
+      "w": "eight",
+      "start": 9.779,
+      "end": 10.027
+     },
+     {
+      "w": "rules",
+      "start": 10.027,
+      "end": 10.275
+     },
+     {
+      "w": "in",
+      "start": 10.275,
+      "end": 10.399
+     },
+     {
+      "w": "order,",
+      "start": 10.399,
+      "end": 10.689
+     }
+    ]
+   },
+   {
+    "text": "clamps the stake,",
+    "start": 11.002,
+    "end": 11.805,
+    "words": [
+     {
+      "w": "clamps",
+      "start": 11.002,
+      "end": 11.314
+     },
+     {
+      "w": "the",
+      "start": 11.314,
+      "end": 11.493
+     },
+     {
+      "w": "stake,",
+      "start": 11.493,
+      "end": 11.805
+     }
+    ]
+   },
+   {
+    "text": "and writes down a reason every time it says no.",
+    "start": 12.123,
+    "end": 14.24,
+    "words": [
+     {
+      "w": "and",
+      "start": 12.123,
+      "end": 12.299
+     },
+     {
+      "w": "writes",
+      "start": 12.299,
+      "end": 12.608
+     },
+     {
+      "w": "down",
+      "start": 12.608,
+      "end": 12.829
+     },
+     {
+      "w": "a",
+      "start": 12.829,
+      "end": 12.917
+     },
+     {
+      "w": "reason",
+      "start": 12.917,
+      "end": 13.226
+     },
+     {
+      "w": "every",
+      "start": 13.226,
+      "end": 13.49
+     },
+     {
+      "w": "time",
+      "start": 13.49,
+      "end": 13.711
+     },
+     {
+      "w": "it",
+      "start": 13.711,
+      "end": 13.843
+     },
+     {
+      "w": "says",
+      "start": 13.843,
+      "end": 14.064
+     },
+     {
+      "w": "no.",
+      "start": 14.064,
+      "end": 14.24
+     }
+    ]
+   }
+  ]
+ },
+ "layers": {
+  "duration": 11.496,
+  "phrases": [
+   {
+    "text": "So there are four layers that can say no.",
+    "start": 0,
+    "end": 1.804,
+    "words": [
+     {
+      "w": "So",
+      "start": 0,
+      "end": 0.129
+     },
+     {
+      "w": "there",
+      "start": 0.129,
+      "end": 0.387
+     },
+     {
+      "w": "are",
+      "start": 0.387,
+      "end": 0.558
+     },
+     {
+      "w": "four",
+      "start": 0.558,
+      "end": 0.773
+     },
+     {
+      "w": "layers",
+      "start": 0.773,
+      "end": 1.074
+     },
+     {
+      "w": "that",
+      "start": 1.074,
+      "end": 1.289
+     },
+     {
+      "w": "can",
+      "start": 1.289,
+      "end": 1.46
+     },
+     {
+      "w": "say",
+      "start": 1.46,
+      "end": 1.632
+     },
+     {
+      "w": "no.",
+      "start": 1.632,
+      "end": 1.804
+     }
+    ]
+   },
+   {
+    "text": "The schema.",
+    "start": 2.417,
+    "end": 2.917,
+    "words": [
+     {
+      "w": "The",
+      "start": 2.417,
+      "end": 2.584
+     },
+     {
+      "w": "schema.",
+      "start": 2.584,
+      "end": 2.917
+     }
+    ]
+   },
+   {
+    "text": "The policy gate.",
+    "start": 3.497,
+    "end": 4.272,
+    "words": [
+     {
+      "w": "The",
+      "start": 3.497,
+      "end": 3.679
+     },
+     {
+      "w": "policy",
+      "start": 3.679,
+      "end": 3.998
+     },
+     {
+      "w": "gate.",
+      "start": 3.998,
+      "end": 4.272
+     }
+    ]
+   },
+   {
+    "text": "A human.",
+    "start": 4.83,
+    "end": 5.324,
+    "words": [
+     {
+      "w": "A",
+      "start": 4.83,
+      "end": 4.94
+     },
+     {
+      "w": "human.",
+      "start": 4.94,
+      "end": 5.324
+     }
+    ]
+   },
+   {
+    "text": "And the chain.",
+    "start": 6.009,
+    "end": 6.582,
+    "words": [
+     {
+      "w": "And",
+      "start": 6.009,
+      "end": 6.162
+     },
+     {
+      "w": "the",
+      "start": 6.162,
+      "end": 6.315
+     },
+     {
+      "w": "chain.",
+      "start": 6.315,
+      "end": 6.582
+     }
+    ]
+   },
+   {
+    "text": "That last one matters most,",
+    "start": 7.312,
+    "end": 8.7,
+    "words": [
+     {
+      "w": "That",
+      "start": 7.312,
+      "end": 7.56
+     },
+     {
+      "w": "last",
+      "start": 7.56,
+      "end": 7.808
+     },
+     {
+      "w": "one",
+      "start": 7.808,
+      "end": 8.006
+     },
+     {
+      "w": "matters",
+      "start": 8.006,
+      "end": 8.403
+     },
+     {
+      "w": "most,",
+      "start": 8.403,
+      "end": 8.7
+     }
+    ]
+   },
+   {
+    "text": "because it doesn't care what the application believes.",
+    "start": 8.998,
+    "end": 11.172,
+    "words": [
+     {
+      "w": "because",
+      "start": 8.998,
+      "end": 9.314
+     },
+     {
+      "w": "it",
+      "start": 9.314,
+      "end": 9.433
+     },
+     {
+      "w": "doesn't",
+      "start": 9.433,
+      "end": 9.749
+     },
+     {
+      "w": "care",
+      "start": 9.749,
+      "end": 9.947
+     },
+     {
+      "w": "what",
+      "start": 9.947,
+      "end": 10.144
+     },
+     {
+      "w": "the",
+      "start": 10.144,
+      "end": 10.302
+     },
+     {
+      "w": "application",
+      "start": 10.302,
+      "end": 10.777
+     },
+     {
+      "w": "believes.",
+      "start": 10.777,
+      "end": 11.172
+     }
+    ]
+   }
+  ]
+ },
+ "probe": {
+  "duration": 16.032,
+  "phrases": [
+   {
+    "text": "So let's test it.",
+    "start": 0,
+    "end": 0.761,
+    "words": [
+     {
+      "w": "So",
+      "start": 0,
+      "end": 0.127
+     },
+     {
+      "w": "let's",
+      "start": 0.127,
+      "end": 0.381
+     },
+     {
+      "w": "test",
+      "start": 0.381,
+      "end": 0.592
+     },
+     {
+      "w": "it.",
+      "start": 0.592,
+      "end": 0.761
+     }
+    ]
+   },
+   {
+    "text": "This button on the trust page needs no wallet.",
+    "start": 1.259,
+    "end": 3.252,
+    "words": [
+     {
+      "w": "This",
+      "start": 1.259,
+      "end": 1.471
+     },
+     {
+      "w": "button",
+      "start": 1.471,
+      "end": 1.768
+     },
+     {
+      "w": "on",
+      "start": 1.768,
+      "end": 1.895
+     },
+     {
+      "w": "the",
+      "start": 1.895,
+      "end": 2.065
+     },
+     {
+      "w": "trust",
+      "start": 2.065,
+      "end": 2.319
+     },
+     {
+      "w": "page",
+      "start": 2.319,
+      "end": 2.531
+     },
+     {
+      "w": "needs",
+      "start": 2.531,
+      "end": 2.786
+     },
+     {
+      "w": "no",
+      "start": 2.786,
+      "end": 2.913
+     },
+     {
+      "w": "wallet.",
+      "start": 2.913,
+      "end": 3.252
+     }
+    ]
+   },
+   {
+    "text": "It reads a real agent's on-chain cap,",
+    "start": 3.559,
+    "end": 5.405,
+    "words": [
+     {
+      "w": "It",
+      "start": 3.559,
+      "end": 3.705
+     },
+     {
+      "w": "reads",
+      "start": 3.705,
+      "end": 3.996
+     },
+     {
+      "w": "a",
+      "start": 3.996,
+      "end": 4.093
+     },
+     {
+      "w": "real",
+      "start": 4.093,
+      "end": 4.336
+     },
+     {
+      "w": "agent's",
+      "start": 4.336,
+      "end": 4.725
+     },
+     {
+      "w": "on-chain",
+      "start": 4.725,
+      "end": 5.162
+     },
+     {
+      "w": "cap,",
+      "start": 5.162,
+      "end": 5.405
+     }
+    ]
+   },
+   {
+    "text": "adds exactly one wei,",
+    "start": 5.697,
+    "end": 7.045,
+    "words": [
+     {
+      "w": "adds",
+      "start": 5.697,
+      "end": 6.003
+     },
+     {
+      "w": "exactly",
+      "start": 6.003,
+      "end": 6.494
+     },
+     {
+      "w": "one",
+      "start": 6.494,
+      "end": 6.739
+     },
+     {
+      "w": "wei,",
+      "start": 6.739,
+      "end": 7.045
+     }
+    ]
+   },
+   {
+    "text": "and has the server sign the bet with the policy gate deliberately bypassed,",
+    "start": 7.357,
+    "end": 10.772,
+    "words": [
+     {
+      "w": "and",
+      "start": 7.357,
+      "end": 7.537
+     },
+     {
+      "w": "has",
+      "start": 7.537,
+      "end": 7.716
+     },
+     {
+      "w": "the",
+      "start": 7.716,
+      "end": 7.896
+     },
+     {
+      "w": "server",
+      "start": 7.896,
+      "end": 8.211
+     },
+     {
+      "w": "sign",
+      "start": 8.211,
+      "end": 8.435
+     },
+     {
+      "w": "the",
+      "start": 8.435,
+      "end": 8.615
+     },
+     {
+      "w": "bet",
+      "start": 8.615,
+      "end": 8.795
+     },
+     {
+      "w": "with",
+      "start": 8.795,
+      "end": 9.02
+     },
+     {
+      "w": "the",
+      "start": 9.02,
+      "end": 9.199
+     },
+     {
+      "w": "policy",
+      "start": 9.199,
+      "end": 9.514
+     },
+     {
+      "w": "gate",
+      "start": 9.514,
+      "end": 9.739
+     },
+     {
+      "w": "deliberately",
+      "start": 9.739,
+      "end": 10.323
+     },
+     {
+      "w": "bypassed,",
+      "start": 10.323,
+      "end": 10.772
+     }
+    ]
+   },
+   {
+    "text": "which is exactly what a compromised server would do.",
+    "start": 11.06,
+    "end": 13.279,
+    "words": [
+     {
+      "w": "which",
+      "start": 11.06,
+      "end": 11.311
+     },
+     {
+      "w": "is",
+      "start": 11.311,
+      "end": 11.437
+     },
+     {
+      "w": "exactly",
+      "start": 11.437,
+      "end": 11.772
+     },
+     {
+      "w": "what",
+      "start": 11.772,
+      "end": 11.981
+     },
+     {
+      "w": "a",
+      "start": 11.981,
+      "end": 12.065
+     },
+     {
+      "w": "compromised",
+      "start": 12.065,
+      "end": 12.567
+     },
+     {
+      "w": "server",
+      "start": 12.567,
+      "end": 12.86
+     },
+     {
+      "w": "would",
+      "start": 12.86,
+      "end": 13.112
+     },
+     {
+      "w": "do.",
+      "start": 13.112,
+      "end": 13.279
+     }
+    ]
+   },
+   {
+    "text": "Here's one a visitor ran from the live site.",
+    "start": 13.844,
+    "end": 15.705,
+    "words": [
+     {
+      "w": "Here's",
+      "start": 13.844,
+      "end": 14.133
+     },
+     {
+      "w": "one",
+      "start": 14.133,
+      "end": 14.299
+     },
+     {
+      "w": "a",
+      "start": 14.299,
+      "end": 14.382
+     },
+     {
+      "w": "visitor",
+      "start": 14.382,
+      "end": 14.712
+     },
+     {
+      "w": "ran",
+      "start": 14.712,
+      "end": 14.878
+     },
+     {
+      "w": "from",
+      "start": 14.878,
+      "end": 15.085
+     },
+     {
+      "w": "the",
+      "start": 15.085,
+      "end": 15.25
+     },
+     {
+      "w": "live",
+      "start": 15.25,
+      "end": 15.457
+     },
+     {
+      "w": "site.",
+      "start": 15.457,
+      "end": 15.705
+     }
+    ]
+   }
+  ]
+ },
+ "revert": {
+  "duration": 17.64,
+  "phrases": [
+   {
+    "text": "The cap:",
+    "start": 0,
+    "end": 0.45,
+    "words": [
+     {
+      "w": "The",
+      "start": 0,
+      "end": 0.2
+     },
+     {
+      "w": "cap:",
+      "start": 0.2,
+      "end": 0.45
+     }
+    ]
+   },
+   {
+    "text": "zero point zero two tMSTC.",
+    "start": 0.94,
+    "end": 3.3,
+    "words": [
+     {
+      "w": "zero",
+      "start": 0.94,
+      "end": 1.377
+     },
+     {
+      "w": "point",
+      "start": 1.377,
+      "end": 1.901
+     },
+     {
+      "w": "zero",
+      "start": 1.901,
+      "end": 2.339
+     },
+     {
+      "w": "two",
+      "start": 2.339,
+      "end": 2.688
+     },
+     {
+      "w": "tMSTC.",
+      "start": 2.688,
+      "end": 3.3
+     }
+    ]
+   },
+   {
+    "text": "The bet:",
+    "start": 4.23,
+    "end": 4.52,
+    "words": [
+     {
+      "w": "The",
+      "start": 4.23,
+      "end": 4.359
+     },
+     {
+      "w": "bet:",
+      "start": 4.359,
+      "end": 4.52
+     }
+    ]
+   },
+   {
+    "text": "one wei more.",
+    "start": 4.99,
+    "end": 5.69,
+    "words": [
+     {
+      "w": "one",
+      "start": 4.99,
+      "end": 5.19
+     },
+     {
+      "w": "wei",
+      "start": 5.19,
+      "end": 5.39
+     },
+     {
+      "w": "more.",
+      "start": 5.39,
+      "end": 5.69
+     }
+    ]
+   },
+   {
+    "text": "Reverted.",
+    "start": 6.51,
+    "end": 6.97,
+    "words": [
+     {
+      "w": "Reverted.",
+      "start": 6.51,
+      "end": 6.97
+     }
+    ]
+   },
+   {
+    "text": "AgentPerTxCapExceeded,",
+    "start": 7.54,
+    "end": 9.24,
+    "words": [
+     {
+      "w": "AgentPerTxCapExceeded,",
+      "start": 7.54,
+      "end": 9.24
+     }
+    ]
+   },
+   {
+    "text": "with both numbers in the error,",
+    "start": 9.54,
+    "end": 10.85,
+    "words": [
+     {
+      "w": "with",
+      "start": 9.54,
+      "end": 9.745
+     },
+     {
+      "w": "both",
+      "start": 9.745,
+      "end": 9.949
+     },
+     {
+      "w": "numbers",
+      "start": 9.949,
+      "end": 10.277
+     },
+     {
+      "w": "in",
+      "start": 10.277,
+      "end": 10.4
+     },
+     {
+      "w": "the",
+      "start": 10.4,
+      "end": 10.563
+     },
+     {
+      "w": "error,",
+      "start": 10.563,
+      "end": 10.85
+     }
+    ]
+   },
+   {
+    "text": "decoded against verified source on MSTScan.",
+    "start": 11.22,
+    "end": 13.96,
+    "words": [
+     {
+      "w": "decoded",
+      "start": 11.22,
+      "end": 11.718
+     },
+     {
+      "w": "against",
+      "start": 11.718,
+      "end": 12.216
+     },
+     {
+      "w": "verified",
+      "start": 12.216,
+      "end": 12.777
+     },
+     {
+      "w": "source",
+      "start": 12.777,
+      "end": 13.213
+     },
+     {
+      "w": "on",
+      "start": 13.213,
+      "end": 13.4
+     },
+     {
+      "w": "MSTScan.",
+      "start": 13.4,
+      "end": 13.96
+     }
+    ]
+   },
+   {
+    "text": "The app didn't stop that agent.",
+    "start": 14.95,
+    "end": 16.16,
+    "words": [
+     {
+      "w": "The",
+      "start": 14.95,
+      "end": 15.101
+     },
+     {
+      "w": "app",
+      "start": 15.101,
+      "end": 15.252
+     },
+     {
+      "w": "didn't",
+      "start": 15.252,
+      "end": 15.517
+     },
+     {
+      "w": "stop",
+      "start": 15.517,
+      "end": 15.706
+     },
+     {
+      "w": "that",
+      "start": 15.706,
+      "end": 15.895
+     },
+     {
+      "w": "agent.",
+      "start": 15.895,
+      "end": 16.16
+     }
+    ]
+   },
+   {
+    "text": "The contract did.",
+    "start": 16.52,
+    "end": 17.32,
+    "words": [
+     {
+      "w": "The",
+      "start": 16.52,
+      "end": 16.698
+     },
+     {
+      "w": "contract",
+      "start": 16.698,
+      "end": 17.098
+     },
+     {
+      "w": "did.",
+      "start": 17.098,
+      "end": 17.32
+     }
+    ]
+   }
+  ]
+ },
+ "honest": {
+  "duration": 8.592,
+  "phrases": [
+   {
+    "text": "And when no market is open,",
+    "start": 0,
+    "end": 1.32,
+    "words": [
+     {
+      "w": "And",
+      "start": 0,
+      "end": 0.189
+     },
+     {
+      "w": "when",
+      "start": 0.189,
+      "end": 0.424
+     },
+     {
+      "w": "no",
+      "start": 0.424,
+      "end": 0.566
+     },
+     {
+      "w": "market",
+      "start": 0.566,
+      "end": 0.896
+     },
+     {
+      "w": "is",
+      "start": 0.896,
+      "end": 1.037
+     },
+     {
+      "w": "open,",
+      "start": 1.037,
+      "end": 1.32
+     }
+    ]
+   },
+   {
+    "text": "the button won't run at all,",
+    "start": 1.674,
+    "end": 2.868,
+    "words": [
+     {
+      "w": "the",
+      "start": 1.674,
+      "end": 1.839
+     },
+     {
+      "w": "button",
+      "start": 1.839,
+      "end": 2.127
+     },
+     {
+      "w": "won't",
+      "start": 2.127,
+      "end": 2.374
+     },
+     {
+      "w": "run",
+      "start": 2.374,
+      "end": 2.539
+     },
+     {
+      "w": "at",
+      "start": 2.539,
+      "end": 2.662
+     },
+     {
+      "w": "all,",
+      "start": 2.662,
+      "end": 2.868
+     }
+    ]
+   },
+   {
+    "text": "and it tells you why.",
+    "start": 3.265,
+    "end": 4.138,
+    "words": [
+     {
+      "w": "and",
+      "start": 3.265,
+      "end": 3.424
+     },
+     {
+      "w": "it",
+      "start": 3.424,
+      "end": 3.543
+     },
+     {
+      "w": "tells",
+      "start": 3.543,
+      "end": 3.781
+     },
+     {
+      "w": "you",
+      "start": 3.781,
+      "end": 3.94
+     },
+     {
+      "w": "why.",
+      "start": 3.94,
+      "end": 4.138
+     }
+    ]
+   },
+   {
+    "text": "A late bet would be refused for the wrong reason,",
+    "start": 4.489,
+    "end": 6.603,
+    "words": [
+     {
+      "w": "A",
+      "start": 4.489,
+      "end": 4.574
+     },
+     {
+      "w": "late",
+      "start": 4.574,
+      "end": 4.785
+     },
+     {
+      "w": "bet",
+      "start": 4.785,
+      "end": 4.954
+     },
+     {
+      "w": "would",
+      "start": 4.954,
+      "end": 5.208
+     },
+     {
+      "w": "be",
+      "start": 5.208,
+      "end": 5.335
+     },
+     {
+      "w": "refused",
+      "start": 5.335,
+      "end": 5.673
+     },
+     {
+      "w": "for",
+      "start": 5.673,
+      "end": 5.842
+     },
+     {
+      "w": "the",
+      "start": 5.842,
+      "end": 6.011
+     },
+     {
+      "w": "wrong",
+      "start": 6.011,
+      "end": 6.265
+     },
+     {
+      "w": "reason,",
+      "start": 6.265,
+      "end": 6.603
+     }
+    ]
+   },
+   {
+    "text": "and that would prove the wrong thing.",
+    "start": 6.896,
+    "end": 8.266,
+    "words": [
+     {
+      "w": "and",
+      "start": 6.896,
+      "end": 7.04
+     },
+     {
+      "w": "that",
+      "start": 7.04,
+      "end": 7.22
+     },
+     {
+      "w": "would",
+      "start": 7.22,
+      "end": 7.437
+     },
+     {
+      "w": "prove",
+      "start": 7.437,
+      "end": 7.653
+     },
+     {
+      "w": "the",
+      "start": 7.653,
+      "end": 7.797
+     },
+     {
+      "w": "wrong",
+      "start": 7.797,
+      "end": 8.014
+     },
+     {
+      "w": "thing.",
+      "start": 8.014,
+      "end": 8.266
+     }
+    ]
+   }
+  ]
+ },
+ "roles": {
+  "duration": 13.056,
+  "phrases": [
+   {
+    "text": "Authority is checked the same way.",
+    "start": 0,
+    "end": 1.475,
+    "words": [
+     {
+      "w": "Authority",
+      "start": 0,
+      "end": 0.421
+     },
+     {
+      "w": "is",
+      "start": 0.421,
+      "end": 0.548
+     },
+     {
+      "w": "checked",
+      "start": 0.548,
+      "end": 0.885
+     },
+     {
+      "w": "the",
+      "start": 0.885,
+      "end": 1.054
+     },
+     {
+      "w": "same",
+      "start": 1.054,
+      "end": 1.264
+     },
+     {
+      "w": "way.",
+      "start": 1.264,
+      "end": 1.475
+     }
+    ]
+   },
+   {
+    "text": "This role matrix is read live from the contract.",
+    "start": 1.801,
+    "end": 4.052,
+    "words": [
+     {
+      "w": "This",
+      "start": 1.801,
+      "end": 2.031
+     },
+     {
+      "w": "role",
+      "start": 2.031,
+      "end": 2.26
+     },
+     {
+      "w": "matrix",
+      "start": 2.26,
+      "end": 2.582
+     },
+     {
+      "w": "is",
+      "start": 2.582,
+      "end": 2.72
+     },
+     {
+      "w": "read",
+      "start": 2.72,
+      "end": 2.949
+     },
+     {
+      "w": "live",
+      "start": 2.949,
+      "end": 3.179
+     },
+     {
+      "w": "from",
+      "start": 3.179,
+      "end": 3.409
+     },
+     {
+      "w": "the",
+      "start": 3.409,
+      "end": 3.593
+     },
+     {
+      "w": "contract.",
+      "start": 3.593,
+      "end": 4.052
+     }
+    ]
+   },
+   {
+    "text": "The agent wallets hold no role at all.",
+    "start": 4.404,
+    "end": 6.234,
+    "words": [
+     {
+      "w": "The",
+      "start": 4.404,
+      "end": 4.592
+     },
+     {
+      "w": "agent",
+      "start": 4.592,
+      "end": 4.873
+     },
+     {
+      "w": "wallets",
+      "start": 4.873,
+      "end": 5.249
+     },
+     {
+      "w": "hold",
+      "start": 5.249,
+      "end": 5.483
+     },
+     {
+      "w": "no",
+      "start": 5.483,
+      "end": 5.624
+     },
+     {
+      "w": "role",
+      "start": 5.624,
+      "end": 5.859
+     },
+     {
+      "w": "at",
+      "start": 5.859,
+      "end": 5.999
+     },
+     {
+      "w": "all.",
+      "start": 5.999,
+      "end": 6.234
+     }
+    ]
+   },
+   {
+    "text": "They can't create a market or resolve one,",
+    "start": 6.618,
+    "end": 8.646,
+    "words": [
+     {
+      "w": "They",
+      "start": 6.618,
+      "end": 6.854
+     },
+     {
+      "w": "can't",
+      "start": 6.854,
+      "end": 7.137
+     },
+     {
+      "w": "create",
+      "start": 7.137,
+      "end": 7.467
+     },
+     {
+      "w": "a",
+      "start": 7.467,
+      "end": 7.561
+     },
+     {
+      "w": "market",
+      "start": 7.561,
+      "end": 7.891
+     },
+     {
+      "w": "or",
+      "start": 7.891,
+      "end": 8.033
+     },
+     {
+      "w": "resolve",
+      "start": 8.033,
+      "end": 8.41
+     },
+     {
+      "w": "one,",
+      "start": 8.41,
+      "end": 8.646
+     }
+    ]
+   },
+   {
+    "text": "and winnings are paid to the owner,",
+    "start": 8.973,
+    "end": 10.271,
+    "words": [
+     {
+      "w": "and",
+      "start": 8.973,
+      "end": 9.117
+     },
+     {
+      "w": "winnings",
+      "start": 9.117,
+      "end": 9.442
+     },
+     {
+      "w": "are",
+      "start": 9.442,
+      "end": 9.586
+     },
+     {
+      "w": "paid",
+      "start": 9.586,
+      "end": 9.766
+     },
+     {
+      "w": "to",
+      "start": 9.766,
+      "end": 9.874
+     },
+     {
+      "w": "the",
+      "start": 9.874,
+      "end": 10.019
+     },
+     {
+      "w": "owner,",
+      "start": 10.019,
+      "end": 10.271
+     }
+    ]
+   },
+   {
+    "text": "so a stolen agent key can't steal a thing.",
+    "start": 10.589,
+    "end": 12.617,
+    "words": [
+     {
+      "w": "so",
+      "start": 10.589,
+      "end": 10.73
+     },
+     {
+      "w": "a",
+      "start": 10.73,
+      "end": 10.825
+     },
+     {
+      "w": "stolen",
+      "start": 10.825,
+      "end": 11.155
+     },
+     {
+      "w": "agent",
+      "start": 11.155,
+      "end": 11.438
+     },
+     {
+      "w": "key",
+      "start": 11.438,
+      "end": 11.627
+     },
+     {
+      "w": "can't",
+      "start": 11.627,
+      "end": 11.91
+     },
+     {
+      "w": "steal",
+      "start": 11.91,
+      "end": 12.193
+     },
+     {
+      "w": "a",
+      "start": 12.193,
+      "end": 12.287
+     },
+     {
+      "w": "thing.",
+      "start": 12.287,
+      "end": 12.617
+     }
+    ]
+   }
+  ]
+ },
+ "resolution": {
+  "duration": 15.072,
+  "phrases": [
+   {
+    "text": "Resolution follows the same rules.",
+    "start": 0,
+    "end": 1.783,
+    "words": [
+     {
+      "w": "Resolution",
+      "start": 0,
+      "end": 0.56
+     },
+     {
+      "w": "follows",
+      "start": 0.56,
+      "end": 0.968
+     },
+     {
+      "w": "the",
+      "start": 0.968,
+      "end": 1.172
+     },
+     {
+      "w": "same",
+      "start": 1.172,
+      "end": 1.426
+     },
+     {
+      "w": "rules.",
+      "start": 1.426,
+      "end": 1.783
+     }
+    ]
+   },
+   {
+    "text": "The resolution agent doesn't pick its own sources,",
+    "start": 2.103,
+    "end": 4.33,
+    "words": [
+     {
+      "w": "The",
+      "start": 2.103,
+      "end": 2.278
+     },
+     {
+      "w": "resolution",
+      "start": 2.278,
+      "end": 2.758
+     },
+     {
+      "w": "agent",
+      "start": 2.758,
+      "end": 3.02
+     },
+     {
+      "w": "doesn't",
+      "start": 3.02,
+      "end": 3.369
+     },
+     {
+      "w": "pick",
+      "start": 3.369,
+      "end": 3.588
+     },
+     {
+      "w": "its",
+      "start": 3.588,
+      "end": 3.762
+     },
+     {
+      "w": "own",
+      "start": 3.762,
+      "end": 3.937
+     },
+     {
+      "w": "sources,",
+      "start": 3.937,
+      "end": 4.33
+     }
+    ]
+   },
+   {
+    "text": "and it must quote its evidence word for word.",
+    "start": 4.611,
+    "end": 6.565,
+    "words": [
+     {
+      "w": "and",
+      "start": 4.611,
+      "end": 4.781
+     },
+     {
+      "w": "it",
+      "start": 4.781,
+      "end": 4.908
+     },
+     {
+      "w": "must",
+      "start": 4.908,
+      "end": 5.121
+     },
+     {
+      "w": "quote",
+      "start": 5.121,
+      "end": 5.376
+     },
+     {
+      "w": "its",
+      "start": 5.376,
+      "end": 5.546
+     },
+     {
+      "w": "evidence",
+      "start": 5.546,
+      "end": 5.928
+     },
+     {
+      "w": "word",
+      "start": 5.928,
+      "end": 6.14
+     },
+     {
+      "w": "for",
+      "start": 6.14,
+      "end": 6.31
+     },
+     {
+      "w": "word.",
+      "start": 6.31,
+      "end": 6.565
+     }
+    ]
+   },
+   {
+    "text": "A paraphrase fails.",
+    "start": 6.919,
+    "end": 8.019,
+    "words": [
+     {
+      "w": "A",
+      "start": 6.919,
+      "end": 7.029
+     },
+     {
+      "w": "paraphrase",
+      "start": 7.029,
+      "end": 7.634
+     },
+     {
+      "w": "fails.",
+      "start": 7.634,
+      "end": 8.019
+     }
+    ]
+   },
+   {
+    "text": "A human signs the outcome,",
+    "start": 8.508,
+    "end": 9.844,
+    "words": [
+     {
+      "w": "A",
+      "start": 8.508,
+      "end": 8.607
+     },
+     {
+      "w": "human",
+      "start": 8.607,
+      "end": 8.904
+     },
+     {
+      "w": "signs",
+      "start": 8.904,
+      "end": 9.201
+     },
+     {
+      "w": "the",
+      "start": 9.201,
+      "end": 9.399
+     },
+     {
+      "w": "outcome,",
+      "start": 9.399,
+      "end": 9.844
+     }
+    ]
+   },
+   {
+    "text": "a challenge window opens,",
+    "start": 10.199,
+    "end": 11.334,
+    "words": [
+     {
+      "w": "a",
+      "start": 10.199,
+      "end": 10.286
+     },
+     {
+      "w": "challenge",
+      "start": 10.286,
+      "end": 10.723
+     },
+     {
+      "w": "window",
+      "start": 10.723,
+      "end": 11.028
+     },
+     {
+      "w": "opens,",
+      "start": 11.028,
+      "end": 11.334
+     }
+    ]
+   },
+   {
+    "text": "and after that,",
+    "start": 11.647,
+    "end": 12.232,
+    "words": [
+     {
+      "w": "and",
+      "start": 11.647,
+      "end": 11.793
+     },
+     {
+      "w": "after",
+      "start": 11.793,
+      "end": 12.013
+     },
+     {
+      "w": "that,",
+      "start": 12.013,
+      "end": 12.232
+     }
+    ]
+   },
+   {
+    "text": "anyone can finalize,",
+    "start": 12.559,
+    "end": 13.733,
+    "words": [
+     {
+      "w": "anyone",
+      "start": 12.559,
+      "end": 12.95
+     },
+     {
+      "w": "can",
+      "start": 12.95,
+      "end": 13.174
+     },
+     {
+      "w": "finalize,",
+      "start": 13.174,
+      "end": 13.733
+     }
+    ]
+   },
+   {
+    "text": "and winners claim.",
+    "start": 13.986,
+    "end": 14.744,
+    "words": [
+     {
+      "w": "and",
+      "start": 13.986,
+      "end": 14.146
+     },
+     {
+      "w": "winners",
+      "start": 14.146,
+      "end": 14.465
+     },
+     {
+      "w": "claim.",
+      "start": 14.465,
+      "end": 14.744
+     }
+    ]
+   }
+  ]
+ },
+ "market8": {
+  "duration": 7.752,
+  "phrases": [
+   {
+    "text": "Market eight,",
+    "start": 0,
+    "end": 0.549,
+    "words": [
+     {
+      "w": "Market",
+      "start": 0,
+      "end": 0.275
+     },
+     {
+      "w": "eight,",
+      "start": 0.275,
+      "end": 0.549
+     }
+    ]
+   },
+   {
+    "text": "a labelled test market driven from a laptop,",
+    "start": 0.901,
+    "end": 2.887,
+    "words": [
+     {
+      "w": "a",
+      "start": 0.901,
+      "end": 0.989
+     },
+     {
+      "w": "labelled",
+      "start": 0.989,
+      "end": 1.386
+     },
+     {
+      "w": "test",
+      "start": 1.386,
+      "end": 1.607
+     },
+     {
+      "w": "market",
+      "start": 1.607,
+      "end": 1.916
+     },
+     {
+      "w": "driven",
+      "start": 1.916,
+      "end": 2.225
+     },
+     {
+      "w": "from",
+      "start": 2.225,
+      "end": 2.446
+     },
+     {
+      "w": "a",
+      "start": 2.446,
+      "end": 2.534
+     },
+     {
+      "w": "laptop,",
+      "start": 2.534,
+      "end": 2.887
+     }
+    ]
+   },
+   {
+    "text": "shows the whole lifecycle on chain,",
+    "start": 3.105,
+    "end": 4.709,
+    "words": [
+     {
+      "w": "shows",
+      "start": 3.105,
+      "end": 3.372
+     },
+     {
+      "w": "the",
+      "start": 3.372,
+      "end": 3.551
+     },
+     {
+      "w": "whole",
+      "start": 3.551,
+      "end": 3.818
+     },
+     {
+      "w": "lifecycle",
+      "start": 3.818,
+      "end": 4.263
+     },
+     {
+      "w": "on",
+      "start": 4.263,
+      "end": 4.397
+     },
+     {
+      "w": "chain,",
+      "start": 4.397,
+      "end": 4.709
+     }
+    ]
+   },
+   {
+    "text": "including every step the contract refused.",
+    "start": 5.154,
+    "end": 7.408,
+    "words": [
+     {
+      "w": "including",
+      "start": 5.154,
+      "end": 5.678
+     },
+     {
+      "w": "every",
+      "start": 5.678,
+      "end": 5.993
+     },
+     {
+      "w": "step",
+      "start": 5.993,
+      "end": 6.255
+     },
+     {
+      "w": "the",
+      "start": 6.255,
+      "end": 6.464
+     },
+     {
+      "w": "contract",
+      "start": 6.464,
+      "end": 6.936
+     },
+     {
+      "w": "refused.",
+      "start": 6.936,
+      "end": 7.408
+     }
+    ]
+   }
+  ]
+ },
+ "audit": {
+  "duration": 8.256,
+  "phrases": [
+   {
+    "text": "Every decision,",
+    "start": 0,
+    "end": 0.846,
+    "words": [
+     {
+      "w": "Every",
+      "start": 0,
+      "end": 0.317
+     },
+     {
+      "w": "decision,",
+      "start": 0.317,
+      "end": 0.846
+     }
+    ]
+   },
+   {
+    "text": "approved or refused,",
+    "start": 1.155,
+    "end": 2.304,
+    "words": [
+     {
+      "w": "approved",
+      "start": 1.155,
+      "end": 1.647
+     },
+     {
+      "w": "or",
+      "start": 1.647,
+      "end": 1.812
+     },
+     {
+      "w": "refused,",
+      "start": 1.812,
+      "end": 2.304
+     }
+    ]
+   },
+   {
+    "text": "lands in an append-only log with its reason.",
+    "start": 2.652,
+    "end": 4.727,
+    "words": [
+     {
+      "w": "lands",
+      "start": 2.652,
+      "end": 2.929
+     },
+     {
+      "w": "in",
+      "start": 2.929,
+      "end": 3.067
+     },
+     {
+      "w": "an",
+      "start": 3.067,
+      "end": 3.205
+     },
+     {
+      "w": "append-only",
+      "start": 3.205,
+      "end": 3.759
+     },
+     {
+      "w": "log",
+      "start": 3.759,
+      "end": 3.943
+     },
+     {
+      "w": "with",
+      "start": 3.943,
+      "end": 4.174
+     },
+     {
+      "w": "its",
+      "start": 4.174,
+      "end": 4.358
+     },
+     {
+      "w": "reason.",
+      "start": 4.358,
+      "end": 4.727
+     }
+    ]
+   },
+   {
+    "text": "The refusals are never deleted.",
+    "start": 5.085,
+    "end": 6.669,
+    "words": [
+     {
+      "w": "The",
+      "start": 5.085,
+      "end": 5.283
+     },
+     {
+      "w": "refusals",
+      "start": 5.283,
+      "end": 5.728
+     },
+     {
+      "w": "are",
+      "start": 5.728,
+      "end": 5.926
+     },
+     {
+      "w": "never",
+      "start": 5.926,
+      "end": 6.223
+     },
+     {
+      "w": "deleted.",
+      "start": 6.223,
+      "end": 6.669
+     }
+    ]
+   },
+   {
+    "text": "They're the evidence.",
+    "start": 7.194,
+    "end": 7.967,
+    "words": [
+     {
+      "w": "They're",
+      "start": 7.194,
+      "end": 7.475
+     },
+     {
+      "w": "the",
+      "start": 7.475,
+      "end": 7.616
+     },
+     {
+      "w": "evidence.",
+      "start": 7.616,
+      "end": 7.967
+     }
+    ]
+   }
+  ]
+ },
+ "close": {
+  "duration": 13.44,
+  "phrases": [
+   {
+    "text": "AuspeX.",
+    "start": 0,
+    "end": 0.602,
+    "words": [
+     {
+      "w": "AuspeX.",
+      "start": 0,
+      "end": 0.602
+     }
+    ]
+   },
+   {
+    "text": "AI proposes.",
+    "start": 0.936,
+    "end": 1.88,
+    "words": [
+     {
+      "w": "AI",
+      "start": 0.936,
+      "end": 1.154
+     },
+     {
+      "w": "proposes.",
+      "start": 1.154,
+      "end": 1.88
+     }
+    ]
+   },
+   {
+    "text": "Humans and the chain decide.",
+    "start": 2.377,
+    "end": 3.802,
+    "words": [
+     {
+      "w": "Humans",
+      "start": 2.377,
+      "end": 2.721
+     },
+     {
+      "w": "and",
+      "start": 2.721,
+      "end": 2.918
+     },
+     {
+      "w": "the",
+      "start": 2.918,
+      "end": 3.114
+     },
+     {
+      "w": "chain",
+      "start": 3.114,
+      "end": 3.409
+     },
+     {
+      "w": "decide.",
+      "start": 3.409,
+      "end": 3.802
+     }
+    ]
+   },
+   {
+    "text": "It's live on MST testnet.",
+    "start": 4.712,
+    "end": 6.291,
+    "words": [
+     {
+      "w": "It's",
+      "start": 4.712,
+      "end": 5.016
+     },
+     {
+      "w": "live",
+      "start": 5.016,
+      "end": 5.319
+     },
+     {
+      "w": "on",
+      "start": 5.319,
+      "end": 5.502
+     },
+     {
+      "w": "MST",
+      "start": 5.502,
+      "end": 5.744
+     },
+     {
+      "w": "testnet.",
+      "start": 5.744,
+      "end": 6.291
+     }
+    ]
+   },
+   {
+    "text": "The contract source is verified,",
+    "start": 6.628,
+    "end": 8.022,
+    "words": [
+     {
+      "w": "The",
+      "start": 6.628,
+      "end": 6.797
+     },
+     {
+      "w": "contract",
+      "start": 6.797,
+      "end": 7.177
+     },
+     {
+      "w": "source",
+      "start": 7.177,
+      "end": 7.473
+     },
+     {
+      "w": "is",
+      "start": 7.473,
+      "end": 7.6
+     },
+     {
+      "w": "verified,",
+      "start": 7.6,
+      "end": 8.022
+     }
+    ]
+   },
+   {
+    "text": "and every hash in this video resolves on the explorer.",
+    "start": 8.325,
+    "end": 10.819,
+    "words": [
+     {
+      "w": "and",
+      "start": 8.325,
+      "end": 8.506
+     },
+     {
+      "w": "every",
+      "start": 8.506,
+      "end": 8.778
+     },
+     {
+      "w": "hash",
+      "start": 8.778,
+      "end": 9.005
+     },
+     {
+      "w": "in",
+      "start": 9.005,
+      "end": 9.141
+     },
+     {
+      "w": "this",
+      "start": 9.141,
+      "end": 9.368
+     },
+     {
+      "w": "video",
+      "start": 9.368,
+      "end": 9.64
+     },
+     {
+      "w": "resolves",
+      "start": 9.64,
+      "end": 10.048
+     },
+     {
+      "w": "on",
+      "start": 10.048,
+      "end": 10.184
+     },
+     {
+      "w": "the",
+      "start": 10.184,
+      "end": 10.366
+     },
+     {
+      "w": "explorer.",
+      "start": 10.366,
+      "end": 10.819
+     }
+    ]
+   },
+   {
+    "text": "So don't trust me.",
+    "start": 11.53,
+    "end": 12.265,
+    "words": [
+     {
+      "w": "So",
+      "start": 11.53,
+      "end": 11.646
+     },
+     {
+      "w": "don't",
+      "start": 11.646,
+      "end": 11.878
+     },
+     {
+      "w": "trust",
+      "start": 11.878,
+      "end": 12.11
+     },
+     {
+      "w": "me.",
+      "start": 12.11,
+      "end": 12.265
+     }
+    ]
+   },
+   {
+    "text": "Check it.",
+    "start": 12.814,
+    "end": 13.129,
+    "words": [
+     {
+      "w": "Check",
+      "start": 12.814,
+      "end": 13.003
+     },
+     {
+      "w": "it.",
+      "start": 13.003,
+      "end": 13.129
+     }
+    ]
+   }
+  ]
+ }
+}
