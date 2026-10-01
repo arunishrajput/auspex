@@ -3129,5 +3129,6 @@ values (RPC URL, contract and wallet addresses) do.
 
 - The Code of Conduct's enforcement contact is the maintainer's GitHub profile. A dedicated email
   address would be better if contributors arrive.
-- The `[Unreleased]` section of `CHANGELOG.md` is ready to become `1.2.0` whenever a release is cut.
+- ~~Cut `1.2.0`~~ — done: tagged `v1.2.0`, and `v1.1.0` was tagged retroactively at `9abe3fc`, the commit
+  that set that version. GitHub Releases now exist for v1.0.0, v1.1.0 and v1.2.0.
 

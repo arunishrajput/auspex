@@ -16,10 +16,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely 
 
 ---
 
-## [Unreleased]
+## [1.2.0] — 2026-10-01
 
 **Open-source ready, and a new demo video.** Documentation and repository scaffolding only — no
-application code, contract, address, hash or measurement changed.
+application code, contract, address, hash or measurement changed. Only the root package moves to
+`1.2.0`; `web` stays `1.1.0` and `contracts` `1.0.0`, because neither one's code changed.
 
 ### Added
 
@@ -368,4 +369,6 @@ than assuming:
 
 ---
 
+[1.2.0]: https://github.com/arunishrajput/auspex/releases/tag/v1.2.0
+[1.1.0]: https://github.com/arunishrajput/auspex/releases/tag/v1.1.0
 [1.0.0]: https://github.com/arunishrajput/auspex/releases/tag/v1.0.0
